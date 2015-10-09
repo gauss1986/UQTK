@@ -29,10 +29,10 @@
 #include <cstdio>
 #include <string>
 #include <iostream>
-#include "Utils.h"
+#include "UtilsDuffing.h"
 #include "Array1D.h"
 
-void WriteToFile(Array1D<double>& data, char* filename)
+void WriteToFile(Array1D<double>& data, const char* filename)
 {
   int nx=data.XSize();
   

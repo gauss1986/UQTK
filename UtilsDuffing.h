@@ -29,7 +29,7 @@
 /// \brief Write Array data to a file with name filename
 /// 
 /// \note opens and closes the file
-void WriteToFile(Array1D<double>& data, char* filename);
+void WriteToFile(Array1D<double>& data, const char* filename);
 
 /// \brief Write all PC modes to a file
 ///

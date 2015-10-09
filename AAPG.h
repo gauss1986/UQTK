@@ -1,4 +1,4 @@
-void AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string pcType, int dim, int nStep, Array2D<double>& scaledKLmodes, double dis0, double vel0, PCSet& myPCSet, double factor_OD, int AAPG_ord);
+Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string pcType, int dim, int nStep, Array2D<double>& scaledKLmodes, double dis0, double vel0, PCSet& myPCSet, double factor_OD, int AAPG_ord);
 void PostProcess(int AAPG_ord, Array1D<double>& dis_0, Array1D<Array2D<double> >& dis_1, Array2D<Array2D<double> >& dis_2, Array3D<Array2D<double> >& dis_3, PCSet& myPCSet, double fbar, int dim, int nStep, int PCTerms_1, int PCTerms_2, int PCTerms_3, int order, double dTym, string pcType, Array1D<double>& inpParams, Array2D<double>& scaledKLmodes, double factor_OD);
 Array1D<int> index1(int dim, int i, int order);
 Array1D<int> index2(int dim, int i, int j, int order);

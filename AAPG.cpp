@@ -11,7 +11,7 @@
 #include "GhanemSpanos.h"
 #include "ticktock.h"
 
-void AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string pcType, int dim, int nStep, Array2D<double>& scaledKLmodes, double dis0, double vel0, PCSet& myPCSet, double factor_OD, int AAPG_ord){
+Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string pcType, int dim, int nStep, Array2D<double>& scaledKLmodes, double dis0, double vel0, PCSet& myPCSet, double factor_OD, int AAPG_ord){
     
     // Compute zeroth-order term
     printf("Zeroth-order term...\n");
@@ -32,6 +32,8 @@ void AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string
     }
     //cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
     tt.tock("Took");
+    Array1D<double> t(5,0.e0);
+    t(0) = tt.silent_tock();
     // abstract the displacement terms
     Array1D<double> dis_0(nStep+1,0.e0);
     getCol(x_0,1,dis_0);
@@ -64,6 +66,7 @@ void AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string
     }
     //cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
     tt.tock("Took");
+    t(1)=tt.silent_tock();
 
     // Second order term
     printf("Second-order terms...");
@@ -89,6 +92,7 @@ void AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string
     }
     //cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
     tt.tock("Took");   
+    t(2)=tt.silent_tock();
  
     // Third order term
     printf("Third-order terms...");
@@ -118,6 +122,7 @@ void AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string
     }
     //cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
     tt.tock("Took");
+    t(3)=tt.silent_tock();
     
     printf("\nAssemble the solutions...\n");
     //start = clock(); 
@@ -125,7 +130,9 @@ void AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string
     PostProcess(AAPG_ord, dis_0, dis_1, dis_2, dis_3, myPCSet, fbar, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, pcType, inpParams, scaledKLmodes, factor_OD);
     //cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
     tt.tock("Took");
-    return;
+    t(4)=tt.silent_tock();
+   
+    return(t);
 }
 
 void PostProcess(int AAPG_ord, Array1D<double>& dis_0, Array1D<Array2D<double> >& dis_1, Array2D<Array2D<double> >& dis_2, Array3D<Array2D<double> >& dis_3, PCSet& myPCSet, double fbar, int dim, int nStep, int PCTerms_1, int PCTerms_2, int PCTerms_3, int order, double dTym, string pcType, Array1D<double>& inpParams, Array2D<double>& scaledKLmodes, double factor_OD){

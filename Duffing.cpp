@@ -19,6 +19,7 @@ July 25, 2015
 #include "MCS.h"
 #include "GhanemSpanos.h"
 #include "AAPG.h"
+#include "ticktock.h"
 
 #define DIM 10
 #define CLEN 1.0
@@ -197,16 +198,8 @@ int main(int argc, char *argv[])
         mstd = mStd(tempdis,nspl);
         WriteMeanStdDevToFilePtr((ix+1)*dTym, mstd(0),mstd(1),f_dump);         
         if ((ix+1) % ((int) nStep/10) == 0){
-            //cout << (double) (ix+1)*100.0/nStep << " % completed" << endl;
             WriteMeanStdDevToStdOut(ix+1, (ix+1)*dTym, mstd(0), mstd(1));
         }
-        //Array1D<double> tempKL(nkl,0.e0);
-        //Array1D<double> samPt(dim,0.e0);
-        //Array1D<double> tempforce(nspl,0.e0);
-        //getRow(scaledKLmodes,ix,tempKL);
-        //for (int i=0;i<nspl;i++)
-        //    getRow(samPts,i,samPt);
-        //    tempKL(i)=dotprodVec(samPt,tempKL);
     }
     if(fclose(f_dump)){
         printf("Could not close file '%s'\n",Solufile.c_str());
@@ -218,6 +211,7 @@ int main(int argc, char *argv[])
 
     double dis0 = DIS0;
     double vel0 = VEL0;
+    Array1D<double> t_GS(ord_GS,0.e0);
     for(int ord=1;ord<ord_GS+1;ord++){
         PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
         cout << "Order "<< ord << endl;
@@ -225,7 +219,6 @@ int main(int argc, char *argv[])
         const int nPCTerms = myPCSet.GetNumberPCTerms();
         cout << "The number of PC terms in an expansion is " << nPCTerms << endl;
         // Print the multiindices on screen
-        //myPCSet.PrintMultiIndex();
     
         // Prepare the force in PC format
         Array2D<double> f_GS(nStep+1,nPCTerms,0.e0);
@@ -242,9 +235,12 @@ int main(int argc, char *argv[])
         Array2D<double> dis_GS(nStep+1,nPCTerms);
 
         clock_t start = clock();
+    	TickTock tt;
+    	tt.tick();
         dis_GS = GS(myPCSet, ord, dim, nPCTerms, pcType, nStep, dis0, vel0, dTym, inpParams, f_GS);
-        cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
-    
+        t_GS(ord-1) = tt.silent_tock();
+	cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
+	
         // output and save the solution
         // Open files to write out solutions
         ostringstream s;
@@ -283,8 +279,33 @@ int main(int argc, char *argv[])
     // AAPG
     printf("\nAAPG...\n");
     PCSet myPCSet("ISP",ord_AAPG_GS,dim,pcType,0.0,1.0,false); 
-    AAPG(inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, dis0, vel0, myPCSet, factor_OD, ord_AAPG);
+    Array1D<double> t_AAPG = AAPG(inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, dis0, vel0, myPCSet, factor_OD, ord_AAPG);
+    cout << "t_AAPG=" << t_AAPG(0)<< ","<<t_AAPG(1)<<","<<t_AAPG(2)<<","<<t_AAPG(3)<<endl;    
+    cout << "Assemble AAPG cost time " << t_AAPG(4)<<endl;
     
+    // output the timing
+    ostringstream s;
+    s << "time" <<".dat";
+    string Time(s.str());
+    FILE *time_dump;
+    if(!(time_dump=fopen(Time.c_str(),"w"))){
+        printf("Could not open file '%s'\n",Time.c_str());
+        exit(1);    
+    }
+    Array1D<double> t(3+ord_GS+ord_AAPG,0.e0);
+    t(0) = t_MCS;
+    for (int i=0;i<ord_GS;i++)
+	t(i+1)=t_GS(i);
+    for (int i=0;i<ord_AAPG+2;i++)
+        t(i+1+ord_GS)=t_AAPG(i);
+    
+    WriteToFile(t, Time.c_str());
+        
+    if(fclose(time_dump)){
+        printf("Could not close file '%s'\n",Time.c_str());
+        exit(1);
+    }    
+
     return 0;
 }
 
