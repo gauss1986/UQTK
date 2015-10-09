@@ -35,29 +35,27 @@ void WriteToFile(Array1D<double>& data, char* filename);
 ///
 /// Arguments:
 ///   \li const double tym: current time
-///   \li const double u*, v*, w*: vector with PC coefficients for three solution components u, v, w
+///   \li const double u*: vector with PC coefficients for three solution components u
 ///   \li const int n: number of PC terms
 ///   \li FILE* f_dump: C file pointer to write to
 /// \note Assumes the file to be open already
-void WriteModesToFilePtr(const double tym, const double* u, const double* v, const double* w, const int n, FILE* f_dump);
+void WriteModesToFilePtr(const double tym, const double* u, const int n, FILE* f_dump);
 
 
 /// \brief Write mean and std. dev. to a file
 ///
 /// Arguments:
 ///   \li const double tym: current time
-///   \li const double u0, v0, w0: means of three solution components u, v, w
-///   \li const double u_std, v_std, w_std: std. dev. of three solution components u, v, w
+///   \li const double u0: means of solution components u
+///   \li const double u_std: std. dev. of three solution components u
 ///   \li FILE* f_dump: C file pointer to write to
-void WriteMeanStdDevToFilePtr(const double tym, const double u0, const double v0, const double w0, 
-                                                const double u_std, const double v_std, const double w_std, FILE* f_dump);
+void WriteMeanStdDevToFilePtr(const double tym, const double u0, const double u_std,  FILE* f_dump);
 
 /// \brief Write mean and std. dev. to screen
 ///
 /// Arguments:
 ///   \li const int step: current time step
 ///   \li const double tym: current time
-///   \li const double u0, v0, w0: means of three solution components u, v, w
-///   \li const double u_std, v_std, w_std: std. dev. of three solution components u, v, w
-void WriteMeanStdDevToStdOut(const int step, const double tym, const double u0, const double v0, const double w0, 
-                                                       const double u_std, const double v_std, const double w_std);
+///   \li const double u0: means of three solution components u
+///   \li const double u_std: std. dev. of three solution u
+void WriteMeanStdDevToStdOut(const int step, const double tym, const double u0, const double u_std);

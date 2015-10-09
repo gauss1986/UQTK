@@ -2,7 +2,7 @@
 #include "Array2D.h"
 #include "Array1D.h"
 #include "PCSet.h"
-#include "Utils.h"
+#include "UtilsDuffing.h"
 #include "arraytools.h"
 #include "uqtktools.h"
 #include "MCS.h"

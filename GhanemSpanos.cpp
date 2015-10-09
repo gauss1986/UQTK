@@ -5,7 +5,7 @@
 #include "arraytools.h"
 #include "uqtktools.h"
 #include "GhanemSpanos.h"
-#include "Utils.h"
+#include "UtilsDuffing.h"
 #include <ctime>
 
 Array2D<double> GS(PCSet& myPCSet, int order, int dim, int nPCTerms, string pcType, int nStep, double dis0, double vel0, double dTym, Array1D<double>& inpParams, Array2D<double>& f_GS){

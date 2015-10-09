@@ -4,11 +4,12 @@
 #include "PCSet.h"
 #include "arraytools.h"
 #include "uqtktools.h"
-#include "Utils.h"
+#include "UtilsDuffing.h"
 #include "AAPG.h"
 #include "MCS.h"
 #include "lapack.h"
 #include "GhanemSpanos.h"
+#include "ticktock.h"
 
 void AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string pcType, int dim, int nStep, Array2D<double>& scaledKLmodes, double dis0, double vel0, PCSet& myPCSet, double factor_OD, int AAPG_ord){
     
@@ -21,12 +22,16 @@ void AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string
     f_0(0)=fbar;
     // store zeroth order solution
     Array2D<double> x_0(nStep+1,2,0.e0);
-    clock_t start = clock();
+    //clock_t start = clock();
+    // Time marching steps
+    TickTock tt;
+    tt.tick();
     for (int ix=0;ix<nStep;ix++){
         forward_duffing_dt(inpParams,f_0,dTym,Temp);
         x_0.replaceRow(Temp,ix+1);
     }
-    cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
+    //cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
+    tt.tock("Took");
     // abstract the displacement terms
     Array1D<double> dis_0(nStep+1,0.e0);
     getCol(x_0,1,dis_0);
@@ -38,8 +43,10 @@ void AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string
     const int PCTerms_1 = PCSet_1.GetNumberPCTerms();
     // initialize the displacement and force terms
     Array1D<Array2D<double> > dis_1(dim);
-    start = clock();
-    #pragma omp parallel for default(none) shared(fbar,dim,nStep,scaledKLmodes,PCSet_1,order,pcType,dis0,vel0,dTym,inpParams,dis_1)
+    //start = clock();
+    tt.tick();
+    #pragma omp parallel default(none) shared(fbar,dim,nStep,scaledKLmodes,PCSet_1,order,pcType,dis0,vel0,dTym,inpParams,dis_1)
+    {
     for (int i=0;i<dim;i++){
         Array2D<double> f_1(nStep+1,PCTerms_1,0.e0);
         for (int it=0;it<nStep+1;it++)
@@ -54,16 +61,19 @@ void AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string
         // link the solution to the global solution
         dis_1(i) = tempdis;
     }
-    cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
+    }
+    //cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
+    tt.tock("Took");
 
     // Second order term
     printf("Second-order terms...");
     Array2D<Array2D<double> > dis_2(dim,dim); 
     PCSet PCSet_2("ISP",order,2,pcType,0.0,1.0); 
     const int PCTerms_2 = PCSet_2.GetNumberPCTerms();
-    start = clock();
-    #pragma omp parallel for default(none) shared(fbar,dim,nStep,scaledKLmodes,PCSet_2,order,pcType,dis0,vel0,dTym,inpParams,dis_2)
-    for (int i=0;i<dim;i++){
+    //start = clock();
+    tt.tick();
+    #pragma omp parallel  default(none) shared(fbar,dim,nStep,scaledKLmodes,PCSet_2,order,pcType,dis0,vel0,dTym,inpParams,dis_2)
+    {for (int i=0;i<dim;i++){
         for (int j=i+1;j<dim;j++){
             Array2D<double> f_2(nStep+1,PCTerms_2,0.e0);
             for (int it=0;it<nStep+1;it++)
@@ -76,16 +86,19 @@ void AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string
             dis_2(i,j) = GS(PCSet_2, order, 2, PCTerms_2, pcType, nStep, dis0, vel0, dTym, inpParams, f_2);
         }
     }
-    cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
-    
+    }
+    //cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
+    tt.tock("Took");   
+ 
     // Third order term
     printf("Third-order terms...");
     Array3D<Array2D<double> > dis_3(dim,dim,dim); 
     PCSet PCSet_3("ISP",order,3,pcType,0.0,1.0); 
     const int PCTerms_3 = PCSet_3.GetNumberPCTerms();
-    start = clock();
-    #pragma omp parallel for default(none) shared(fbar,dim,nStep,scaledKLmodes,PCSet_3,order,pcType,dis0,vel0,dTym,inpParams,dis_3)
-    for (int i=0;i<dim;i++){
+    //start = clock();
+    tt.tick();
+    #pragma omp parallel default(none) shared(fbar,dim,nStep,scaledKLmodes,PCSet_3,order,pcType,dis0,vel0,dTym,inpParams,dis_3)
+    {for (int i=0;i<dim;i++){
         for (int j=i+1;j<dim;j++){
             for (int k=j+1;k<dim;k++){
                 Array2D<double> f_3(nStep+1,PCTerms_3,0.e0);
@@ -102,12 +115,16 @@ void AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string
             }
         }
     }
-    cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
+    }
+    //cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
+    tt.tock("Took");
     
     printf("\nAssemble the solutions...\n");
-    start = clock(); 
+    //start = clock(); 
+    tt.tick();
     PostProcess(AAPG_ord, dis_0, dis_1, dis_2, dis_3, myPCSet, fbar, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, pcType, inpParams, scaledKLmodes, factor_OD);
-    cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
+    //cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
+    tt.tock("Took");
     return;
 }
 

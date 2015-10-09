@@ -56,7 +56,7 @@ void WriteToFile(Array1D<double>& data, char* filename)
  return; 
 }
 
-void WriteModesToFilePtr(const double tym, const double* u, const double* v, const double* w, const int n, FILE* f_dump)
+void WriteModesToFilePtr(const double tym, const double* u, const int n, FILE* f_dump)
 {
   // Write time
   fprintf(f_dump, "%lg ", tym);
@@ -66,28 +66,18 @@ void WriteModesToFilePtr(const double tym, const double* u, const double* v, con
     fprintf(f_dump, "%lg ", u[ip]);
   }
 
-  for (int ip=0; ip < n; ip++){
-    fprintf(f_dump, "%lg ", v[ip]);
-  }
-
-  for (int ip=0; ip < n; ip++){
-    fprintf(f_dump, "%lg ", w[ip]);
-  }
   fprintf(f_dump, "\n");
   
   return;
 }
 
-void WriteMeanStdDevToFilePtr(const double tym, const double u0, const double v0, const double w0, 
-                                                const double u_std, const double v_std, const double w_std, FILE* f_dump)
+void WriteMeanStdDevToFilePtr(const double tym, const double u0, const double u_std,  FILE* f_dump)
 {
   // Write time
   fprintf(f_dump, "%lg ", tym);
 
   // Write mean and std. dev.
   fprintf(f_dump, "%lg %lg ", u0, u_std);
-  fprintf(f_dump, "%lg %lg ", v0, v_std);
-  fprintf(f_dump, "%lg %lg ", w0, w_std);
 
   // New line
   fprintf(f_dump, "\n");
@@ -95,14 +85,11 @@ void WriteMeanStdDevToFilePtr(const double tym, const double u0, const double v0
   return;
 }
 
-void WriteMeanStdDevToStdOut(const int step, const double tym, const double u0, const double v0, const double w0, 
-                                                       const double u_std, const double v_std, const double w_std)
+void WriteMeanStdDevToStdOut(const int step, const double tym, const double u0, const double u_std)
 {
-  // write time, u, v, w (mean and standard deviation) to screen 
+  // write time, u (mean and standard deviation) to screen 
   cout << "Time Step: " << step << ", time: " << tym;
   cout << ", u: " << u0 << ", u_StDev: " << u_std;
-  cout << ", v: " << v0 << ", v_StDev: " << v_std;
-  cout << ", w: " << w0 << ", w_StDev: " << w_std;
   cout << endl;
 
   return;

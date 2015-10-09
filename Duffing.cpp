@@ -13,7 +13,7 @@ July 25, 2015
 #include "arraytools.h"
 #include "getopt.h"
 
-#include "Utils.h"
+#include "UtilsDuffing.h"
 #include "Duffing.h"
 #include "KL.h"
 #include "MCS.h"

@@ -1,15 +1,15 @@
 SHELL = /bin/sh
 TOPDIR=../..
 # Many macros are defined in the below included site-specific configuration file
-include $(TOPDIR)/config/config.site
+include $(TOPDIR)/config/config3.site
 
 TARGET = Duffing.x
 
-SRCS = Duffing.cpp KL.cpp MCS.cpp GhanemSpanos.cpp AAPG.cpp Utils.cpp ticktock.cpp 
+SRCS = ticktock.cpp KL.cpp MCS.cpp GhanemSpanos.cpp AAPG.cpp Duffing.cpp UtilsDuffing.cpp 
 
 OBJ = $(SRCS:.cpp=.o)
 
-INCS = Utils.h 
+INCS =  UtilsDuffing.h 
 
 LIBINCDIR = $(TOPDIR)/src_cpp/include
 LIBBINDIR = $(TOPDIR)/src_cpp/lib
@@ -24,16 +24,16 @@ LDEP = $(LIBBINDIR)/libUQTk.a $(LIBBINDIR)/libquad.a $(LIBBINDIR)/liblbfgs.a $(L
 
 DEFS = -D__$(FTNNAME)
 
+.cpp.o:
+	$(CXX) $(CXXFLAGS) $(DEFS) $(INCDIRS) -c $*.cpp
+
 all: $(TARGET)
 
 $(TARGET): $(OBJ) $(INCS) $(LDEP)
 	$(CXX) $(CXXFLAGS) $(DEFS) $(INCDIRS) -o $(TARGET) $(OBJ) $(LIBS)
 
-.cpp.o:
-	$(CXX) $(CXXFLAGS) $(DEFS) $(INCDIRS) -c $*.cpp
-
 clean:
-	rm -f $(OBJ) $(TARGET)
+	rm -f $(OBJ) $(TARGET)*~
 	rm -f *.dat
 
 
