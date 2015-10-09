@@ -10,7 +10,7 @@
 #include <omp.h>
 #include "ticktock.h"
 
-void MCS(int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Array2D<double>& scaledKLmodes, Array1D<double>& inpParams, Array2D<double>& samPts, Array2D<double>& dis_MC){
+double MCS(int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Array2D<double>& scaledKLmodes, Array1D<double>& inpParams, Array2D<double>& samPts, Array2D<double>& dis_MC){
     // Time marching steps
     TickTock tt;
     tt.tick();
@@ -59,7 +59,8 @@ void MCS(int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Array2
     cout << "Number of threads in OMP:" << nthreads << endl;
         
     tt.tock("Took");
-    return;
+    double t = tt.silent_tock();
+    return (t);
 }
    
     void forward_duffing_dt(Array1D<double>& inpParams, Array1D<double>& force, double dTym, Array1D<double>& x){

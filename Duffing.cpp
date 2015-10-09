@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
     // Write solutions at initial step
     WriteMeanStdDevToFilePtr(0, 0, 0, f_dump);         
     cout << "\nMCS...\n" << endl;  
-    MCS(nspl, dim, nStep, nkl, dTym, fbar, scaledKLmodes, inpParams, samPts, dis_MC);
+    double t_MCS = MCS(nspl, dim, nStep, nkl, dTym, fbar, scaledKLmodes, inpParams, samPts, dis_MC);
     // post-process the solution
     for (int ix=0;ix<nStep;ix++){
         Array1D<double> tempdis(nspl,0.e0);
