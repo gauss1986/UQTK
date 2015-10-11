@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
     
     // output the timing
     ostringstream s;
-    s << "time" <<".dat";
+    s << "time" <<dim<<".dat";
     string Time(s.str());
     FILE *time_dump;
     if(!(time_dump=fopen(Time.c_str(),"w"))){

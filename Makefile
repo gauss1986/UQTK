@@ -11,8 +11,8 @@ OBJ = $(SRCS:.cpp=.o)
 
 INCS =  UtilsDuffing.h 
 
-LIBINCDIR = $(TOPDIR)/src_cpp/include
-LIBBINDIR = $(TOPDIR)/src_cpp/lib
+LIBINCDIR = $(TOPDIR)/src_cpp_gnu/include
+LIBBINDIR = $(TOPDIR)/src_cpp_gnu/lib
 INCDIRS   = -I. -I$(LIBINCDIR)
 
 LIBS = -L$(LIBBINDIR) -lUQTk -lquad -luqtkmcmc -luqtktools -llbfgs -lcvode-2.6.0 -ldsfmt \

@@ -1,0 +1,69 @@
+ - Number of KL modes:              40
+ - Monte Carlo sample size:         100000
+ - Will generate covariance of type Exp, with correlation length 1 and standard deviation 0.5
+ - Time marching step:              0.01
+ - Process end time:                10
+ - Dynamical orthogonal AAPG factor:1
+ - Nonlinearity parameter:          5
+ - Order of GS:                     2
+ - Order of GS in AAPG subproblems: 2
+ - Order of AAPG:                   3
+
+MCS...
+
+Number of threads in OMP:128
+Took	8.287 sec
+Time Step: 100, time: 1, u: 0.415, u_StDev: 0.102
+Time Step: 200, time: 2, u: 0.6407, u_StDev: 0.06784
+Time Step: 300, time: 3, u: 0.1721, u_StDev: 0.1526
+Time Step: 400, time: 4, u: 0.3289, u_StDev: 0.2045
+Time Step: 500, time: 5, u: 0.6037, u_StDev: 0.1278
+Time Step: 600, time: 6, u: 0.3211, u_StDev: 0.1686
+Time Step: 700, time: 7, u: 0.3204, u_StDev: 0.2093
+Time Step: 800, time: 8, u: 0.5295, u_StDev: 0.1611
+Time Step: 900, time: 9, u: 0.4086, u_StDev: 0.1747
+Time Step: 1000, time: 10, u: 0.345, u_StDev: 0.1892
+
+Ghanem-Spanos method...
+Used level 1 sparse quadrature points for initialization.
+
+Order 1
+The number of PC terms in an expansion is 41
+Cost time: 0.18
+Time Step: 0, time: 0, u: 0, u_StDev: 0
+Time Step: 100, time: 1, u: 0.4217, u_StDev: 0.1036
+Time Step: 200, time: 2, u: 0.6365, u_StDev: 0.06284
+Time Step: 300, time: 3, u: 0.1706, u_StDev: 0.1525
+Time Step: 400, time: 4, u: 0.3279, u_StDev: 0.2083
+Time Step: 500, time: 5, u: 0.598, u_StDev: 0.1144
+Time Step: 600, time: 6, u: 0.324, u_StDev: 0.1666
+Time Step: 700, time: 7, u: 0.3168, u_StDev: 0.2113
+Time Step: 800, time: 8, u: 0.5209, u_StDev: 0.1391
+Time Step: 900, time: 9, u: 0.4156, u_StDev: 0.18
+Time Step: 1000, time: 10, u: 0.3406, u_StDev: 0.1888
+Used level 2 sparse quadrature points for initialization.
+
+Order 2
+The number of PC terms in an expansion is 861
+Cost time: 9.9
+Time Step: 0, time: 0, u: 0, u_StDev: 0
+Time Step: 100, time: 1, u: 0.4217, u_StDev: 0.1034
+Time Step: 200, time: 2, u: 0.6361, u_StDev: 0.06737
+Time Step: 300, time: 3, u: 0.1714, u_StDev: 0.1531
+Time Step: 400, time: 4, u: 0.3341, u_StDev: 0.206
+Time Step: 500, time: 5, u: 0.6013, u_StDev: 0.1281
+Time Step: 600, time: 6, u: 0.3186, u_StDev: 0.1708
+Time Step: 700, time: 7, u: 0.3236, u_StDev: 0.2087
+Time Step: 800, time: 8, u: 0.5304, u_StDev: 0.1579
+Time Step: 900, time: 9, u: 0.4053, u_StDev: 0.1788
+Time Step: 1000, time: 10, u: 0.3461, u_StDev: 0.1876
+
+AAPG...
+Used level 2 sparse quadrature points for initialization.
+Zeroth-order term...
+Took	0.004936 sec
+First-order terms...
+Took	2.733 sec
+Second-order terms...
+Took	94.41 sec
+Third-order terms...
