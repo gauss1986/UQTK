@@ -1,7 +1,7 @@
 SHELL = /bin/sh
 TOPDIR=../..
 # Many macros are defined in the below included site-specific configuration file
-include $(TOPDIR)/config/config2.site
+include $(TOPDIR)/config/config1.site
 
 TARGET = Duffing.x
 

@@ -49,6 +49,7 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     tt.tick();
     #pragma omp parallel default(none) shared(fbar,dim,nStep,scaledKLmodes,PCSet_1,order,pcType,dis0,vel0,dTym,inpParams,dis_1)
     {
+    #pragma omp for
     for (int i=0;i<dim;i++){
         Array2D<double> f_1(nStep+1,PCTerms_1,0.e0);
         for (int it=0;it<nStep+1;it++)
@@ -76,7 +77,9 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     //start = clock();
     tt.tick();
     #pragma omp parallel  default(none) shared(fbar,dim,nStep,scaledKLmodes,PCSet_2,order,pcType,dis0,vel0,dTym,inpParams,dis_2)
-    {for (int i=0;i<dim;i++){
+    {
+    #pragma omp for collapse(2) 
+    for (int i=0;i<dim;i++){
         for (int j=i+1;j<dim;j++){
             Array2D<double> f_2(nStep+1,PCTerms_2,0.e0);
             for (int it=0;it<nStep+1;it++)
@@ -102,7 +105,9 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     //start = clock();
     tt.tick();
     #pragma omp parallel default(none) shared(fbar,dim,nStep,scaledKLmodes,PCSet_3,order,pcType,dis0,vel0,dTym,inpParams,dis_3)
-    {for (int i=0;i<dim;i++){
+    {
+    #pragma omp for
+    for (int i=0;i<dim;i++){
         for (int j=i+1;j<dim;j++){
             for (int k=j+1;k<dim;k++){
                 Array2D<double> f_3(nStep+1,PCTerms_3,0.e0);
