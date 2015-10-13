@@ -74,23 +74,33 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     Array2D<Array2D<double> > dis_2(dim,dim); 
     PCSet PCSet_2("ISP",order,2,pcType,0.0,1.0); 
     const int PCTerms_2 = PCSet_2.GetNumberPCTerms();
-    //start = clock();
-    tt.tick();
-    #pragma omp parallel  default(none) shared(fbar,dim,nStep,scaledKLmodes,PCSet_2,order,pcType,dis0,vel0,dTym,inpParams,dis_2)
-    {
-    #pragma omp for collapse(2) 
+    Array2D<double> f_2(nStep+1,PCTerms_2,0.e0);
+    for (int it=0;it<nStep+1;it++)
+        f_2(it,0) = fbar;
+    Array1D<Array2D<double> > force_2(dim*(dim-1)/2);
+    int k = 0;
+    Array1D<int> indi(dim*(dim-1)/2,0);
+    Array1D<int> indj(dim*(dim-1)/2,0);
     for (int i=0;i<dim;i++){
         for (int j=i+1;j<dim;j++){
-            Array2D<double> f_2(nStep+1,PCTerms_2,0.e0);
-            for (int it=0;it<nStep+1;it++)
-                f_2(it,0) = fbar;
             Array1D<double> tempf(nStep+1,0.e0);
             getCol(scaledKLmodes,i,tempf);
             f_2.replaceCol(tempf,1);
             getCol(scaledKLmodes,j,tempf);
             f_2.replaceCol(tempf,2);
-            dis_2(i,j) = GS(PCSet_2, order, 2, PCTerms_2, pcType, nStep, dis0, vel0, dTym, inpParams, f_2);
-        }
+	    force_2(k)=f_2;
+	    indi(k) = i;
+    	    indj(k) = j;
+	    k++;
+	}
+    }
+    //start = clock();
+    tt.tick();
+    #pragma omp parallel  default(none) shared(k,dis_2,indi,indj,PCSet_2,order,PCTerms_2,pcType,nStep,dis0,vel0,dTym,inpParams,force_2)
+    {
+    #pragma omp for
+    for (int i=0;i<k;i++){ 
+        dis_2(indi(i),indj(i)) = GS(PCSet_2, order, 2, PCTerms_2, pcType, nStep, dis0, vel0, dTym, inpParams, force_2(i));
     }
     }
     //cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
