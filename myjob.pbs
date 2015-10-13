@@ -1,0 +1,17 @@
+#!/bin/bash
+#PBS -l nodes=1:ppn=8,walltime=48:00:00
+#PBS -N Duffing_intel
+cd $SCRATCH/UQTK/examples_cpp/Duffing/
+module load intel openmpi
+export OMP_NUM_THREADS=16
+./Duffing.x -n 10
+./Duffing.x -n 20
+./Duffing.x -n 30
+./Duffing.x -n 40
+./Duffing.x -n 50
+./Duffing.x -n 60
+./Duffing.x -n 70
+./Duffing.x -n 80
+./Duffing.x -n 90
+./Duffing.x -n 100
+

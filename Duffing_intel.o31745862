@@ -1,0 +1,24 @@
+----------------------------------------
+Begin PBS Prologue Mon Oct 12 17:31:29 EDT 2015 1444685489
+Job ID:		31745862.gpc-sched-ib0
+Username:	lgao
+Group:		pbn
+Nodes:		gpc-f110n018-ib0
+End PBS Prologue Mon Oct 12 17:31:30 EDT 2015 1444685490
+----------------------------------------
+----------------------------------------
+Begin PBS Epilogue Mon Oct 12 17:31:36 EDT 2015 1444685496
+Job ID:		31745862.gpc-sched-ib0
+Username:	lgao
+Group:		pbn
+Job Name:	Duffing_intel
+Session:	14155
+Limits:		neednodes=1:ppn=8,nodes=1:ppn=8,walltime=24:00:00
+Resources:	cput=00:00:00,mem=0kb,vmem=0kb,walltime=00:00:02
+Queue:		batch_ib
+Account:		
+Nodes:	gpc-f110n018-ib0
+Killing leftovers...
+
+End PBS Epilogue Mon Oct 12 17:31:37 EDT 2015 1444685497
+----------------------------------------
