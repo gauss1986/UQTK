@@ -112,17 +112,17 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     Array3D<Array2D<double> > dis_3(dim,dim,dim); 
     PCSet PCSet_3("ISP",order,3,pcType,0.0,1.0); 
     const int PCTerms_3 = PCSet_3.GetNumberPCTerms();
-    //start = clock();
-    tt.tick();
-    #pragma omp parallel default(none) shared(fbar,dim,nStep,scaledKLmodes,PCSet_3,order,pcType,dis0,vel0,dTym,inpParams,dis_3)
-    {
-    #pragma omp for
+    Array2D<double> f_3(nStep+1,PCTerms_3,0.e0);
+    Array1D<Array2D<double> > force_3(dim*(dim-1)*(dim-2)/6);
+    for (int ix=0;ix<nStep+1;ix++)
+        f_3(ix,0) = fbar;
+    int l=0;
+    indi.Resize(dim*(dim-1)*(dim-2)/6,0);
+    indj.Resize(dim*(dim-1)*(dim-2)/6,0);
+    Array1D<int> indk(dim*(dim-1)*(dim-2)/6,0);
     for (int i=0;i<dim;i++){
         for (int j=i+1;j<dim;j++){
             for (int k=j+1;k<dim;k++){
-                Array2D<double> f_3(nStep+1,PCTerms_3,0.e0);
-                for (int ix=0;ix<nStep+1;ix++)
-                    f_3(ix,0) = fbar;
                 Array1D<double> tempf(nStep+1,0.e0);
                 getCol(scaledKLmodes,i,tempf);
                 f_3.replaceCol(tempf,1);
@@ -130,9 +130,20 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
                 f_3.replaceCol(tempf,2);
                 getCol(scaledKLmodes,k,tempf);
                 f_3.replaceCol(tempf,3);
-                dis_3(i,j,k) = GS(PCSet_3, order, 3, PCTerms_3, pcType, nStep, dis0, vel0, dTym, inpParams, f_3);
-            }
-        }
+		force_3(l)=f_3;
+    		indi(l)=i;
+		indj(l)=j;
+		indk(l)=k;
+		l++;
+	}
+    }
+    //start = clock();
+    tt.tick();
+    #pragma omp parallel default(none) shared(l,indi,indj,indk,PCSet_3,order,PCTerms_3,pcType,nStep,dis0,vel0,dTym,inpParams,dis_3,force_3)
+    {
+    #pragma omp for
+    for (int i=0;i<l;i++)        
+	dis_3(indi(i),indj(i),indk(i)) = GS(PCSet_3, order, 3, PCTerms_3, pcType, nStep, dis0, vel0, dTym, inpParams, force_3(i));
     }
     }
     //cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
