@@ -73,7 +73,7 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     printf("Second-order terms...");
     Array2D<Array2D<double> > dis_2(dim,dim); 
     PCSet PCSet_2("ISP",order,2,pcType,0.0,1.0); 
-    const int PCTerms_2 = PCSet_2.GetNumberPCTerms();
+    int PCTerms_2 = PCSet_2.GetNumberPCTerms();
     Array2D<double> f_2(nStep+1,PCTerms_2,0.e0);
     for (int it=0;it<nStep+1;it++)
         f_2(it,0) = fbar;
@@ -111,7 +111,7 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     printf("Third-order terms...");
     Array3D<Array2D<double> > dis_3(dim,dim,dim); 
     PCSet PCSet_3("ISP",order,3,pcType,0.0,1.0); 
-    const int PCTerms_3 = PCSet_3.GetNumberPCTerms();
+    int PCTerms_3 = PCSet_3.GetNumberPCTerms();
     Array2D<double> f_3(nStep+1,PCTerms_3,0.e0);
     Array1D<Array2D<double> > force_3(dim*(dim-1)*(dim-2)/6);
     for (int ix=0;ix<nStep+1;ix++)

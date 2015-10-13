@@ -1,7 +1,7 @@
 SHELL = /bin/sh
 TOPDIR=../..
 # Many macros are defined in the below included site-specific configuration file
-include $(TOPDIR)/config/config1.site
+include $(TOPDIR)/config/config3.site
 
 TARGET = Duffing.x
 
@@ -11,8 +11,8 @@ OBJ = $(SRCS:.cpp=.o)
 
 INCS =  UtilsDuffing.h 
 
-LIBINCDIR = $(TOPDIR)/src_cpp_intel/include
-LIBBINDIR = $(TOPDIR)/src_cpp_intel/lib
+LIBINCDIR = $(TOPDIR)/src_cpp/include/
+LIBBINDIR = $(TOPDIR)/src_cpp/lib/
 INCDIRS   = -I. -I$(LIBINCDIR)
 
 LIBS = -L$(LIBBINDIR) -lUQTk -lquad -luqtkmcmc -luqtktools -llbfgs -lcvode-2.6.0 -ldsfmt \
