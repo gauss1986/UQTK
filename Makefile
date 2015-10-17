@@ -25,12 +25,12 @@ LDEP = $(LIBBINDIR)/libUQTk.a $(LIBBINDIR)/libquad.a $(LIBBINDIR)/liblbfgs.a $(L
 DEFS = -D__$(FTNNAME)
 
 .cpp.o:
-	$(CXX) $(CXXFLAGS) $(DEFS) $(INCDIRS) -c $*.cpp
+	$(CXX) $(CXXFLAGS) $(DEFS) $(INCDIRS) -c $*.cpp -pg
 
 all: $(TARGET)
 
 $(TARGET): $(OBJ) $(INCS) $(LDEP)
-	$(CXX) $(CXXFLAGS) $(DEFS) $(INCDIRS) -o $(TARGET) $(OBJ) $(LIBS)
+	$(CXX) $(CXXFLAGS) $(DEFS) $(INCDIRS) -o $(TARGET) $(OBJ) $(LIBS) -pg
 
 clean:
 	rm -f $(OBJ) $(TARGET)*~
