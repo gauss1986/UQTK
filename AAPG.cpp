@@ -108,10 +108,12 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     t(2)=tt.silent_tock();
  
     // Third order term
-    printf("Third-order terms...");
     Array3D<Array2D<double> > dis_3(dim,dim,dim); 
+    int PCTerms_3 = 0;
+    if (AAPG_ord >= 3){
+    printf("Third-order terms...");
     PCSet PCSet_3("ISP",order,3,pcType,0.0,1.0); 
-    int PCTerms_3 = PCSet_3.GetNumberPCTerms();
+    PCTerms_3 = PCSet_3.GetNumberPCTerms();
     Array2D<double> f_3(nStep+1,PCTerms_3,0.e0);
     Array1D<Array2D<double> > force_3(dim*(dim-1)*(dim-2)/6);
     for (int ix=0;ix<nStep+1;ix++)
@@ -149,6 +151,7 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     //cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
     tt.tock("Took");
     t(3)=tt.silent_tock();
+    }
     
     printf("\nAssemble the solutions...\n");
     //start = clock(); 
@@ -162,6 +165,8 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
 }
 
 void PostProcess(int AAPG_ord, Array1D<double>& dis_0, Array1D<Array2D<double> >& dis_1, Array2D<Array2D<double> >& dis_2, Array3D<Array2D<double> >& dis_3, PCSet& myPCSet, double fbar, int dim, int nStep, int PCTerms_1, int PCTerms_2, int PCTerms_3, int order, double dTym, string pcType, Array1D<double>& inpParams, Array2D<double>& scaledKLmodes, double factor_OD){
+    TickTock tt;
+    tt.tick();
     // Post-process the AAPG solutions
     // initialization
     int nAAPGTerms = 1+dim+dim*(dim-1)/2+dim*(dim-1)*(dim-2)/6;
@@ -177,11 +182,15 @@ void PostProcess(int AAPG_ord, Array1D<double>& dis_0, Array1D<Array2D<double> >
     Array1D<double> dis_1_mean = dis_0;
     Array1D<double> dis_2_mean = dis_0;
     Array1D<double> dis_3_mean = dis_0;
-    
+   
+    tt.tock("Initialization Took");
+ 
     // assemble and save the mean values
     printf("Assembling the mean...\n");
+    tt.tick();
     assemblemean(dis_0, dis_1, dis_2, dis_3, dim, nStep, AAPG_ord, dis_1_mean, dis_2_mean, dis_3_mean, coeffAAPG1, coeffAAPG2, coeffAAPG3);
-    
+    tt.tock("Assemble mean took");   
+ 
     // add the mean to the assembled solution
     dis_1_assembled.replaceCol(dis_1_mean,0);
     dis_2_assembled.replaceCol(dis_2_mean,0); 
@@ -189,14 +198,18 @@ void PostProcess(int AAPG_ord, Array1D<double>& dis_0, Array1D<Array2D<double> >
 
     // assemble the rest PC terms
     printf("Assembling the rest...\n");
+    tt.tick();
     assemblerest(dis_1, dis_2, dis_3, dis_1_assembled, dis_2_assembled, dis_3_assembled, PCTerms_1, PCTerms_2, PCTerms_3, dim, order, nStep, AAPG_ord, coeffAAPG1, coeffAAPG2, coeffAAPG3);
-    
+    tt.tock("Assemble rest took");    
+
     // compute and print the std values
     Array1D<double> std1(nStep+1,0.e0);
     Array1D<double> std2(nStep+1,0.e0);
     Array1D<double> std3(nStep+1,0.e0);
     printf("Computing the std...\n");
+    tt.tick();
     computeStd(nStep, nPCTerms, dis_1_assembled,dis_2_assembled, dis_3_assembled, myPCSet, std1, std2, std3);
+    tt.tock("Compute std took");
     write_datafile_1d(dis_1_mean,"dis_1_mean.dat");
     write_datafile_1d(dis_2_mean,"dis_2_mean.dat");
     write_datafile_1d(dis_3_mean,"dis_3_mean.dat");
@@ -392,8 +405,8 @@ void assemblemean(Array1D<double>& dis_0, Array1D<Array2D<double> >& dis_1, Arra
         }
     }
     // third-order terms
-    if (AAPG_ord >= 3){
     dis_3_mean = dis_2_mean;
+    if (AAPG_ord >= 3){
         for (int ii=0;ii<dim-1;ii++){
             for (int jj=ii+1;jj<dim;jj++){
                 for (int kk=jj+1;kk<dim;kk++){
@@ -512,9 +525,9 @@ void assemblerest(Array1D<Array2D<double> >& dis_1, Array2D<Array2D<double> >& d
     }    
     
     // Assemble third order AAPG solutions
-    printf("Assembling the third order terms...\n");
     dis_3_assembled = dis_2_assembled;
     if (AAPG_ord >= 3){
+        printf("Assembling the third order terms...\n");
         for (int ii=0;ii<dim-1;ii++){
             for (int jj=ii+1;jj<dim;jj++){
                 for (int kk=jj+1;kk<dim;kk++){

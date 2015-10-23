@@ -21,12 +21,12 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define DIM 10
+#define DIM 30
 #define CLEN 1.0
-#define SIG 0.5
+#define SIG 1.0
 #define ORDER_GS 2
 #define ORDER_AAPG_GS 2
-#define ORDER_AAPG 3
+#define ORDER_AAPG 2
 #define TFINAL 10.0
 #define DTYM 0.01
 #define NSPL 100000
@@ -213,8 +213,11 @@ int main(int argc, char *argv[])
     double vel0 = VEL0;
     Array1D<double> t_GS(ord_GS,0.e0);
     for(int ord=1;ord<ord_GS+1;ord++){
-        PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
-        cout << "Order "<< ord << endl;
+        TickTock tt;
+	tt.tick();
+	PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
+        tt.tock("Took");
+  	cout << "Order "<< ord << endl;
         // The number of PC terms
         const int nPCTerms = myPCSet.GetNumberPCTerms();
         cout << "The number of PC terms in an expansion is " << nPCTerms << endl;
@@ -235,7 +238,6 @@ int main(int argc, char *argv[])
         Array2D<double> dis_GS(nStep+1,nPCTerms);
 
         clock_t start = clock();
-    	TickTock tt;
     	tt.tick();
         dis_GS = GS(myPCSet, ord, dim, nPCTerms, pcType, nStep, dis0, vel0, dTym, inpParams, f_GS);
         t_GS(ord-1) = tt.silent_tock();
@@ -278,7 +280,10 @@ int main(int argc, char *argv[])
 
     // AAPG
     printf("\nAAPG...\n");
+    TickTock tt;
+    tt.tick();
     PCSet myPCSet("ISP",ord_AAPG_GS,dim,pcType,0.0,1.0,false); 
+    tt.tock("Took");
     Array1D<double> t_AAPG = AAPG(inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, dis0, vel0, myPCSet, factor_OD, ord_AAPG);
     cout << "t_AAPG=" << t_AAPG(0)<< ","<<t_AAPG(1)<<","<<t_AAPG(2)<<","<<t_AAPG(3)<<endl;    
     cout << "Assemble AAPG cost time " << t_AAPG(4)<<endl;
