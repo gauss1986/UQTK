@@ -27,7 +27,7 @@ July 25, 2015
 #define ORDER_GS 2
 #define ORDER_AAPG_GS 2
 #define ORDER_AAPG 2
-#define TFINAL 10.0
+#define TFINAL 5.0
 #define DTYM 0.01
 #define NSPL 100000
 #define ZETA 0.1
@@ -104,7 +104,7 @@ int main(int argc, char *argv[])
     /* Read the user input */
     int c;
 
-    while ((c=getopt(argc,(char **)argv,"hc:d:n:p:s:l:t:f:e:G:A:P"))!=-1){
+    while ((c=getopt(argc,(char **)argv,"h:c:d:n:p:s:l:t:f:e:G:A:P:"))!=-1){
         switch (c) {
         case 'h':
             usage();
@@ -217,7 +217,7 @@ int main(int argc, char *argv[])
 	tt.tick();
 	PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
         tt.tock("Took");
-  	cout << "Order "<< ord << endl;
+	cout << "Order "<< ord << endl;
         // The number of PC terms
         const int nPCTerms = myPCSet.GetNumberPCTerms();
         cout << "The number of PC terms in an expansion is " << nPCTerms << endl;
@@ -282,7 +282,9 @@ int main(int argc, char *argv[])
     printf("\nAAPG...\n");
     TickTock tt;
     tt.tick();
+    //if (ord_AAPG_GS > ord_GS)
     PCSet myPCSet("ISP",ord_AAPG_GS,dim,pcType,0.0,1.0,false); 
+
     tt.tock("Took");
     Array1D<double> t_AAPG = AAPG(inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, dis0, vel0, myPCSet, factor_OD, ord_AAPG);
     cout << "t_AAPG=" << t_AAPG(0)<< ","<<t_AAPG(1)<<","<<t_AAPG(2)<<","<<t_AAPG(3)<<endl;    

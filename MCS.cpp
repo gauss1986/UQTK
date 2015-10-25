@@ -53,10 +53,10 @@ double MCS(int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Arra
         for (int ix=0;ix<nStep+1;ix++)
             dis_MC(ix,iq) = dis(ix);
     }
-    //#pragma omp single
-    //nthreads = omp_get_num_threads();
+    #pragma omp single
+    nthreads = omp_get_num_threads();
     }
-    //cout << "Number of threads in OMP:" << nthreads << endl;
+    cout << "Number of threads in OMP:" << nthreads << endl;
         
     tt.tock("Took");
     double t = tt.silent_tock();
