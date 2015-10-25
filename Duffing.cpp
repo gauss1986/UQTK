@@ -7,6 +7,8 @@ July 25, 2015
 
 #include <math.h>
 #include <sstream>
+#include <fstream>
+#include <iostream>
 #include "uqtktools.h"
 #include "uqtkmcmc.h"
 #include "PCSet.h"
@@ -215,10 +217,22 @@ int main(int argc, char *argv[])
     for(int ord=1;ord<ord_GS+1;ord++){
         TickTock tt;
 	tt.tick();
-	PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
+	PCSet myPCSet("ISP",ord,dim,pcType,0.0,0.0); 
         tt.tock("Took");
 	cout << "Order "<< ord << endl;
-        // The number of PC terms
+	//cout << "Size of myPCSet" << sizeof(myPCSet) << endl;
+        stringstream ss;
+	ss << ord;
+	stringstream ss2;
+	ss2 << dim;
+	std::string name = "PC_"+ss2.str()+"_"+ss.str()+".ros";
+	//std::ofstream ofs(name.c_str(),ios::binary);
+	//ofs.write((char *)&myPCSet,sizeof(myPCSet));
+	// Read PC basis
+	ifstream ifs(name.c_str(),ios::binary);
+	ifs.read((char *)&myPCSet, sizeof(myPCSet));
+
+	// The number of PC terms
         const int nPCTerms = myPCSet.GetNumberPCTerms();
         cout << "The number of PC terms in an expansion is " << nPCTerms << endl;
         // Print the multiindices on screen
