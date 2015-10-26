@@ -224,17 +224,21 @@ void PostProcess(int AAPG_ord, Array1D<double>& dis_0, Array1D<Array2D<double> >
             WriteMeanStdDevToStdOut(ix,ix*dTym,dis_1_mean(ix),std1(ix));
         }
     }
-    printf("Second-order AAPG results:\n");
-    for (int ix=0;ix<nStep+1;ix++){
-        if (ix % ((int) nStep/10) == 0){
-            WriteMeanStdDevToStdOut(ix,ix*dTym,dis_2_mean(ix),std2(ix));
-        }
+    if(AAPG_ord >= 2){
+	printf("Second-order AAPG results:\n");
+    	for (int ix=0;ix<nStep+1;ix++){
+            if (ix % ((int) nStep/10) == 0){
+            	WriteMeanStdDevToStdOut(ix,ix*dTym,dis_2_mean(ix),std2(ix));
+            }
+    	}
     }
-    printf("Third-order AAPG results:\n");
-    for (int ix=0;ix<nStep+1;ix++){
-        if (ix % ((int) nStep/10) == 0){
-            WriteMeanStdDevToStdOut(ix,ix*dTym,dis_3_mean(ix),std3(ix));
-        }
+    if(AAPG_ord >= 3){
+        printf("Third-order AAPG results:\n");
+        for (int ix=0;ix<nStep+1;ix++){
+            if (ix % ((int) nStep/10) == 0){
+            	WriteMeanStdDevToStdOut(ix,ix*dTym,dis_3_mean(ix),std3(ix));
+        	}
+    	}
     }
     
     return;     

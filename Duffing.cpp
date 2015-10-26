@@ -24,16 +24,16 @@ July 25, 2015
 #include "ticktock.h"
 
 #define DIM 30
-#define CLEN 1.0
+#define CLEN 0.2
 #define SIG 1.0
 #define ORDER_GS 2
 #define ORDER_AAPG_GS 2
-#define ORDER_AAPG 2
-#define TFINAL 5.0
+#define ORDER_AAPG 3
+#define TFINAL 10.0
 #define DTYM 0.01
 #define NSPL 100000
 #define ZETA 0.1
-#define EPSILON 5.0
+#define EPSILON 1.0
 #define FBAR 1.0
 #define DIS0 0.0
 #define VEL0 0.0
@@ -217,7 +217,7 @@ int main(int argc, char *argv[])
     for(int ord=1;ord<ord_GS+1;ord++){
         TickTock tt;
 	tt.tick();
-	PCSet myPCSet("ISP",ord,dim,pcType,0.0,0.0); 
+	PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
         tt.tock("Took");
 	cout << "Order "<< ord << endl;
 	//cout << "Size of myPCSet" << sizeof(myPCSet) << endl;
@@ -226,11 +226,11 @@ int main(int argc, char *argv[])
 	stringstream ss2;
 	ss2 << dim;
 	std::string name = "PC_"+ss2.str()+"_"+ss.str()+".ros";
-	//std::ofstream ofs(name.c_str(),ios::binary);
-	//ofs.write((char *)&myPCSet,sizeof(myPCSet));
+	std::ofstream ofs(name.c_str(),ios::binary);
+	ofs.write((char *)&myPCSet,sizeof(myPCSet));
 	// Read PC basis
-	ifstream ifs(name.c_str(),ios::binary);
-	ifs.read((char *)&myPCSet, sizeof(myPCSet));
+	//ifstream ifs(name.c_str(),ios::binary);
+	//ifs.read((char *)&myPCSet, sizeof(myPCSet));
 
 	// The number of PC terms
         const int nPCTerms = myPCSet.GetNumberPCTerms();
