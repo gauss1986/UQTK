@@ -25,7 +25,7 @@ July 25, 2015
 
 #define DIM 30
 #define CLEN 0.2
-#define SIG 1.0
+#define SIG 2.0
 #define ORDER_GS 2
 #define ORDER_AAPG_GS 2
 #define ORDER_AAPG 3
@@ -34,7 +34,7 @@ July 25, 2015
 #define NSPL 100000
 #define ZETA 0.1
 #define EPSILON 1.0
-#define FBAR 1.0
+#define FBAR 2.0
 #define DIS0 0.0
 #define VEL0 0.0
 #define FACTOR_OD 1.0

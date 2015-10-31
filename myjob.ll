@@ -29,18 +29,4 @@
 
 module load gcc
 rm *.dat
-./Duffing.x -n 10 -e 0.1
-mv *.dat ./10_gnu/
-./Duffing.x -n 20 -e 0.1
-mv *.dat ./20_gnu/
-./Duffing.x -n 30 -A 2 -e 0.1
-mv *.dat ./30_gnu/
-./Duffing.x -n 40 -G 1 -A 2 -e 0.1
-mv *.dat ./40_gnu/
-./Duffing.x -n 50 -G 1 -A 2 -e 0.1
-mv *.dat ./50_gnu/
-./Duffing.x -n 60 -G 1 -A 2 -e 0.1
-mv *.dat ./60_gnu/
-./Duffing.x -n 70 -G 1 -A 2 -e 0.1
-mv *.dat ./70_gnu/
-
+./Duffing.x -s 0.8 -l 1 -n 30 -G 1 -A 2 -P 2
