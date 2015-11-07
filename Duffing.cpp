@@ -23,9 +23,9 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define DIM 30
-#define CLEN 0.2
-#define SIG 2.0
+#define DIM 10
+#define CLEN 1.0
+#define SIG 0.8
 #define ORDER_GS 2
 #define ORDER_AAPG_GS 2
 #define ORDER_AAPG 3
@@ -33,7 +33,7 @@ July 25, 2015
 #define DTYM 0.01
 #define NSPL 100000
 #define ZETA 0.1
-#define EPSILON 1.0
+#define EPSILON 2.0
 #define FBAR 2.0
 #define DIS0 0.0
 #define VEL0 0.0
@@ -94,10 +94,10 @@ int main(int argc, char *argv[])
     double epsilon = EPSILON;
     // GS order
     int ord_GS = ORDER_GS;
-    // GS order in AAPG subproblems
-    int ord_AAPG_GS = ORDER_AAPG_GS;
     // AAPG order
     int ord_AAPG = ORDER_AAPG;
+    // GS order in AAPG subproblems
+    int ord_AAPG_GS = ord_AAPG;
 
     // Time marching info
     double dTym = DTYM;
@@ -296,13 +296,28 @@ int main(int argc, char *argv[])
     printf("\nAAPG...\n");
     TickTock tt;
     tt.tick();
-    //if (ord_AAPG_GS > ord_GS)
     PCSet myPCSet("ISP",ord_AAPG_GS,dim,pcType,0.0,1.0,false); 
-
+    stringstream ss;
+    ss << ord_AAPG_GS;
+    stringstream ss2;
+    ss2 << dim;
+    std::string name = "PC_"+ss2.str()+"_"+ss.str()+"_no3.ros";
+    std::ofstream ofs(name.c_str(),ios::binary);
+    ofs.write((char *)&myPCSet,sizeof(myPCSet));
+	// Read PC basis
+	ifstream ifs(name.c_str(),ios::binary);
+	ifs.read((char *)&myPCSet, sizeof(myPCSet));
+    
     tt.tock("Took");
-    Array1D<double> t_AAPG = AAPG(inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, dis0, vel0, myPCSet, factor_OD, ord_AAPG);
-    cout << "t_AAPG=" << t_AAPG(0)<< ","<<t_AAPG(1)<<","<<t_AAPG(2)<<","<<t_AAPG(3)<<endl;    
-    cout << "Assemble AAPG cost time " << t_AAPG(4)<<endl;
+    Array1D<double> t_AAPG1 = AAPG(inpParams, fbar, dTym, 1, pcType, dim, nStep, scaledKLmodes, dis0, vel0, myPCSet, factor_OD, 1);
+    cout << "t_AAPG=" << t_AAPG1(0) << t_AAPG1(1) << endl;    
+    cout << "Assemble AAPG cost time " << t_AAPG1(4)<<endl;
+    Array1D<double> t_AAPG2 = AAPG(inpParams, fbar, dTym, 2, pcType, dim, nStep, scaledKLmodes, dis0, vel0, myPCSet, factor_OD, 2);
+    cout << "t_AAPG=" << t_AAPG2(0)<< ","<<t_AAPG2(1)<<","<<t_AAPG2(2)<<endl;    
+    cout << "Assemble AAPG cost time " << t_AAPG2(4)<<endl;
+    Array1D<double> t_AAPG3 = AAPG(inpParams, fbar, dTym, 3, pcType, dim, nStep, scaledKLmodes, dis0, vel0, myPCSet, factor_OD, 3);
+    cout << "t_AAPG=" << t_AAPG3(0)<< ","<<t_AAPG3(1)<<","<<t_AAPG3(2)<<","<<t_AAPG3(3)<<endl;    
+    cout << "Assemble AAPG cost time " << t_AAPG3(4)<<endl;
     
     // output the timing
     ostringstream s;
@@ -317,9 +332,13 @@ int main(int argc, char *argv[])
     t(0) = t_MCS;
     for (int i=0;i<ord_GS;i++)
 	t(i+1)=t_GS(i);
-    for (int i=0;i<ord_AAPG+2;i++)
-        t(i+1+ord_GS)=t_AAPG(i);
-    
+    //for (int i=0;i<ord_AAPG+2;i++)
+    //    t(i+1+ord_GS)=t_AAPG(i);
+    t(ord_GS+1)=t_AAPG1(0);
+    t(ord_GS+2)=t_AAPG1(1);
+    t(ord_GS+3)=t_AAPG2(2);
+    t(ord_GS+4)=t_AAPG3(3);
+
     WriteToFile(t, Time.c_str());
         
     if(fclose(time_dump)){

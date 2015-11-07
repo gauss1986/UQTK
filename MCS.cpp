@@ -16,7 +16,9 @@ double MCS(int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Arra
     tt.tick();
 
     int nthreads;
-    #pragma omp parallel default(none) shared(dis_MC,nStep,nspl,fbar,dim,samPts,nkl,scaledKLmodes,dTym,inpParams,nthreads) 
+    Array1D<double> max(nspl,0.e0);
+    Array1D<double> min(nspl,0.e0);
+    #pragma omp parallel default(none) shared(max,min,dis_MC,nStep,nspl,fbar,dim,samPts,nkl,scaledKLmodes,dTym,inpParams,nthreads) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
@@ -24,7 +26,9 @@ double MCS(int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Arra
         Array1D<double> temp(nStep+1,fbar);
         Array1D<double> sampt(dim,0.e0);
         getRow(samPts,iq,sampt);
-        for (int iy=0;iy<nkl;iy++){
+        max(iq) = maxVal(sampt);
+        min(iq) = minVal(sampt);
+	for (int iy=0;iy<nkl;iy++){
             Array1D<double> tempf(nStep+1,0.e0);
             getCol(scaledKLmodes,iy,tempf);
             prodVal(tempf,sampt(iy));
@@ -57,7 +61,11 @@ double MCS(int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Arra
     nthreads = omp_get_num_threads();
     }
     cout << "Number of threads in OMP:" << nthreads << endl;
-        
+
+    double maxsam = maxVal(max);
+    double minsam = minVal(min);
+    cout << "Min/max of the sample points are:" << minsam << "/" << maxsam << endl;    
+    
     tt.tock("Took");
     double t = tt.silent_tock();
     return (t);

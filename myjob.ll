@@ -29,4 +29,25 @@
 
 module load gcc
 rm *.dat
-./Duffing.x -s 0.8 -l 1 -n 30 -G 1 -A 2 -P 2
+./Duffing.x -s 0
+mv *.dat ./test_Oct31/n10/s00/
+./Duffing.x -s 0.1
+mv *.dat ./test_Oct31/n10/s01/
+./Duffing.x -s 0.2
+mv *.dat ./test_Oct31/n10/s02/
+./Duffing.x -s 0.3
+mv *.dat ./test_Oct31/n10/s03/
+./Duffing.x -s 0.4
+mv *.dat ./test_Oct31/n10/s04/
+./Duffing.x -s 0.5
+mv *.dat ./test_Oct31/n10/s05/
+./Duffing.x -s 0.6
+mv *.dat ./test_Oct31/n10/s06/
+./Duffing.x -s 0.7
+mv *.dat ./test_Oct31/n10/s07/
+./Duffing.x -s 0.8
+mv *.dat ./test_Oct31/n10/s08/
+./Duffing.x -s 0.9
+mv *.dat ./test_Oct31/n10/s09/
+./Duffing.x -s 1.0
+mv *.dat ./test_Oct31/n10/s10/

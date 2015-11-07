@@ -70,17 +70,19 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     t(1)=tt.silent_tock();
 
     // Second order term
-    printf("Second-order terms...");
     Array2D<Array2D<double> > dis_2(dim,dim); 
+    int PCTerms_2 = 0;
+    Array1D<int> indi(dim*(dim-1)/2,0);
+    Array1D<int> indj(dim*(dim-1)/2,0);
+    if (AAPG_ord >= 2){
+    printf("Second-order terms...");
     PCSet PCSet_2("ISP",order,2,pcType,0.0,1.0); 
-    int PCTerms_2 = PCSet_2.GetNumberPCTerms();
+    PCTerms_2 = PCSet_2.GetNumberPCTerms();
     Array2D<double> f_2(nStep+1,PCTerms_2,0.e0);
     for (int it=0;it<nStep+1;it++)
         f_2(it,0) = fbar;
     Array1D<Array2D<double> > force_2(dim*(dim-1)/2);
     int k = 0;
-    Array1D<int> indi(dim*(dim-1)/2,0);
-    Array1D<int> indj(dim*(dim-1)/2,0);
     for (int i=0;i<dim;i++){
         for (int j=i+1;j<dim;j++){
             Array1D<double> tempf(nStep+1,0.e0);
@@ -94,7 +96,6 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
 	    k++;
 	}
     }
-    //start = clock();
     tt.tick();
     #pragma omp parallel  default(none) shared(k,dis_2,indi,indj,PCSet_2,order,PCTerms_2,pcType,nStep,dis0,vel0,dTym,inpParams,force_2)
     {
@@ -103,9 +104,9 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
         dis_2(indi(i),indj(i)) = GS(PCSet_2, order, 2, PCTerms_2, pcType, nStep, dis0, vel0, dTym, inpParams, force_2(i));
     }
     }
-    //cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
     tt.tock("Took");   
     t(2)=tt.silent_tock();
+    }
  
     // Third order term
     Array3D<Array2D<double> > dis_3(dim,dim,dim); 
@@ -210,35 +211,37 @@ void PostProcess(int AAPG_ord, Array1D<double>& dis_0, Array1D<Array2D<double> >
     tt.tick();
     computeStd(nStep, nPCTerms, dis_1_assembled,dis_2_assembled, dis_3_assembled, myPCSet, std1, std2, std3);
     tt.tock("Compute std took");
-    write_datafile_1d(dis_1_mean,"dis_1_mean.dat");
-    write_datafile_1d(dis_2_mean,"dis_2_mean.dat");
-    write_datafile_1d(dis_3_mean,"dis_3_mean.dat");
-    write_datafile_1d(std1,"dis_1_std.dat");
-    write_datafile_1d(std2,"dis_2_std.dat");
-    write_datafile_1d(std3,"dis_3_std.dat");
     
     // print out mean/std valus at specific points for comparison
     printf("First-order AAPG results:\n");
-    for (int ix=0;ix<nStep+1;ix++){
-        if (ix % ((int) nStep/10) == 0){
-            WriteMeanStdDevToStdOut(ix,ix*dTym,dis_1_mean(ix),std1(ix));
-        }
+    if (AAPG_ord == 1){
+    	for (int ix=0;ix<nStep+1;ix++){
+            if (ix % ((int) nStep/10) == 0){
+            	WriteMeanStdDevToStdOut(ix,ix*dTym,dis_1_mean(ix),std1(ix));
+            }
+    	}
+    	write_datafile_1d(dis_1_mean,"dis_1_mean.dat");
+    	write_datafile_1d(std1,"dis_1_std.dat");
     }
-    if(AAPG_ord >= 2){
+    if(AAPG_ord == 2){
 	printf("Second-order AAPG results:\n");
     	for (int ix=0;ix<nStep+1;ix++){
             if (ix % ((int) nStep/10) == 0){
             	WriteMeanStdDevToStdOut(ix,ix*dTym,dis_2_mean(ix),std2(ix));
             }
     	}
+    	write_datafile_1d(dis_2_mean,"dis_2_mean.dat");
+    	write_datafile_1d(std2,"dis_2_std.dat");
     }
-    if(AAPG_ord >= 3){
+    if(AAPG_ord == 3){
         printf("Third-order AAPG results:\n");
         for (int ix=0;ix<nStep+1;ix++){
             if (ix % ((int) nStep/10) == 0){
             	WriteMeanStdDevToStdOut(ix,ix*dTym,dis_3_mean(ix),std3(ix));
         	}
     	}
+    	write_datafile_1d(dis_3_mean,"dis_3_mean.dat");
+    	write_datafile_1d(std3,"dis_3_std.dat");
     }
     
     return;     
