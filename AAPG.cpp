@@ -12,6 +12,8 @@
 #include "ticktock.h"
 
 Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string pcType, int dim, int nStep, Array2D<double>& scaledKLmodes, double dis0, double vel0, PCSet& myPCSet, double factor_OD, int AAPG_ord){
+    // timing var
+    Array1D<double> t(5,0.e0);
     
     // Compute zeroth-order term
     printf("Zeroth-order term...\n");
@@ -22,7 +24,6 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     f_0(0)=fbar;
     // store zeroth order solution
     Array2D<double> x_0(nStep+1,2,0.e0);
-    //clock_t start = clock();
     // Time marching steps
     TickTock tt;
     tt.tick();
@@ -30,9 +31,7 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
         forward_duffing_dt(inpParams,f_0,dTym,Temp);
         x_0.replaceRow(Temp,ix+1);
     }
-    //cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
     tt.tock("Took");
-    Array1D<double> t(5,0.e0);
     t(0) = tt.silent_tock();
     // abstract the displacement terms
     Array1D<double> dis_0(nStep+1,0.e0);
@@ -40,16 +39,13 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     
     // Compute first order terms
     printf("First-order terms...");
-    // generate PCSet and the number of terms in it
-    PCSet PCSet_1("ISP",order,1,pcType,0.0,1.0); 
-    const int PCTerms_1 = PCSet_1.GetNumberPCTerms();
     // initialize the displacement and force terms
     Array1D<Array2D<double> > dis_1(dim);
-    //start = clock();
-    tt.tick();
-    #pragma omp parallel default(none) shared(fbar,dim,nStep,scaledKLmodes,PCSet_1,order,pcType,dis0,vel0,dTym,inpParams,dis_1)
-    {
-    #pragma omp for
+    Array1D<Array2D<double> > force_1(dim);
+    // generate PCSet and the number of terms in it
+    PCSet PCSet_1("ISP",order,1,pcType,0.0,1.0); 
+    int PCTerms_1 = PCSet_1.GetNumberPCTerms();
+    // Generate the forcing on each dim
     for (int i=0;i<dim;i++){
         Array2D<double> f_1(nStep+1,PCTerms_1,0.e0);
         for (int it=0;it<nStep+1;it++)
@@ -58,14 +54,16 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
         Array1D<double> tempf(nStep+1,0.e0);
         getCol(scaledKLmodes,i,tempf);
         f_1.replaceCol(tempf,1);
-        // utilize the GS function to compute first order solutions
-        Array2D<double> tempdis(nStep+1,PCTerms_1,0.e0);
-        tempdis = GS(PCSet_1, order, 1, PCTerms_1, pcType, nStep, dis0, vel0, dTym, inpParams, f_1);
-        // link the solution to the global solution
-        dis_1(i) = tempdis;
+        force_1(i) = f_1;
+    }
+    tt.tick();
+    #pragma omp parallel default(none) shared(dim,PCSet_1,order,PCTerms_1,pcType,nStep,dis0,vel0,dTym,inpParams,force_1,dis_1)
+    {
+    #pragma omp for
+    for (int i=0;i<dim;i++){
+        dis_1(i) = GS(PCSet_1, order, 1, PCTerms_1, pcType, nStep, dis0, vel0, dTym, inpParams, force_1(i));
     }
     }
-    //cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
     tt.tock("Took");
     t(1)=tt.silent_tock();
 
@@ -90,10 +88,10 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
             f_2.replaceCol(tempf,1);
             getCol(scaledKLmodes,j,tempf);
             f_2.replaceCol(tempf,2);
-	    force_2(k)=f_2;
-	    indi(k) = i;
+	        force_2(k)=f_2;
+	        indi(k) = i;
     	    indj(k) = j;
-	    k++;
+	        k++;
 	}
     }
     tt.tick();
@@ -133,11 +131,11 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
                 f_3.replaceCol(tempf,2);
                 getCol(scaledKLmodes,k,tempf);
                 f_3.replaceCol(tempf,3);
-		force_3(l)=f_3;
-    		indi(l)=i;
-		indj(l)=j;
-		indk(l)=k;
-		l++;
+		        force_3(l)=f_3;
+    		    indi(l)=i;
+		        indj(l)=j;
+		        indk(l)=k;
+		        l++;
 	}
     }
     //start = clock();
@@ -149,16 +147,13 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
 	dis_3(indi(i),indj(i),indk(i)) = GS(PCSet_3, order, 3, PCTerms_3, pcType, nStep, dis0, vel0, dTym, inpParams, force_3(i));
     }
     }
-    //cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
     tt.tock("Took");
     t(3)=tt.silent_tock();
     }
     
     printf("\nAssemble the solutions...\n");
-    //start = clock(); 
     tt.tick();
     PostProcess(AAPG_ord, dis_0, dis_1, dis_2, dis_3, myPCSet, fbar, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, pcType, inpParams, scaledKLmodes, factor_OD);
-    //cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
     tt.tock("Took");
     t(4)=tt.silent_tock();
    
@@ -214,7 +209,7 @@ void PostProcess(int AAPG_ord, Array1D<double>& dis_0, Array1D<Array2D<double> >
     
     // print out mean/std valus at specific points for comparison
     printf("First-order AAPG results:\n");
-    if (AAPG_ord == 1){
+    if (AAPG_ord >= 1){
     	for (int ix=0;ix<nStep+1;ix++){
             if (ix % ((int) nStep/10) == 0){
             	WriteMeanStdDevToStdOut(ix,ix*dTym,dis_1_mean(ix),std1(ix));
@@ -223,7 +218,7 @@ void PostProcess(int AAPG_ord, Array1D<double>& dis_0, Array1D<Array2D<double> >
     	write_datafile_1d(dis_1_mean,"dis_1_mean.dat");
     	write_datafile_1d(std1,"dis_1_std.dat");
     }
-    if(AAPG_ord == 2){
+    if(AAPG_ord >= 2){
 	printf("Second-order AAPG results:\n");
     	for (int ix=0;ix<nStep+1;ix++){
             if (ix % ((int) nStep/10) == 0){
@@ -233,7 +228,7 @@ void PostProcess(int AAPG_ord, Array1D<double>& dis_0, Array1D<Array2D<double> >
     	write_datafile_1d(dis_2_mean,"dis_2_mean.dat");
     	write_datafile_1d(std2,"dis_2_std.dat");
     }
-    if(AAPG_ord == 3){
+    if(AAPG_ord >= 3){
         printf("Third-order AAPG results:\n");
         for (int ix=0;ix<nStep+1;ix++){
             if (ix % ((int) nStep/10) == 0){

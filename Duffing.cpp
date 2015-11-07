@@ -297,55 +297,21 @@ int main(int argc, char *argv[])
     TickTock tt;
     tt.tick();
     PCSet myPCSet("ISP",ord_AAPG_GS,dim,pcType,0.0,1.0,false); 
-    stringstream ss;
-    ss << ord_AAPG_GS;
-    stringstream ss2;
-    ss2 << dim;
-    std::string name = "PC_"+ss2.str()+"_"+ss.str()+"_no3.ros";
-    std::ofstream ofs(name.c_str(),ios::binary);
-    ofs.write((char *)&myPCSet,sizeof(myPCSet));
-	// Read PC basis
-	ifstream ifs(name.c_str(),ios::binary);
-	ifs.read((char *)&myPCSet, sizeof(myPCSet));
-    
     tt.tock("Took");
-    Array1D<double> t_AAPG1 = AAPG(inpParams, fbar, dTym, 1, pcType, dim, nStep, scaledKLmodes, dis0, vel0, myPCSet, factor_OD, 1);
-    cout << "t_AAPG=" << t_AAPG1(0) << t_AAPG1(1) << endl;    
-    cout << "Assemble AAPG cost time " << t_AAPG1(4)<<endl;
-    Array1D<double> t_AAPG2 = AAPG(inpParams, fbar, dTym, 2, pcType, dim, nStep, scaledKLmodes, dis0, vel0, myPCSet, factor_OD, 2);
-    cout << "t_AAPG=" << t_AAPG2(0)<< ","<<t_AAPG2(1)<<","<<t_AAPG2(2)<<endl;    
-    cout << "Assemble AAPG cost time " << t_AAPG2(4)<<endl;
-    Array1D<double> t_AAPG3 = AAPG(inpParams, fbar, dTym, 3, pcType, dim, nStep, scaledKLmodes, dis0, vel0, myPCSet, factor_OD, 3);
-    cout << "t_AAPG=" << t_AAPG3(0)<< ","<<t_AAPG3(1)<<","<<t_AAPG3(2)<<","<<t_AAPG3(3)<<endl;    
-    cout << "Assemble AAPG cost time " << t_AAPG3(4)<<endl;
+    
+    Array1D<double> t_AAPG = AAPG(inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, dis0, vel0, myPCSet, factor_OD, ord_AAPG);
     
     // output the timing
-    ostringstream s;
-    s << "time" <<dim<<".dat";
-    string Time(s.str());
-    FILE *time_dump;
-    if(!(time_dump=fopen(Time.c_str(),"w"))){
-        printf("Could not open file '%s'\n",Time.c_str());
-        exit(1);    
-    }
     Array1D<double> t(3+ord_GS+ord_AAPG,0.e0);
     t(0) = t_MCS;
     for (int i=0;i<ord_GS;i++)
-	t(i+1)=t_GS(i);
-    //for (int i=0;i<ord_AAPG+2;i++)
-    //    t(i+1+ord_GS)=t_AAPG(i);
-    t(ord_GS+1)=t_AAPG1(0);
-    t(ord_GS+2)=t_AAPG1(1);
-    t(ord_GS+3)=t_AAPG2(2);
-    t(ord_GS+4)=t_AAPG3(3);
+	    t(i+1)=t_GS(i);
+    for (int i=0;i<ord_AAPG+2;i++)
+        t(i+1+ord_GS)=t_AAPG(i);
 
+    std::string Time = "time.dat";
     WriteToFile(t, Time.c_str());
         
-    if(fclose(time_dump)){
-        printf("Could not close file '%s'\n",Time.c_str());
-        exit(1);
-    }    
-
     return 0;
 }
 
