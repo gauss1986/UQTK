@@ -56,6 +56,7 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
         f_1.replaceCol(tempf,1);
         force_1(i) = f_1;
     }
+    
     tt.tick();
     #pragma omp parallel default(none) shared(dim,PCSet_1,order,PCTerms_1,pcType,nStep,dis0,vel0,dTym,inpParams,force_1,dis_1)
     {
@@ -66,6 +67,24 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     }
     tt.tock("Took");
     t(1)=tt.silent_tock();
+
+    // compute the std in each sub-dim and select the 'active' dim based on P5 of X. Yang et al. Adaptive ANOVA decomp. of stocha. imcompre
+    Array1D<double> var(dim,0.e0); 
+    Array1D<int> ind(dim,0);
+    for (int i=0;i<dim;i++){
+        Array1D<double> dis_temp(PCTerms_1,0.e0);
+        ind(i) = i;
+        for (int it=0;it<nStep+1;it++){
+            getRow(dis_1(i),it,dis_temp);
+            var(i)=var(i)+PCSet_1.StDv(dis_temp);  
+        }
+        cout << "Sum of var on dim No." <<i <<" is "<< var(i) << endl;
+    }
+    shell_sort_ind(var,ind);
+    cout << "Var is sorted now" << endl;
+    for (int i=0;i<dim;i++){
+        cout << "Sum of var on dim NO. " <<ind(i) <<" is "<< var(i) << endl;
+    }
 
     // Second order term
     Array2D<Array2D<double> > dis_2(dim,dim); 
