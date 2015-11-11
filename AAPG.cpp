@@ -90,10 +90,11 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     double var_sum = sum(var);
     double p = 0.99; //ratio of the sum(var) on active dims 
     double temp = 0.e0;
-    int i = 0;
-    while ((temp+=var(i))<((1-p)*var_sum)&&i<dim){
-        cout << "Dim No." << ind(i) << " is non-active." << " Percentage:"<<temp/var_sum*100<<"%"<< endl;
-        i++;
+    int i_temp = 0;
+    while ((temp+=var(i_temp))<((1-p)*var_sum)&&i_temp<dim){
+        cout << "Dim No." << ind(0) << " is non-active." << " Percentage:"<<temp/var_sum*100<<"%"<< endl;
+        ind.erase(0);
+        i_temp++;
     }
 
     // Second order term
