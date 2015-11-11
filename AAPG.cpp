@@ -80,10 +80,20 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
         }
         cout << "Sum of var on dim No." <<i <<" is "<< var(i) << endl;
     }
+    // sort the variance in ascending order
     shell_sort_ind(var,ind);
     cout << "Var is sorted now" << endl;
     for (int i=0;i<dim;i++){
         cout << "Sum of var on dim NO. " <<ind(i) <<" is "<< var(i) << endl;
+    }
+    // select the active dims
+    double var_sum = sum(var);
+    double p = 0.99; //ratio of the sum(var) on active dims 
+    double temp = 0.e0;
+    int i = 0;
+    while ((temp+=var(i))<((1-p)*var_sum)&&i<dim){
+        cout << "Dim No." << ind(i) << " is non-active." << " Percentage:"<<temp/var_sum*100<<"%"<< endl;
+        i++;
     }
 
     // Second order term
