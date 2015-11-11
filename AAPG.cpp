@@ -110,7 +110,7 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
         f_2(it,0) = fbar;
     Array1D<Array2D<double> > force_2(dim*(dim-1)/2);
     int k = 0;
-    for (int i=0;i<dim;i++){
+    for (int i=0;i<dim-1;i++){
         for (int j=i+1;j<dim;j++){
             Array1D<double> tempf(nStep+1,0.e0);
             getCol(scaledKLmodes,i,tempf);
@@ -150,8 +150,8 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     indi.Resize(dim*(dim-1)*(dim-2)/6,0);
     indj.Resize(dim*(dim-1)*(dim-2)/6,0);
     Array1D<int> indk(dim*(dim-1)*(dim-2)/6,0);
-    for (int i=0;i<dim;i++){
-        for (int j=i+1;j<dim;j++){
+    for (int i=0;i<dim-2;i++){
+        for (int j=i+1;j<dim-1;j++){
             for (int k=j+1;k<dim;k++){
                 Array1D<double> tempf(nStep+1,0.e0);
                 getCol(scaledKLmodes,i,tempf);
@@ -438,8 +438,8 @@ void assemblemean(Array1D<double>& dis_0, Array1D<Array2D<double> >& dis_1, Arra
     // third-order terms
     dis_3_mean = dis_2_mean;
     if (AAPG_ord >= 3){
-        for (int ii=0;ii<dim-1;ii++){
-            for (int jj=ii+1;jj<dim;jj++){
+        for (int ii=0;ii<dim-2;ii++){
+            for (int jj=ii+1;jj<dim-1;jj++){
                 for (int kk=jj+1;kk<dim;kk++){
                     Array1D<double> Temp(nStep+1,0.e0);
                     getCol(dis_3(ii,jj,kk),0,Temp);
@@ -487,8 +487,8 @@ void assemblerest(Array1D<Array2D<double> >& dis_1, Array2D<Array2D<double> >& d
         }
     }
     Array3D<Array1D<int> > ind3(dim,dim,dim);
-    for (int i=0;i<dim-1;i++){
-        for (int j=i+1;j<dim;j++){
+    for (int i=0;i<dim-2;i++){
+        for (int j=i+1;j<dim-1;j++){
             for (int k=j+1;k<dim;k++){
                 ind3(i,j,k) = index3(dim, i, j, k, order);
             }
@@ -559,8 +559,8 @@ void assemblerest(Array1D<Array2D<double> >& dis_1, Array2D<Array2D<double> >& d
     dis_3_assembled = dis_2_assembled;
     if (AAPG_ord >= 3){
         printf("Assembling the third order terms...\n");
-        for (int ii=0;ii<dim-1;ii++){
-            for (int jj=ii+1;jj<dim;jj++){
+        for (int ii=0;ii<dim-2;ii++){
+            for (int jj=ii+1;jj<dim-1;jj++){
                 for (int kk=jj+1;kk<dim;kk++){
                     // retrieve the index in the global matrix
                     Array1D<int> ind = ind3(ii,jj,kk);
