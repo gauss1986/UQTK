@@ -11,7 +11,7 @@
 #include "GhanemSpanos.h"
 #include "ticktock.h"
 
-Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string pcType, int dim, int nStep, Array2D<double>& scaledKLmodes, double dis0, double vel0, PCSet& myPCSet, double factor_OD, int AAPG_ord){
+Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string pcType, int dim, int nStep, Array2D<double>& scaledKLmodes, double dis0, double vel0, PCSet& myPCSet, double factor_OD, int AAPG_ord, bool act_D){
     // timing var
     Array1D<double> t(5,0.e0);
     
@@ -68,9 +68,14 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     tt.tock("Took");
     t(1)=tt.silent_tock();
 
+    Array1D<int> ind(dim,0);
+    if (!act_D){
+        for (int i=0;i<dim;i++)
+            ind(i)=i;
+    }
+    else{
     // compute the std in each sub-dim and select the 'active' dim based on P5 of X. Yang et al. Adaptive ANOVA decomp. of stocha. imcompre
     Array1D<double> var(dim,0.e0); 
-    Array1D<int> ind(dim,0);
     for (int i=0;i<dim;i++){
         Array1D<double> dis_temp(PCTerms_1,0.e0);
         ind(i) = i;
@@ -97,6 +102,7 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
         i_temp++;
     }
     shell_sort(ind);
+    }
     int N_adof = ind.XSize();
 
     // Second order term
@@ -136,6 +142,7 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     }
     tt.tock("Took");   
     t(2)=tt.silent_tock();
+    cout << "Saving on computational cost using only active dims: " << (1-(N_adof*(N_adof-1)*1.0/dim/(dim-1)))*100 << "%" << endl;
     }
  
     // Third order term
@@ -181,6 +188,7 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     }
     tt.tock("Took");
     t(3)=tt.silent_tock();
+    cout << "Saving on computational cost using only active dims: " << (1-(N_adof*(N_adof-1)*(N_adof-2)*1.0/dim/(dim-1)/(dim-2)))*100 << "%" << endl;
     }
  
     printf("\nAssemble the solutions...\n");
