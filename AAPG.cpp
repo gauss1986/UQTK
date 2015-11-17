@@ -630,19 +630,22 @@ void computeStd(int nStep, int nPCTerms, Array2D<double>& dis_1_assembled, Array
 }
 
 void subtractfirst(int p,int ii, Array2D<int>& ind1,Array1D<Array2D<double> >& dis_1,int nStep,Array1D<double>& coeffn,Array2D<double>& dis_assembled){
-    int indii = ind1(p,ii);
+    int ind = ind1(p,ii);
     // retrieve PC solution on ii dim
-    Array1D<double> Temp1(nStep+1,0.e0);
-    getCol(dis_1(ii),p,Temp1);
+    //Array1D<double> Temp1(nStep+1,0.e0);
+    //getCol(dis_1(ii),p,Temp1);
     // incorporate coeffn
-    dotprodVec(coeffn,Temp1);
+    //dotprodVec(coeffn,Temp1);
     // subtract the first order terms and put back into dis_assembled
-    Array1D<double> Temp2(nStep+1,0.e0);
-    getCol(dis_assembled,indii,Temp2);
-    subtractVec(Temp1,Temp2);
-    dis_assembled.replaceCol(Temp2,indii);
+    //Array1D<double> Temp2(nStep+1,0.e0);
+    //getCol(dis_assembled,indii,Temp2);
+    //subtractVec(Temp1,Temp2);
+    //dis_assembled.replaceCol(Temp2,indii);
     //for (int it=0;it<nStep+1;it++)
     //    dis_assembled(it,indii)=Temp2(it);
+    for (int it=0;it<nStep+1;it++){
+        dis_assembled(it,ind) = dis_assembled(it,ind)-coeffn(it)*dis_1(ii)(it,p);
+    }
 
     return;
 }
@@ -650,17 +653,21 @@ void subtractfirst(int p,int ii, Array2D<int>& ind1,Array1D<Array2D<double> >& d
 void subtractsecond(int p,int ii,int jj, Array3D<int>& ind2, Array2D<Array2D<double> >& dis_2, int nStep, Array1D<double>& coeffn, Array2D<double>& dis_assembled){
     int ind = ind2(ii,jj,p);
     // retrieve PC solution on ii/jj dim
-    Array1D<double> Temp1(nStep+1,0.e0);
-    getCol(dis_2(ii,jj),p,Temp1);
+    //Array1D<double> Temp1(nStep+1,0.e0);
+    //getCol(dis_2(ii,jj),p,Temp1);
     // incorporate coeffn
-    dotprodVec(coeffn,Temp1);
+    //dotprodVec(coeffn,Temp1);
     // subtract the second order terms and put back into dis_assembled
-    Array1D<double> Temp2(nStep+1,0.e0);
-    getCol(dis_assembled,ind,Temp2);
-    subtractVec(Temp1,Temp2);
-    dis_assembled.replaceCol(Temp2,ind);
+    //Array1D<double> Temp2(nStep+1,0.e0);
+    //getCol(dis_assembled,ind,Temp2);
+    //subtractVec(Temp1,Temp2);
+    //dis_assembled.replaceCol(Temp2,ind);
     //for (int it=0;it<nStep+1;it++)
     //    dis_assembled(it,ind)=Temp2(it);
+
+    for (int it=0;it<nStep+1;it++){
+        dis_assembled(it,ind) = dis_assembled(it,ind)-coeffn(it)*dis_2(ii,jj)(it,p);
+    }
     
     return;
 }
