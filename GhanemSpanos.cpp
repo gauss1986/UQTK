@@ -4,6 +4,7 @@
 #include "PCSet.h"
 #include "arraytools.h"
 #include "uqtktools.h"
+#include "MCS.h"
 #include "GhanemSpanos.h"
 #include "UtilsDuffing.h"
 #include <ctime>
@@ -135,8 +136,6 @@ void RHS_GS(PCSet& myPCSet, Array1D<double>& force, Array1D<double>& dis, Array1
 }
 
 Array1D<double> postprocess_GS(int nPCTerms, int nStep, double dis0, Array2D<double>& dis_GS, PCSet& myPCSet, double dTym, FILE* GS_dump, FILE* GSstat_dump, Array2D<double>& mstd_MCS){
-    // Return the integrated error in mean/std
-    Array1D<double> e(2,0.e0);
     // Output solution (mean and std) 
     Array1D<double> dis_temp(nPCTerms,0.e0);
     dis_temp(0) = dis0;
@@ -150,8 +149,6 @@ Array1D<double> postprocess_GS(int nPCTerms, int nStep, double dis0, Array2D<dou
         getRow(dis_GS,i,dis_temp); 
         StDv_temp = myPCSet.StDv(dis_temp);
         disStDv(i) = StDv_temp; 
-        e(0) = e(0) + fabs(dis_temp(0) - mstd_MCS(0,i));
-        e(1) = e(1) + fabs(StDv_temp - mstd_MCS(1,i));  
         // Write time and solution to file
         WriteModesToFilePtr(i, dis_temp.GetArrayPointer(), nPCTerms, GS_dump);
         // Write dis (mean and std) to file and screen
@@ -160,15 +157,9 @@ Array1D<double> postprocess_GS(int nPCTerms, int nStep, double dis0, Array2D<dou
             WriteMeanStdDevToStdOut(i,i*dTym,dis_temp(0),StDv_temp);
         }
     }
-    
-    Array1D<double> temp_m(nStep,0.e0);
-    getRow(mstd_MCS,0,temp_m);
-    Array1D<double> temp_s(nStep,0.e0);
-    getRow(mstd_MCS,1,temp_s);
 
-    // normalized relative error
-    e(0) = e(0)/sum(temp_m)*100;
-    e(1) = e(1)/sum(temp_s)*100;
-
+    Array1D<double> dis_mean;
+    getCol(dis_GS,0,dis_mean);
+    Array1D<double> e =  error(dis_mean, disStDv, mstd_MCS);    
     return e;
 }

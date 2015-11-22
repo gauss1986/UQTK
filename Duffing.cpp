@@ -295,8 +295,12 @@ int main(int argc, char *argv[])
         Array1D<double> e_GS_ord = postprocess_GS(nPCTerms, nStep, dis0, dis_GS, myPCSet, dTym, GS_dump, GSstat_dump, mstd_MCS);
         e_GS.replaceCol(e_GS_ord,ord-1);       
 
+        stringstream temp_err;
+        temp_err << ord;
+        std::string Err = "e_GS" + temp_err.str() + ".dat";
         cout << "e_GS_mean for ord=" <<ord<<" is " << e_GS(0,ord-1) << "%"<< endl;
         cout << "e_GS_std for ord=" <<ord<<" is " << e_GS(1,ord-1) << "%" << endl;
+        WriteToFile(e_GS_ord, Err.c_str());
   
         // close files
         if(fclose(GS_dump)){
@@ -317,7 +321,7 @@ int main(int argc, char *argv[])
     PCSet myPCSet("ISP",ord_AAPG_GS,dim,pcType,0.0,1.0,false); 
     tt.tock("Took");
     
-    Array1D<double> t_AAPG = AAPG(inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, dis0, vel0, myPCSet, factor_OD, ord_AAPG, act_D, p);
+    Array1D<double> t_AAPG = AAPG(inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, dis0, vel0, myPCSet, factor_OD, ord_AAPG, act_D, p, mstd_MCS);
     
     // output the timing
     Array1D<double> t(3+ord_GS+ord_AAPG,0.e0);

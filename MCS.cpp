@@ -139,3 +139,22 @@ double MCS(int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Arra
         mstd(1) = sqrt((sum2-nspl*pow(mstd(0),2))/nspl); 
         return(mstd);   
    }
+
+   Array1D<double> error(Array1D<double>& dis, Array1D<double>& StDv, Array2D<double>& mstd_MCS){
+   // Return the integrated error in mean/std
+        Array1D<double> e(2,0.e0);
+        for (unsigned int i=0;i<dis.XSize();i++){
+            e(0) = e(0) + fabs(dis(i) - mstd_MCS(0,i));
+            e(1) = e(1) + fabs(StDv(i) - mstd_MCS(1,i));  
+        }
+        Array1D<double> temp_m;
+        getRow(mstd_MCS,0,temp_m);
+        Array1D<double> temp_s;
+        getRow(mstd_MCS,1,temp_s);
+
+        // normalized relative error
+        e(0) = e(0)/sum(temp_m)*100;
+        e(1) = e(1)/sum(temp_s)*100;
+    
+        return e;
+    }
