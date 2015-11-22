@@ -214,12 +214,14 @@ int main(int argc, char *argv[])
     WriteMeanStdDevToFilePtr(0, 0, 0, f_dump);         
     cout << "\nMCS...\n" << endl;  
     double t_MCS = MCS(nspl, dim, nStep, nkl, dTym, fbar, scaledKLmodes, inpParams, samPts, dis_MC);
+    Array2D<double> mstd_MCS(2,nStep,0.e0);
     // post-process the solution
     for (int ix=0;ix<nStep;ix++){
         Array1D<double> tempdis(nspl,0.e0);
         getRow(dis_MC,ix,tempdis);
         Array1D<double> mstd(2,0.e0);
         mstd = mStd(tempdis,nspl);
+        mstd_MCS.replaceCol(mstd,ix); 
         WriteMeanStdDevToFilePtr((ix+1)*dTym, mstd(0),mstd(1),f_dump);         
         if ((ix+1) % ((int) nStep/10) == 0){
             WriteMeanStdDevToStdOut(ix+1, (ix+1)*dTym, mstd(0), mstd(1));
@@ -236,14 +238,15 @@ int main(int argc, char *argv[])
     double dis0 = DIS0;
     double vel0 = VEL0;
     Array1D<double> t_GS(ord_GS,0.e0);
+    Array2D<double> e_GS(2,ord_GS);
     for(int ord=1;ord<ord_GS+1;ord++){
         TickTock tt;
-	tt.tick();
-	PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
-        tt.tock("Took");
-	cout << "Order "<< ord << endl;
+    	tt.tick();
+	    PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
+            tt.tock("Took");
+	    cout << "Order "<< ord << endl;
 
-	// The number of PC terms
+	    // The number of PC terms
         const int nPCTerms = myPCSet.GetNumberPCTerms();
         cout << "The number of PC terms in an expansion is " << nPCTerms << endl;
         // Print the multiindices on screen
@@ -266,7 +269,7 @@ int main(int argc, char *argv[])
     	tt.tick();
         dis_GS = GS(myPCSet, ord, dim, nPCTerms, pcType, nStep, dis0, vel0, dTym, inpParams, f_GS);
         t_GS(ord-1) = tt.silent_tock();
-	cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
+	    cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
 	
         // output and save the solution
         // Open files to write out solutions
@@ -289,8 +292,12 @@ int main(int argc, char *argv[])
             exit(1);    
         }
         
-        postprocess_GS(nPCTerms, nStep, dis0, dis_GS, myPCSet, dTym, GS_dump, GSstat_dump);
-        
+        Array1D<double> e_GS_ord = postprocess_GS(nPCTerms, nStep, dis0, dis_GS, myPCSet, dTym, GS_dump, GSstat_dump, mstd_MCS);
+        e_GS.replaceCol(e_GS_ord,ord-1);       
+
+        cout << "e_GS_mean for ord=" <<ord<<" is " << e_GS(0,ord-1) << "%"<< endl;
+        cout << "e_GS_std for ord=" <<ord<<" is " << e_GS(1,ord-1) << "%" << endl;
+  
         // close files
         if(fclose(GS_dump)){
             printf("Could not close file '%s'\n",SoluGSmodes.c_str());
