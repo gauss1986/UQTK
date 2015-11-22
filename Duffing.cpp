@@ -23,8 +23,8 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define DIM 10
-#define CLEN 1.0
+#define DIM 50
+#define CLEN 0.1
 #define SIG 0.8
 #define ORDER_GS 2
 #define ORDER_AAPG_GS 2
@@ -39,6 +39,7 @@ July 25, 2015
 #define VEL0 0.0
 #define FACTOR_OD 1.0
 #define ACTD false
+#define THRESHOLD 0.99
 
 #define COVTYPE "Exp"
 #define PCTYPE "LU"
@@ -59,6 +60,7 @@ int usage(){
   printf(" -G <ord_GS>      : define the order of Ghanem-Spanos method (default=%d) \n", ORDER_GS);
   printf(" -A <ord_AAPG_GS> : define the order of Ghanem-Spanos method used in subproblems of AAPG (default=%d) \n", ORDER_AAPG_GS);
   printf(" -P <ord_AAPG>    : define the order of AAPG method(default=%d) \n", ORDER_AAPG);
+  printf(" -T <p>           : define the threshold used in the adaptive AAPG method(default=%e) \n", THRESHOLD);
   printf("================================================================================================================\n");
   printf("Input:: Nothing hard-coded.\n");
   printf("Output:: \n");
@@ -98,9 +100,11 @@ int main(int argc, char *argv[])
     // AAPG order
     int ord_AAPG = ORDER_AAPG;
     // GS order in AAPG subproblems
-    int ord_AAPG_GS = ord_AAPG;
+    int ord_AAPG_GS = ORDER_AAPG_GS;
     // wheather doing AAPG adaptive or not
     bool act_D = ACTD;
+    // Threashold used in the adaptive AAPG scheme
+    double p = THRESHOLD;
 
     // Time marching info
     double dTym = DTYM;
@@ -109,7 +113,7 @@ int main(int argc, char *argv[])
     /* Read the user input */
     int c;
 
-    while ((c=getopt(argc,(char **)argv,"h:c:d:n:p:s:l:t:f:e:G:A:P:D:"))!=-1){
+    while ((c=getopt(argc,(char **)argv,"h:c:d:n:p:s:l:t:f:e:G:A:P:D:T:"))!=-1){
         switch (c) {
         case 'h':
             usage();
@@ -150,6 +154,9 @@ int main(int argc, char *argv[])
         case 'P':
             ord_AAPG = strtod(optarg, (char **)NULL);
             break;
+        case 'T':
+            p = strtod(optarg,(char **)NULL);
+            break;
         case 'D':
             int temp_D = strtod(optarg, (char **)NULL);
             if (temp_D==1)
@@ -166,6 +173,7 @@ int main(int argc, char *argv[])
     cout << " - Process end time:                " << tf  << endl<<flush;
     cout << " - Dynamical orthogonal AAPG factor:" << factor_OD  << endl<<flush;
     cout << " - Nonlinearity parameter:          " << epsilon  << endl<<flush;
+    cout << " - The threshold in adaptive AAPG:  " << p  << endl<<flush;
     cout << " - Order of GS:                     " << ord_GS  << endl<<flush;
     cout << " - Order of GS in AAPG subproblems: " << ord_AAPG_GS  << endl<<flush;
     cout << " - Order of AAPG:                   " << ord_AAPG  << endl<<flush;
@@ -302,7 +310,7 @@ int main(int argc, char *argv[])
     PCSet myPCSet("ISP",ord_AAPG_GS,dim,pcType,0.0,1.0,false); 
     tt.tock("Took");
     
-    Array1D<double> t_AAPG = AAPG(inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, dis0, vel0, myPCSet, factor_OD, ord_AAPG, act_D);
+    Array1D<double> t_AAPG = AAPG(inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, dis0, vel0, myPCSet, factor_OD, ord_AAPG, act_D, p);
     
     // output the timing
     Array1D<double> t(3+ord_GS+ord_AAPG,0.e0);
