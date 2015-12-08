@@ -3,3 +3,4 @@ void forward_duffing_dt(Array1D<double>& inpParams, Array1D<double>& force, doub
 void RHS(Array1D<double>& force, Array1D<double>& x, Array1D<double>& dxdt, double epsilon, double zeta);
 Array1D<double> mStd(Array1D<double>& x,int nspl);
 Array1D<double> error(Array1D<double>& dis, Array1D<double>& StDv, Array2D<double>& mstd_MCS);
+void sample(Array2D<double>& samPts,int iq,int dim,int nStep,double fbar,int nkl,Array2D<double>& scaledKLmodes,Array2D<double>& totalforce);
