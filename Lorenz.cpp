@@ -23,20 +23,20 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define DIM 50
+#define DIM 10
 #define CLEN 0.1
-#define SIG 0.8
+#define SIG 0.2
 #define ORDER_GS 2
 #define ORDER_AAPG_GS 2
 #define ORDER_AAPG 3
 #define TFINAL 10.0
 #define DTYM 0.01
 #define NSPL 100000
-#define ZETA 0.1
-#define EPSILON 1.0
-#define FBAR 2.0
-#define DIS0 0.0
-#define VEL0 0.0
+#define AMP 2.0
+#define FBAR 7.0
+#define x0 1.0
+#define y0 1.0
+#define z0 1.0
 #define FACTOR_OD 1.0
 #define ACTD false
 #define THRESHOLD 0.99
@@ -55,8 +55,9 @@ int usage(){
   printf(" -s <sigma>       : define standard deviation (default=%e) \n",SIG);
   printf(" -l <clen>        : define correlation length (default=%e) \n",CLEN);
   printf(" -t <tf>          : define end time (default=%e) \n",TFINAL);
+  printf(" -a <AMP>           : define the oscillation amp of F (default=%e) \n",A);
+  printf(" -F <FBAR>        : define mean of F(default=%e) \n",FBAR);
   printf(" -f <factor_OD>   : define the factor in overdetermined dynimcal-orthogonal calculation (default=%e) \n", FACTOR_OD);
-  printf(" -e <epsilon>     : define the nonlinearity parameter (default=%e) \n", EPSILON);
   printf(" -G <ord_GS>      : define the order of Ghanem-Spanos method (default=%d) \n", ORDER_GS);
   printf(" -A <ord_AAPG_GS> : define the order of Ghanem-Spanos method used in subproblems of AAPG (default=%d) \n", ORDER_AAPG_GS);
   printf(" -P <ord_AAPG>    : define the order of AAPG method(default=%d) \n", ORDER_AAPG);
@@ -93,8 +94,6 @@ int main(int argc, char *argv[])
     int nspl = NSPL;
     // dynamical-orthogonal info
     double factor_OD = FACTOR_OD;
-    // Nonlinearity parameter
-    double epsilon = EPSILON;
     // GS order
     int ord_GS = ORDER_GS;
     // AAPG order
@@ -113,7 +112,7 @@ int main(int argc, char *argv[])
     /* Read the user input */
     int c;
 
-    while ((c=getopt(argc,(char **)argv,"h:c:d:n:p:s:l:t:f:e:G:A:P:D:T:"))!=-1){
+    while ((c=getopt(argc,(char **)argv,"h:c:d:n:p:s:l:t:f:G:A:P:D:T:"))!=-1){
         switch (c) {
         case 'h':
             usage();
@@ -142,9 +141,6 @@ int main(int argc, char *argv[])
         case 'f':
             factor_OD = strtod(optarg, (char **)NULL);
             break;
-        case 'e':
-            epsilon = strtod(optarg, (char **)NULL);
-            break;
         case 'G':
             ord_GS = strtod(optarg, (char **)NULL);
             break;
@@ -166,13 +162,13 @@ int main(int argc, char *argv[])
     }
     
     /* Print the input information on screen */
+    cout << "Lorenz model--" << endl<<flush;
     cout << " - Number of KL modes:              " << dim  << endl<<flush;
     cout << " - Monte Carlo sample size:         " << nspl  << endl<<flush;
     cout << " - Will generate covariance of type "<<cov_type<<", with correlation length "<<clen<<" and standard deviation "<<sigma<<endl<<flush;
     cout << " - Time marching step:              " << dTym  << endl<<flush;
     cout << " - Process end time:                " << tf  << endl<<flush;
     cout << " - Dynamical orthogonal AAPG factor:" << factor_OD  << endl<<flush;
-    cout << " - Nonlinearity parameter:          " << epsilon  << endl<<flush;
     cout << " - The threshold in adaptive AAPG:  " << p  << endl<<flush;
     cout << " - Order of GS:                     " << ord_GS  << endl<<flush;
     cout << " - Order of GS in AAPG subproblems: " << ord_AAPG_GS  << endl<<flush;
@@ -191,14 +187,12 @@ int main(int argc, char *argv[])
     int nkl = dim;
     Array2D<double> scaledKLmodes(nStep+1,nkl,0.0);
     genKL(scaledKLmodes, nStep+1, nkl, clen, sigma, tf, cov_type);
-    write_datafile(scaledKLmodes,"KL.dat");
+    write_datafile(scaledKLmodes,"./Lorenz/KL.dat");
  
     // Monte Carlo simulation
     // Define input parameters
-    Array1D<double> inpParams(2,0.e0);
-    inpParams(0) = ZETA;
-    inpParams(1) = epsilon;
     double fbar = FBAR;
+    double Amp = AMP;
     Array2D<double> dis_MC(nStep+1,nspl,0.e0);
     Array2D<double> samPts(nspl,dim,0.e0);
     PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
@@ -213,7 +207,7 @@ int main(int argc, char *argv[])
     // Write solutions at initial step
     WriteMeanStdDevToFilePtr(0, 0, 0, f_dump);         
     cout << "\nMCS...\n" << endl;  
-    double t_MCS = MCS(nspl, dim, nStep, nkl, dTym, fbar, scaledKLmodes, inpParams, samPts, dis_MC);
+    double t_MCS = MCS(nspl, dim, nStep, nkl, dTym, fbar, scaledKLmodes, samPts, dis_MC);
     Array2D<double> mstd_MCS(2,nStep,0.e0);
     // post-process the solution
     for (int ix=0;ix<nStep;ix++){
