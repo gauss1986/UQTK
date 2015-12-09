@@ -25,9 +25,13 @@ Array2D<double> GS(PCSet& myPCSet, int order, int dim, int nPCTerms, string pcTy
     for (int ix=0;ix<nStep;ix++){
         // Subtract the current force
         Array1D<double> force_current(nPCTerms,0.e0);
-        getRow(f_GS,ix,force_current);
+        Array1D<double> force_mid(nPCTerms,0.e0);
+        Array1D<double> force_plus(nPCTerms,0.e0);
+        getRow(f_GS,2*ix,force_current);
+        getRow(f_GS,2*ix+1,force_mid);
+        getRow(f_GS,2*ix+2,force_plus);
         // Step forward 
-        forward_duffing_GS(myPCSet, inpParams, force_current, dTym, dis_temp, vel_temp);
+        forward_duffing_GS(myPCSet, inpParams, force_current, force_mid, force_plus, dTym, dis_temp, vel_temp);
         // Update dis/vel
         dis_GS.replaceRow(dis_temp,ix+1);
         vel_GS.replaceRow(vel_temp,ix+1);
@@ -42,9 +46,9 @@ Array2D<double> GS(PCSet& myPCSet, int order, int dim, int nPCTerms, string pcTy
     return (dis_GS);
 }
 
-void forward_duffing_GS(PCSet& myPCSet, Array1D<double>& inpParams, Array1D<double>& force, double dTym, Array1D<double>& dis, Array1D<double>& vel){
+void forward_duffing_GS(PCSet& myPCSet, Array1D<double>& inpParams, Array1D<double>& force_current, Array1D<double>& force_mid, Array1D<double>& force_plus,  double dTym, Array1D<double>& dis, Array1D<double>& vel){
         // Prepare force term for PC calculation
-        int nPCTerms = force.Length();
+        int nPCTerms = force_current.Length();
         
         // variable to store right hand side
         Array1D<double> dudt1(nPCTerms,0.e0);
@@ -66,14 +70,14 @@ void forward_duffing_GS(PCSet& myPCSet, Array1D<double>& inpParams, Array1D<doub
         
         // Integrate with classical 4th order Runge-Kutta
         // k1
-        RHS_GS(myPCSet, force, dis, vel, dudt1, dvdt1, epsilon, zeta);
+        RHS_GS(myPCSet, force_current, dis, vel, dudt1, dvdt1, epsilon, zeta);
         
         // Advance to mid-point
         addVecAlphaVecPow(dis,0.5*dTym,dudt1,1);
         addVecAlphaVecPow(vel,0.5*dTym,dvdt1,1);
     
         // k2
-        RHS_GS(myPCSet, force, dis, vel, dudt2, dvdt2, epsilon, zeta);
+        RHS_GS(myPCSet, force_mid, dis, vel, dudt2, dvdt2, epsilon, zeta);
 
         // Advance to mid-point
         dis = dis0;
@@ -82,7 +86,7 @@ void forward_duffing_GS(PCSet& myPCSet, Array1D<double>& inpParams, Array1D<doub
         addVecAlphaVecPow(vel,0.5*dTym,dvdt2,1);
 
         // k3
-        RHS_GS(myPCSet, force, dis, vel, dudt3, dvdt3, epsilon, zeta);
+        RHS_GS(myPCSet, force_mid, dis, vel, dudt3, dvdt3, epsilon, zeta);
 
         // Advance
         dis = dis0;
@@ -91,7 +95,7 @@ void forward_duffing_GS(PCSet& myPCSet, Array1D<double>& inpParams, Array1D<doub
         addVecAlphaVecPow(vel,dTym,dvdt3,1);
 
         // k4
-        RHS_GS(myPCSet, force, dis, vel, dudt4, dvdt4, epsilon, zeta);
+        RHS_GS(myPCSet, force_plus, dis, vel, dudt4, dvdt4, epsilon, zeta);
 
         // Advance to next time step
         dis = dis0;

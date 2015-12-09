@@ -28,7 +28,7 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     TickTock tt;
     tt.tick();
     for (int ix=0;ix<nStep;ix++){
-        forward_duffing_dt(inpParams,f_0,dTym,Temp);
+        forward_duffing_dt(inpParams,f_0,f_0,f_0,dTym,Temp);
         x_0.replaceRow(Temp,ix+1);
     }
     tt.tock("Took");
@@ -47,8 +47,8 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     int PCTerms_1 = PCSet_1.GetNumberPCTerms();
     // Generate the forcing on each dim
     for (int i=0;i<dim;i++){
-        Array2D<double> f_1(nStep+1,PCTerms_1,0.e0);
-        for (int it=0;it<nStep+1;it++){
+        Array2D<double> f_1(2*nStep+1,PCTerms_1,0.e0);
+        for (int it=0;it<2*nStep+1;it++){
             f_1(it,0) = fbar;
             f_1(it,1) = scaledKLmodes(it,i);
         }
@@ -115,8 +115,8 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
         int k = 0;
         for (int i=0;i<N_adof-1;i++){
             for (int j=i+1;j<N_adof;j++){
-                Array2D<double> f_2(nStep+1,PCTerms_2,0.e0);
-                for (int it=0;it<nStep+1;it++){
+                Array2D<double> f_2(2*nStep+1,PCTerms_2,0.e0);
+                for (int it=0;it<2*nStep+1;it++){
                     f_2(it,0) = fbar;
                     f_2(it,1) = scaledKLmodes(it,ind(i));
                     f_2(it,2) = scaledKLmodes(it,ind(j));
@@ -155,8 +155,8 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     for (int i=0;i<N_adof-2;i++){
         for (int j=i+1;j<N_adof-1;j++){
             for (int k=j+1;k<N_adof;k++){
-                Array2D<double> f_3(nStep+1,PCTerms_3,0.e0);
-                for (int it=0;it<nStep+1;it++){
+                Array2D<double> f_3(2*nStep+1,PCTerms_3,0.e0);
+                for (int it=0;it<2*nStep+1;it++){
                     f_3(it,0) = fbar;
                     f_3(it,1) = scaledKLmodes(it,ind(i));
                     f_3(it,2) = scaledKLmodes(it,ind(j));
@@ -185,14 +185,14 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
  
     printf("\nAssemble the solutions...\n");
     tt.tick();
-    PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, dis_0, dis_1, dis_2, dis_3, myPCSet, fbar, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, pcType, inpParams, scaledKLmodes, factor_OD, mstd_MCS, err_dump);
+    PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, dis_0, dis_1, dis_2, dis_3, myPCSet, fbar, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, pcType, inpParams, factor_OD, mstd_MCS, err_dump);
     tt.tock("Took");
     t(4)=tt.silent_tock();
    
     return(t);
 }
 
-void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, int AAPG_ord, Array1D<double>& dis_0, Array1D<Array2D<double> >& dis_1, Array2D<Array2D<double> >& dis_2, Array3D<Array2D<double> >& dis_3, PCSet& myPCSet, double fbar, int dim, int nStep, int PCTerms_1, int PCTerms_2, int PCTerms_3, int order, double dTym, string pcType, Array1D<double>& inpParams, Array2D<double>& scaledKLmodes, double factor_OD, Array2D<double>& mstd_MCS, FILE* err_dump){
+void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, int AAPG_ord, Array1D<double>& dis_0, Array1D<Array2D<double> >& dis_1, Array2D<Array2D<double> >& dis_2, Array3D<Array2D<double> >& dis_3, PCSet& myPCSet, double fbar, int dim, int nStep, int PCTerms_1, int PCTerms_2, int PCTerms_3, int order, double dTym, string pcType, Array1D<double>& inpParams, double factor_OD, Array2D<double>& mstd_MCS, FILE* err_dump){
     TickTock tt;
     tt.tick();
     // Post-process the AAPG solutions

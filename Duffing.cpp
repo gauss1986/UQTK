@@ -189,8 +189,8 @@ int main(int argc, char *argv[])
 
     // Generate the KL expansion of the excitation force
     int nkl = dim;
-    Array2D<double> scaledKLmodes(nStep+1,nkl,0.0);
-    genKL(scaledKLmodes, nStep+1, nkl, clen, sigma, tf, cov_type);
+    Array2D<double> scaledKLmodes(2*nStep+1,nkl,0.0);
+    genKL(scaledKLmodes, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
     write_datafile(scaledKLmodes,"KL.dat");
  
     // Monte Carlo simulation
@@ -265,12 +265,12 @@ int main(int argc, char *argv[])
         // Print the multiindices on screen
     
         // Prepare the force in PC format
-        Array2D<double> f_GS(nStep+1,nPCTerms,0.e0);
-        for (int i=0;i<nStep+1;i++){
+        Array2D<double> f_GS(2*nStep+1,nPCTerms,0.e0);
+        for (int i=0;i<2*nStep+1;i++){
             f_GS(i,0) = fbar;
         }
         for (int i=0;i<nkl;i++){
-            Array1D<double> tempf(nStep+1,0.e0);
+            Array1D<double> tempf(2*nStep+1,0.e0);
             getCol(scaledKLmodes,i,tempf);
             f_GS.replaceCol(tempf,i+1);
         }

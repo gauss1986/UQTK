@@ -20,8 +20,8 @@ double MCS(int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Arra
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
-        Array2D<double> totalforce(2,nStep+1,0.e0);
-        sample_duffing(samPts,iq,nStep,fbar,nkl,scaledKLmodes,totalforce);
+        Array2D<double> totalforce(2,2*nStep+1,0.e0);
+        sample_duffing(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,totalforce);
         
         // initialize the solution
         Array2D<double> x(2,nStep+1,0.e0);
@@ -31,9 +31,13 @@ double MCS(int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Arra
         // Time marching steps
         for (int ix=0;ix<nStep;ix++){
             //cout << "Time step No." << ix << endl;
-            Array1D<double> tempf(2,0.e0);
-            getCol(totalforce,ix,tempf);
-            forward_duffing_dt(inpParams, tempf, dTym, tempx);
+            Array1D<double> tempf1(2,0.e0);
+            Array1D<double> tempf2(2,0.e0);
+            Array1D<double> tempf3(2,0.e0);
+            getCol(totalforce,ix*2,tempf1);
+            getCol(totalforce,ix*2+1,tempf2);
+            getCol(totalforce,ix*2+2,tempf3);
+            forward_duffing_dt(inpParams, tempf1, tempf2, tempf3, dTym, tempx);
             x.replaceCol(tempx,ix+1);
         }
        
@@ -53,31 +57,31 @@ double MCS(int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Arra
     return (t);
 }
    
-    void forward_duffing_dt(Array1D<double>& inpParams, Array1D<double>& force, double dTym, Array1D<double>& x){
+    void forward_duffing_dt(Array1D<double>& inpParams, Array1D<double>& force1, Array1D<double>& force2, Array1D<double>& force3, double dTym, Array1D<double>& x){
         // Integrate with classical 4th order Runge-Kutta
 
         //Save solution at current time step
         Array1D<double> x0(x);
         
         // k1
-        Array1D<double> dxdt1 = RHS(force,x,inpParams);
+        Array1D<double> dxdt1 = RHS(force1,x,inpParams);
         // Advance to mid-point
         addVecAlphaVecPow(x,0.5*dTym,dxdt1,1);
 
         // k2
-        Array1D<double> dxdt2 = RHS(force,x,inpParams);
+        Array1D<double> dxdt2 = RHS(force2,x,inpParams);
         // Advance to mid-point
         copy(x0,x);
         addVecAlphaVecPow(x,0.5*dTym,dxdt2,1);
 
         // k3
-        Array1D<double> dxdt3 = RHS(force,x,inpParams);
+        Array1D<double> dxdt3 = RHS(force2,x,inpParams);
         // Advance
         copy(x0,x);
         addVecAlphaVecPow(x,dTym,dxdt3,1);
 
         // k4
-        Array1D<double> dxdt4 = RHS(force,x,inpParams);
+        Array1D<double> dxdt4 = RHS(force3,x,inpParams);
 
         // Advance to next time step
         for (unsigned int i=0;i<x.XSize();i++){
