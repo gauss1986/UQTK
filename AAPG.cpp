@@ -27,8 +27,9 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     // Time marching steps
     TickTock tt;
     tt.tick();
+    Array1D<double> tempf(3,fbar);
     for (int ix=0;ix<nStep;ix++){
-        forward_duffing_dt(inpParams,f_0,f_0,f_0,dTym,Temp);
+        forward_duffing_dt(inpParams,tempf,dTym,Temp);
         x_0.replaceRow(Temp,ix+1);
     }
     tt.tock("Took");

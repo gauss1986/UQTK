@@ -1,4 +1,5 @@
 #include <math.h>
+#include <cmath>
 #include "Array2D.h"
 #include "Array1D.h"
 #include "PCSet.h"
@@ -16,72 +17,66 @@ double MCS(int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Arra
     tt.tick();
 
     int nthreads;
-    #pragma omp parallel default(none) shared(dis_MC,nStep,nspl,fbar,dim,samPts,nkl,scaledKLmodes,dTym,inpParams,nthreads) 
+    #pragma omp parallel default(none) shared(dis_MC,nStep,nspl,fbar,samPts,nkl,scaledKLmodes,dTym,inpParams,nthreads) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
-        Array2D<double> totalforce(2,2*nStep+1,0.e0);
-        sample_duffing(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,totalforce);
+        Array1D<double> totalforce(2*nStep+1,0.e0);
+        sample(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,totalforce,inpParams);
         
-        // initialize the solution
-        Array2D<double> x(2,nStep+1,0.e0);
         // zero initial condition
         Array1D<double> tempx(2,0.e0);
 
-        // Time marching steps
+        // initialize the forcing terms
+        Array1D<double> tempf(3,0.e0);
+        tempf(2) = totalforce(0);
+        dis_MC(0,iq) = tempx(1);
         for (int ix=0;ix<nStep;ix++){
-            //cout << "Time step No." << ix << endl;
-            Array1D<double> tempf1(2,0.e0);
-            Array1D<double> tempf2(2,0.e0);
-            Array1D<double> tempf3(2,0.e0);
-            getCol(totalforce,ix*2,tempf1);
-            getCol(totalforce,ix*2+1,tempf2);
-            getCol(totalforce,ix*2+2,tempf3);
-            forward_duffing_dt(inpParams, tempf1, tempf2, tempf3, dTym, tempx);
-            x.replaceCol(tempx,ix+1);
+            tempf(0) = tempf(2);
+            tempf(1) = totalforce(ix*2+1);
+            tempf(2) = totalforce(ix*2+2);
+            forward_duffing_dt(inpParams, tempf, dTym, tempx);
+            dis_MC(ix+1,iq) = tempx(1);
         }
        
-        // store solution for this sample force
-        Array1D<double> dis(nStep+1,0.e0);
-        getRow(x,1,dis);
-        for (int ix=0;ix<nStep+1;ix++)
-            dis_MC(ix,iq) = dis(ix);
     }
+    //output the number of threads
     #pragma omp single
     nthreads = omp_get_num_threads();
     }
     cout << "Number of threads in OMP:" << nthreads << endl;
-
+    
+    //report the time cost
     tt.tock("Took");
     double t = tt.silent_tock();
     return (t);
 }
    
-    void forward_duffing_dt(Array1D<double>& inpParams, Array1D<double>& force1, Array1D<double>& force2, Array1D<double>& force3, double dTym, Array1D<double>& x){
+    void forward_duffing_dt(Array1D<double>& inpParams, Array1D<double>& force,  double dTym, Array1D<double>& x){
         // Integrate with classical 4th order Runge-Kutta
 
         //Save solution at current time step
         Array1D<double> x0(x);
         
         // k1
-        Array1D<double> dxdt1 = RHS(force1,x,inpParams);
+        Array1D<double> dxdt1 = RHS(force(0),x,inpParams);
         // Advance to mid-point
         addVecAlphaVecPow(x,0.5*dTym,dxdt1,1);
 
         // k2
-        Array1D<double> dxdt2 = RHS(force2,x,inpParams);
+        Array1D<double> dxdt2 = RHS(force(1),x,inpParams);
         // Advance to mid-point
         copy(x0,x);
         addVecAlphaVecPow(x,0.5*dTym,dxdt2,1);
 
         // k3
-        Array1D<double> dxdt3 = RHS(force2,x,inpParams);
+        Array1D<double> dxdt3 = RHS(force(1),x,inpParams);
         // Advance
         copy(x0,x);
         addVecAlphaVecPow(x,dTym,dxdt3,1);
 
         // k4
-        Array1D<double> dxdt4 = RHS(force3,x,inpParams);
+        Array1D<double> dxdt4 = RHS(force(2),x,inpParams);
 
         // Advance to next time step
         for (unsigned int i=0;i<x.XSize();i++){
@@ -89,23 +84,36 @@ double MCS(int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Arra
         }
    }
    
-   Array1D<double> RHS(Array1D<double>& force, Array1D<double>& x,Array1D<double>& inpParams){
+   Array1D<double> RHS(double force, Array1D<double>& x,Array1D<double>& inpParams){
         Array1D<double> dxdt(x);
-        // parse input parameters
-        const double zeta = inpParams(0);
-        const double epsilon = inpParams(1);
+        if (abs(inpParams(0))<1e-10) //Duffing
+            {// parse input parameters
+            const double zeta = inpParams(1);
+            const double epsilon = inpParams(2);
 
-        double temp = pow(x(1),3);
-        if (temp != temp){
-            cout << "Pow 3 in MCS is generating NaN!\n" << endl;
-            exit(1);
+            double temp = pow(x(1),3);
+            if (temp != temp){
+                cout << "Pow 3 in MCS is generating NaN!\n" << endl;
+                exit(1);
+            }
+            dxdt(0) = force-epsilon*temp-2*zeta*x(0)-x(1);
+            dxdt(1) = x(0);
+            } 
+        else
+        {   if (abs(inpParams(0)-1)<1e-10) //Lorenz
+            {// parse input parameters
+            const double a = inpParams(1);
+            const double b = inpParams(2);
+            const double G = inpParams(3);
+
+            dxdt(0)=-pow(x(1),2)-pow(x(2),2)-a*x(0)+a*force;
+            dxdt(1)=x(0)*x(1)-b*x(0)*x(2)-x(1)+G;
+            dxdt(2)=b*x(0)*x(1)+x(0)*x(2)-x(2);
+            }
         }
-        dxdt(0) = force(0)-epsilon*temp-2*zeta*x(0)-x(1);
-        dxdt(1) = x(0); 
-
         return dxdt;
    }
-   
+
    Array1D<double> mStd(Array1D<double>& x,int nspl){
         Array1D<double> mstd(2,0.e0);
         double sum = 0.e0;
@@ -138,20 +146,18 @@ double MCS(int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Arra
         return e;
     }
 
-void sample_duffing(Array2D<double>& samPts,int iq,int nStep,double fbar,int nkl,Array2D<double>& scaledKLmodes,Array2D<double>& totalforce){    
+void sample(Array2D<double>& samPts,int iq,int nStep,double fbar,int nkl,Array2D<double>& scaledKLmodes,Array1D<double>& totalforce, Array1D<double>& inpParams){    
     for (int it=0;it<nStep+1;it++){
-        totalforce(0,it) = fbar;
-	    for (int iy=0;iy<nkl;iy++){
-            totalforce(0,it) = totalforce(0,it)+samPts(iq,iy)*scaledKLmodes(it,iy);
+        if (abs(inpParams(0))<1e-10){ //Duffing
+            totalforce(it) = fbar;
+        }
+        else 
+        {   if (abs(inpParams(0)-1)<1e-10) //Lorenz
+            totalforce(it) = fbar+inpParams(4)*cos(inpParams(5)*it);
+	    }
+        for (int iy=0;iy<nkl;iy++){
+            totalforce(it) = totalforce(it)+samPts(iq,iy)*scaledKLmodes(it,iy);
         }
     }
 }
 
-void sample_lorenz(Array2D<double>& samPts,int iq,int nStep,double fbar,double Amp,double w,int nkl,Array2D<double>& scaledKLmodes,Array2D<double>& totalforce){    
-    for (int it=0;it<nStep+1;it++){
-        totalforce(0,it) = fbar+Amp*cos(w*it);
-	    for (int iy=0;iy<nkl;iy++){
-            totalforce(0,it) = totalforce(0,it)+samPts(iq,iy)*scaledKLmodes(it,iy);
-        }
-    }
-}

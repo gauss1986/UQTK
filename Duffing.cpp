@@ -195,9 +195,10 @@ int main(int argc, char *argv[])
  
     // Monte Carlo simulation
     // Define input parameters
-    Array1D<double> inpParams(2,0.e0);
-    inpParams(0) = ZETA;
-    inpParams(1) = epsilon;
+    Array1D<double> inpParams(3,0.e0);
+    inpParams(0) = 0;  // code for problem: 0-Duffing, 1-Lorenz
+    inpParams(1) = ZETA;
+    inpParams(2) = epsilon;
     double fbar = FBAR;
     Array2D<double> dis_MC(nStep+1,nspl,0.e0);
     Array2D<double> samPts(nspl,dim,0.e0);

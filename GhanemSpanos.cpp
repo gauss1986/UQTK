@@ -61,8 +61,8 @@ void forward_duffing_GS(PCSet& myPCSet, Array1D<double>& inpParams, Array1D<doub
         Array1D<double> dvdt4(nPCTerms,0.e0);
         
         // parse input parameters
-        const double zeta = inpParams(0);
-        const double epsilon = inpParams(1);
+        const double zeta = inpParams(1);
+        const double epsilon = inpParams(2);
 
         //Save solution at current time step
         Array1D<double> dis0(dis);
