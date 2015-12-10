@@ -1,4 +1,4 @@
-double MCS(int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Array2D<double>& scaledKLmodes, Array1D<double>& inpParams, Array2D<double>& samPts, Array2D<double>& dis_MC);
+double MCS(int dof, int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Array2D<double>& scaledKLmodes, Array1D<double>& inpParams, Array2D<double>& samPts, Array1D<Array2D<double> >& result);
 void forward_duffing_dt(Array1D<double>& inpParams, Array1D<double>& force, double dTym, Array1D<double>& x);
 Array1D<double> RHS(double force, Array1D<double>& x, Array1D<double>& inpParams);
 Array1D<double> mStd(Array1D<double>& x,int nspl);

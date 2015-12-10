@@ -11,13 +11,13 @@
 #include <omp.h>
 #include "ticktock.h"
 
-double MCS(int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Array2D<double>& scaledKLmodes, Array1D<double>& inpParams, Array2D<double>& samPts, Array2D<double>& dis_MC){
+double MCS(int dof, int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Array2D<double>& scaledKLmodes, Array1D<double>& inpParams, Array2D<double>& samPts, Array1D<Array2D<double> >& result){
     // Time marching steps
     TickTock tt;
     tt.tick();
 
     int nthreads;
-    #pragma omp parallel default(none) shared(dis_MC,nStep,nspl,fbar,samPts,nkl,scaledKLmodes,dTym,inpParams,nthreads) 
+    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,fbar,samPts,nkl,scaledKLmodes,dTym,inpParams,nthreads) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
@@ -25,18 +25,21 @@ double MCS(int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Arra
         sample(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,totalforce,inpParams);
         
         // zero initial condition
-        Array1D<double> tempx(2,0.e0);
-
+        Array1D<double> tempx(dof,0.e0);
         // initialize the forcing terms
         Array1D<double> tempf(3,0.e0);
         tempf(2) = totalforce(0);
-        dis_MC(0,iq) = tempx(1);
+        for (int idof=0;idof<dof;idof++){
+            result(idof)(0,iq) = tempx(idof);
+        }
         for (int ix=0;ix<nStep;ix++){
             tempf(0) = tempf(2);
             tempf(1) = totalforce(ix*2+1);
             tempf(2) = totalforce(ix*2+2);
             forward_duffing_dt(inpParams, tempf, dTym, tempx);
-            dis_MC(ix+1,iq) = tempx(1);
+            for (int idof=0;idof<dof;idof++){
+                result(idof)(ix+1,iq) = tempx(idof);
+            }
         }
        
     }

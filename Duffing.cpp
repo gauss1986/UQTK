@@ -105,6 +105,8 @@ int main(int argc, char *argv[])
     bool act_D = ACTD;
     // Threashold used in the adaptive AAPG scheme
     double p = THRESHOLD;
+    // Spatial dof
+    double dof = 2;
 
     // Time marching info
     double dTym = DTYM;
@@ -200,7 +202,6 @@ int main(int argc, char *argv[])
     inpParams(1) = ZETA;
     inpParams(2) = epsilon;
     double fbar = FBAR;
-    Array2D<double> dis_MC(nStep+1,nspl,0.e0);
     Array2D<double> samPts(nspl,dim,0.e0);
     PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
     MCPCSet.DrawSampleVar(samPts);
@@ -213,13 +214,18 @@ int main(int argc, char *argv[])
     }
     // Write solutions at initial step
     WriteMeanStdDevToFilePtr(0, 0, 0, f_dump);         
+    Array2D<double>dis_MC(nStep+1,nspl,0.e0);
+    Array2D<double>vel_MC(nStep+1,nspl,0.e0);
+    Array1D<Array2D<double> > result(dof);
+    result(0) = dis_MC;
+    result(1) = vel_MC;
     cout << "\nMCS...\n" << endl;  
-    double t_MCS = MCS(nspl, dim, nStep, nkl, dTym, fbar, scaledKLmodes, inpParams, samPts, dis_MC);
+    double t_MCS = MCS(dof,nspl, dim, nStep, nkl, dTym, fbar, scaledKLmodes, inpParams, samPts, result);
     Array2D<double> mstd_MCS(2,nStep,0.e0);
     // post-process the solution
     for (int ix=0;ix<nStep;ix++){
         Array1D<double> tempdis(nspl,0.e0);
-        getRow(dis_MC,ix,tempdis);
+        getRow(result(1),ix,tempdis);
         Array1D<double> mstd(2,0.e0);
         mstd = mStd(tempdis,nspl);
         mstd_MCS.replaceCol(mstd,ix); 
