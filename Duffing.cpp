@@ -219,8 +219,11 @@ int main(int argc, char *argv[])
     Array1D<Array2D<double> > result(dof);
     result(0) = dis_MC;
     result(1) = vel_MC;
+    Array1D<double> initial(2,0.e0);
+    initial(0) = VEL0;
+    initial(1) = DIS0;
     cout << "\nMCS...\n" << endl;  
-    double t_MCS = MCS(dof,nspl, dim, nStep, nkl, dTym, fbar, scaledKLmodes, inpParams, samPts, result);
+    double t_MCS = MCS(dof,nspl, dim, nStep, nkl, dTym, fbar, scaledKLmodes, inpParams, samPts, result, initial);
     Array2D<double> mstd_MCS(2,nStep,0.e0);
     // post-process the solution
     for (int ix=0;ix<nStep;ix++){

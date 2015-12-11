@@ -22,11 +22,11 @@ Array2D<double> GS(PCSet& myPCSet, int order, int dim, int nPCTerms, string pcTy
     vel_GS.replaceRow(vel_temp,0);
     
     // Forward run
+    Array1D<double> force_current(nPCTerms,0.e0);
+    Array1D<double> force_mid(nPCTerms,0.e0);
+    Array1D<double> force_plus(nPCTerms,0.e0);
     for (int ix=0;ix<nStep;ix++){
         // Subtract the current force
-        Array1D<double> force_current(nPCTerms,0.e0);
-        Array1D<double> force_mid(nPCTerms,0.e0);
-        Array1D<double> force_plus(nPCTerms,0.e0);
         getRow(f_GS,2*ix,force_current);
         getRow(f_GS,2*ix+1,force_mid);
         getRow(f_GS,2*ix+2,force_plus);
@@ -35,6 +35,7 @@ Array2D<double> GS(PCSet& myPCSet, int order, int dim, int nPCTerms, string pcTy
         // Update dis/vel
         dis_GS.replaceRow(dis_temp,ix+1);
         vel_GS.replaceRow(vel_temp,ix+1);
+        // test against NaN
         for (int j=0;j<nPCTerms;j++){
             if ((dis_temp(j) != dis_temp(j) )|| (vel_temp(j)!= vel_temp(j))){
                 cout << "GS is producing NaN values at time step " << ix << " on term "<< j<< " !\n"<< endl;

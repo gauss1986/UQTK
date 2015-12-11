@@ -202,6 +202,7 @@ int main(int argc, char *argv[])
     inpParams(4) = AMP;     //AMP
     inpParams(5) = 2*M_PI/73; //w
     double fbar = FBAR;
+    // Draw Monte Carlo samples
     Array2D<double> samPts(nspl,dim,0.e0);
     PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
     MCPCSet.DrawSampleVar(samPts);
@@ -218,7 +219,7 @@ int main(int argc, char *argv[])
         printf("Could not open file '%s'\n",Solufile_std.c_str());
         exit(1);    
     }
-    // Write solutions at initial step
+    // Initialize solutions
     Array2D<double> x(nStep+1,nspl,0.e0);
     Array2D<double> y(nStep+1,nspl,0.e0);
     Array2D<double> z(nStep+1,nspl,0.e0);
@@ -226,9 +227,11 @@ int main(int argc, char *argv[])
     result(0) = x;
     result(1) = y;
     result(2) = z;
-    WriteMeanStdDevToFilePtr_lorenz(0, 0, 0, 0, f_mean);//deterministic and zero initial condtion         
+    // Define and write solutions at initial step
+    Array1D<double> initial(dof,0.e0);  // deterministic and zero initial condition
+    WriteMeanStdDevToFilePtr_lorenz(0, initial(0), initial(1), initial(2), f_mean);        
     cout << "\nMCS...\n" << endl;  
-    double t_MCS = MCS(dof, nspl, dim, nStep, nkl, dTym, fbar, scaledKLmodes, inpParams, samPts, result);
+    double t_MCS = MCS(dof, nspl, dim, nStep, nkl, dTym, fbar, scaledKLmodes, inpParams, samPts, result, initial);
     Array2D<double> mean(dof,nStep+1,0.e0);
     Array2D<double> std(dof,nStep+1,0.e0);
     // post-process the solution
@@ -273,3 +276,92 @@ int main(int argc, char *argv[])
     return 0;
 }
 
+    // Ghanem-Spanos method
+    printf("\nGhanem-Spanos method...\n");
+
+    double dis0 = DIS0;
+    double vel0 = VEL0;
+    Array1D<double> t_GS(ord_GS,0.e0);
+    
+    ostringstream err_stream;
+    if (act_D){
+        err_stream << "error_n" << dim << "_e"<<epsilon<<"_s"<<sigma<<"_actD.dat";
+    }
+    else {
+        err_stream << "error_n" << dim << "_e"<<epsilon<<"_s"<<sigma<<".dat";
+    }
+    string errstr(err_stream.str());
+    FILE *err_dump;
+    if(!(err_dump=fopen(errstr.c_str(),"w"))){
+        printf("Could not open file '%s'\n",errstr.c_str());
+        exit(1);    
+    }
+    for(int ord=1;ord<ord_GS+1;ord++){
+        TickTock tt;
+    	tt.tick();
+	    PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
+            tt.tock("Took");
+	    cout << "Order "<< ord << endl;
+
+	    // The number of PC terms
+        const int nPCTerms = myPCSet.GetNumberPCTerms();
+        cout << "The number of PC terms in an expansion is " << nPCTerms << endl;
+        // Print the multiindices on screen
+    
+        // Prepare the force in PC format
+        Array2D<double> f_GS(2*nStep+1,nPCTerms,0.e0);
+        for (int i=0;i<2*nStep+1;i++){
+            f_GS(i,0) = fbar;
+        }
+        for (int i=0;i<nkl;i++){
+            Array1D<double> tempf(2*nStep+1,0.e0);
+            getCol(scaledKLmodes,i,tempf);
+            f_GS.replaceCol(tempf,i+1);
+        }
+
+        // Assumed deterministic initial conditions
+        Array2D<double> dis_GS(nStep+1,nPCTerms);
+
+        clock_t start = clock();
+    	tt.tick();
+        dis_GS = GS(myPCSet, ord, dim, nPCTerms, pcType, nStep, dis0, vel0, dTym, inpParams, f_GS);
+        t_GS(ord-1) = tt.silent_tock();
+	    cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
+	
+        // output and save the solution
+        // Open files to write out solutions
+        ostringstream s;
+        s << "GS_modes_" << ord<<".dat";
+        string SoluGSmodes(s.str());
+        FILE *GS_dump;
+        if(!(GS_dump=fopen(SoluGSmodes.c_str(),"w"))){
+            printf("Could not open file '%s'\n",SoluGSmodes.c_str());
+            exit(1);    
+        }
+        // Open files to write out statistics of the solutions
+        ostringstream s1;
+        s1 << "GS_stat_" << ord<<".dat";
+        string SoluGSstat(s1.str());
+        //string SoluGSstat = "GS_stat.dat";
+        FILE *GSstat_dump;
+        if(!(GSstat_dump=fopen(SoluGSstat.c_str(),"w"))){
+            printf("Could not open file '%s'\n",SoluGSstat.c_str());
+            exit(1);    
+        }
+        
+        Array1D<double> e_GS_ord = postprocess_GS(nPCTerms, nStep, dis0, dis_GS, myPCSet, dTym, GS_dump, GSstat_dump, mstd_MCS);
+
+        fprintf(err_dump, "%lg %lg", e_GS_ord(0),e_GS_ord(1));
+        fprintf(err_dump, "\n");
+
+        // close files
+        if(fclose(GS_dump)){
+            printf("Could not close file '%s'\n",SoluGSmodes.c_str());
+            exit(1);    
+        }
+        
+        if(fclose(GSstat_dump)){
+            printf("Could not close file '%s'\n",SoluGSstat.c_str());
+            exit(1);    
+        }
+    }
