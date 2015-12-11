@@ -9,13 +9,14 @@ July 25, 2015
 #include <sstream>
 #include <fstream>
 #include <iostream>
+#include <math.h>
 #include "uqtktools.h"
 #include "uqtkmcmc.h"
 #include "PCSet.h"
 #include "arraytools.h"
 #include "getopt.h"
 
-#include "UtilsDuffing.h"
+#include "UtilsLorenz.h"
 #include "Duffing.h"
 #include "KL.h"
 #include "MCS.h"
@@ -55,7 +56,7 @@ int usage(){
   printf(" -s <sigma>       : define standard deviation (default=%e) \n",SIG);
   printf(" -l <clen>        : define correlation length (default=%e) \n",CLEN);
   printf(" -t <tf>          : define end time (default=%e) \n",TFINAL);
-  printf(" -a <AMP>           : define the oscillation amp of F (default=%e) \n",A);
+  printf(" -a <AMP>         : define the oscillation amp of F (default=%e) \n",AMP);
   printf(" -F <FBAR>        : define mean of F(default=%e) \n",FBAR);
   printf(" -f <factor_OD>   : define the factor in overdetermined dynimcal-orthogonal calculation (default=%e) \n", FACTOR_OD);
   printf(" -G <ord_GS>      : define the order of Ghanem-Spanos method (default=%d) \n", ORDER_GS);
@@ -104,6 +105,8 @@ int main(int argc, char *argv[])
     bool act_D = ACTD;
     // Threashold used in the adaptive AAPG scheme
     double p = THRESHOLD;
+    // spatial dof
+    double dof = 3;
 
     // Time marching info
     double dTym = DTYM;
@@ -191,163 +194,82 @@ int main(int argc, char *argv[])
  
     // Monte Carlo simulation
     // Define input parameters
+    Array1D<double> inpParams(6,0.e0);
+    inpParams(0) = 1;       // code for problem: 0-Duffing, 1-Lorenz
+    inpParams(1) = 0.25;    //a, from Lorenz 2005
+    inpParams(2) = 4.0;     //b, from Lorenz 2005
+    inpParams(3) = 1.23;    //G, from Lorenz 2005
+    inpParams(4) = AMP;     //AMP
+    inpParams(5) = 2*M_PI/73; //w
     double fbar = FBAR;
-    double Amp = AMP;
-    Array2D<double> dis_MC(nStep+1,nspl,0.e0);
     Array2D<double> samPts(nspl,dim,0.e0);
     PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
     MCPCSet.DrawSampleVar(samPts);
     // Open files to write out
-    string Solufile = "MCS.dat";
-    FILE *f_dump;
-    if(!(f_dump=fopen(Solufile.c_str(),"w"))){
-        printf("Could not open file '%s'\n",Solufile.c_str());
+    string Solufile_mean = "MCS_mean.dat";
+    string Solufile_std = "MCS_std.dat";
+    FILE *f_mean;
+    FILE *f_std;
+    if(!(f_mean=fopen(Solufile_mean.c_str(),"w"))){
+        printf("Could not open file '%s'\n",Solufile_mean.c_str());
+        exit(1);    
+    }
+    if(!(f_std=fopen(Solufile_std.c_str(),"w"))){
+        printf("Could not open file '%s'\n",Solufile_std.c_str());
         exit(1);    
     }
     // Write solutions at initial step
-    WriteMeanStdDevToFilePtr(0, 0, 0, f_dump);         
+    Array2D<double> x(nStep+1,nspl,0.e0);
+    Array2D<double> y(nStep+1,nspl,0.e0);
+    Array2D<double> z(nStep+1,nspl,0.e0);
+    Array1D<Array2D<double> > result(3);
+    result(0) = x;
+    result(1) = y;
+    result(2) = z;
+    WriteMeanStdDevToFilePtr_lorenz(0, 0, 0, 0, f_mean);//deterministic and zero initial condtion         
     cout << "\nMCS...\n" << endl;  
-    double t_MCS = MCS(nspl, dim, nStep, nkl, dTym, fbar, scaledKLmodes, samPts, dis_MC);
-    Array2D<double> mstd_MCS(2,nStep,0.e0);
+    double t_MCS = MCS(dof, nspl, dim, nStep, nkl, dTym, fbar, scaledKLmodes, inpParams, samPts, result);
+    Array2D<double> mean(dof,nStep+1,0.e0);
+    Array2D<double> std(dof,nStep+1,0.e0);
     // post-process the solution
+    for (int ivar=0;ivar<dof;ivar++){
+        for (int ix=0;ix<nStep;ix++){
+            Array1D<double> temp(nspl,0.e0);
+            getRow(result(ivar),ix,temp);
+            Array1D<double> mstd(2,0.e0);
+            mstd = mStd(temp,nspl);
+            mean(ivar,ix) = mstd(0);
+            std(ivar,ix) = mstd(1);
+        }
+    }
+    // save results
     for (int ix=0;ix<nStep;ix++){
-        Array1D<double> tempdis(nspl,0.e0);
-        getRow(dis_MC,ix,tempdis);
-        Array1D<double> mstd(2,0.e0);
-        mstd = mStd(tempdis,nspl);
-        mstd_MCS.replaceCol(mstd,ix); 
-        WriteMeanStdDevToFilePtr((ix+1)*dTym, mstd(0),mstd(1),f_dump);         
+        WriteMeanStdDevToFilePtr_lorenz((ix+1)*dTym, mean(0,ix),mean(1,ix),mean(2,ix),f_mean);         
+        WriteMeanStdDevToFilePtr_lorenz((ix+1)*dTym, std(0,ix),std(1,ix),std(2,ix),f_std);         
+    }
+    cout << "Results of mean..." << endl;
+    // Output mean to scren
+    for (int ix=0;ix<nStep;ix++){
         if ((ix+1) % ((int) nStep/10) == 0){
-            WriteMeanStdDevToStdOut(ix+1, (ix+1)*dTym, mstd(0), mstd(1));
+            WriteMeanStdDevToStdOut_lorenz(ix+1, (ix+1)*dTym, mean(0,ix), mean(1,ix), mean(2,ix));
         }
     }
-    if(fclose(f_dump)){
-        printf("Could not close file '%s'\n",Solufile.c_str());
+    cout << "Results of std..." << endl;
+    // Output std to scren
+    for (int ix=0;ix<nStep;ix++){
+        if ((ix+1) % ((int) nStep/10) == 0){
+            WriteMeanStdDevToStdOut_lorenz(ix+1, (ix+1)*dTym, std(0,ix), std(1,ix), std(2,ix));
+        }
+    }
+    if(fclose(f_mean)){
+        printf("Could not close file '%s'\n",Solufile_mean.c_str());
+        exit(1);    
+    }
+    if(fclose(f_std)){
+        printf("Could not close file '%s'\n",Solufile_std.c_str());
         exit(1);    
     }
     
-    // Ghanem-Spanos method
-    printf("\nGhanem-Spanos method...\n");
-
-    double dis0 = DIS0;
-    double vel0 = VEL0;
-    Array1D<double> t_GS(ord_GS,0.e0);
-    
-    ostringstream err_stream;
-    if (act_D){
-        err_stream << "error_n" << dim << "_e"<<epsilon<<"_s"<<sigma<<"_actD.dat";
-    }
-    else {
-        err_stream << "error_n" << dim << "_e"<<epsilon<<"_s"<<sigma<<".dat";
-    }
-    string errstr(err_stream.str());
-    FILE *err_dump;
-    if(!(err_dump=fopen(errstr.c_str(),"w"))){
-        printf("Could not open file '%s'\n",errstr.c_str());
-        exit(1);    
-    }
-    for(int ord=1;ord<ord_GS+1;ord++){
-        TickTock tt;
-    	tt.tick();
-	    PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
-            tt.tock("Took");
-	    cout << "Order "<< ord << endl;
-
-	    // The number of PC terms
-        const int nPCTerms = myPCSet.GetNumberPCTerms();
-        cout << "The number of PC terms in an expansion is " << nPCTerms << endl;
-        // Print the multiindices on screen
-    
-        // Prepare the force in PC format
-        Array2D<double> f_GS(nStep+1,nPCTerms,0.e0);
-        for (int i=0;i<nStep+1;i++){
-            f_GS(i,0) = fbar;
-        }
-        for (int i=0;i<nkl;i++){
-            Array1D<double> tempf(nStep+1,0.e0);
-            getCol(scaledKLmodes,i,tempf);
-            f_GS.replaceCol(tempf,i+1);
-        }
-
-        // Assumed deterministic initial conditions
-        Array2D<double> dis_GS(nStep+1,nPCTerms);
-
-        clock_t start = clock();
-    	tt.tick();
-        dis_GS = GS(myPCSet, ord, dim, nPCTerms, pcType, nStep, dis0, vel0, dTym, inpParams, f_GS);
-        t_GS(ord-1) = tt.silent_tock();
-	    cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
-	
-        // output and save the solution
-        // Open files to write out solutions
-        ostringstream s;
-        s << "GS_modes_" << ord<<".dat";
-        string SoluGSmodes(s.str());
-        FILE *GS_dump;
-        if(!(GS_dump=fopen(SoluGSmodes.c_str(),"w"))){
-            printf("Could not open file '%s'\n",SoluGSmodes.c_str());
-            exit(1);    
-        }
-        // Open files to write out statistics of the solutions
-        ostringstream s1;
-        s1 << "GS_stat_" << ord<<".dat";
-        string SoluGSstat(s1.str());
-        //string SoluGSstat = "GS_stat.dat";
-        FILE *GSstat_dump;
-        if(!(GSstat_dump=fopen(SoluGSstat.c_str(),"w"))){
-            printf("Could not open file '%s'\n",SoluGSstat.c_str());
-            exit(1);    
-        }
-        
-        Array1D<double> e_GS_ord = postprocess_GS(nPCTerms, nStep, dis0, dis_GS, myPCSet, dTym, GS_dump, GSstat_dump, mstd_MCS);
-
-        fprintf(err_dump, "%lg %lg", e_GS_ord(0),e_GS_ord(1));
-        fprintf(err_dump, "\n");
-
-        // close files
-        if(fclose(GS_dump)){
-            printf("Could not close file '%s'\n",SoluGSmodes.c_str());
-            exit(1);    
-        }
-        
-        if(fclose(GSstat_dump)){
-            printf("Could not close file '%s'\n",SoluGSstat.c_str());
-            exit(1);    
-        }
-    }
-
-    // AAPG
-    printf("\nAAPG...\n");
-    TickTock tt;
-    tt.tick();
-    PCSet myPCSet("ISP",ord_AAPG_GS,dim,pcType,0.0,1.0,false); 
-    tt.tock("Took");
-    
-    Array1D<double> t_AAPG = AAPG(inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, dis0, vel0, myPCSet, factor_OD, ord_AAPG, act_D, p, mstd_MCS, err_dump);
-    
-    // output the timing
-    Array1D<double> t(3+ord_GS+ord_AAPG,0.e0);
-    t(0) = t_MCS;
-    for (int i=0;i<ord_GS;i++)
-	    t(i+1)=t_GS(i);
-    for (int i=0;i<ord_AAPG+2;i++)
-        t(i+1+ord_GS)=t_AAPG(i);
-
-    ostringstream time_stream;
-    if (act_D){
-        time_stream << "time_n" << dim << "_e"<<epsilon<<"_s"<<sigma<<"_actD.dat";
-    }
-    else{
-        time_stream << "time_n" << dim << "_e"<<epsilon<<"_s"<<sigma<<".dat";
-    }
-    string timestr(time_stream.str());
-    WriteToFile(t, timestr.c_str());
-        
-    if(fclose(err_dump)){
-        printf("Could not close file '%s'\n",errstr.c_str());
-        exit(1);    
-    }
-
     return 0;
 }
 

@@ -4,12 +4,16 @@ TOPDIR=../..
 include $(TOPDIR)/config/config3.site
 
 TARGET = Duffing.x
+TARGET2 = Lorenz.x
 
 SRCS = ticktock.cpp KL.cpp MCS.cpp GhanemSpanos.cpp AAPG.cpp Duffing.cpp UtilsDuffing.cpp 
+SRCS2 = ticktock.cpp KL.cpp MCS.cpp Lorenz.cpp UtilsLorenz.cpp 
 
 OBJ = $(SRCS:.cpp=.o)
+OBJ2 = $(SRCS2:.cpp=.o)
 
-INCS =  UtilsDuffing.h 
+INCS1 =  UtilsDuffing.h 
+INCS2 =  UtilsLorenz.h 
 
 LIBINCDIR = $(TOPDIR)/src_cpp/include/
 LIBBINDIR = $(TOPDIR)/src_cpp/lib/
@@ -25,17 +29,19 @@ LDEP = $(LIBBINDIR)/libUQTk.a $(LIBBINDIR)/libquad.a $(LIBBINDIR)/liblbfgs.a $(L
 DEFS = -D__$(FTNNAME)
 
 .cpp.o:
-#	$(CXX) $(CXXFLAGS) $(DEFS) $(INCDIRS) -c $*.cpp -pg
 	$(CXX) $(CXXFLAGS) $(DEFS) $(INCDIRS) -c $*.cpp
 
-all: $(TARGET)
+duffing: $(TARGET)
+lorenz: $(TARGET2)
 
 $(TARGET): $(OBJ) $(INCS) $(LDEP)
-#	$(CXX) $(CXXFLAGS) $(DEFS) $(INCDIRS) -o $(TARGET) $(OBJ) $(LIBS) -pg
 	$(CXX) $(CXXFLAGS) $(DEFS) $(INCDIRS) -o $(TARGET) $(OBJ) $(LIBS)
 
+$(TARGET2): $(OBJ2) $(INCS2) $(LDEP)
+	$(CXX) $(CXXFLAGS) $(DEFS) $(INCDIRS) -o $(TARGET2) $(OBJ2) $(LIBS)
+
 clean:
-	rm -f $(OBJ) $(TARGET)*~
+	rm -f $(OBJ) $(TARGET)*~ $(OBJ2) $(TARGET2)
 	rm -f *.dat
 
 
