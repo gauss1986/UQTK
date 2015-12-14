@@ -11,7 +11,7 @@
 #include "GhanemSpanos.h"
 #include "ticktock.h"
 
-Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int order, string pcType, int dim, int nStep, Array2D<double>& scaledKLmodes, double dis0, double vel0, PCSet& myPCSet, double factor_OD, int AAPG_ord, bool act_D, double p, Array2D<double>& mstd_MCS, FILE* err_dump){
+Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTym, int order, string pcType, int dim, int nStep, Array2D<double>& scaledKLmodes, Array1D<double>& initial, PCSet& myPCSet, double factor_OD, int AAPG_ord, bool act_D, double p, Array2D<double>& mstd_MCS, FILE* err_dump){
     // timing var
     Array1D<double> t(5,0.e0);
     
@@ -57,11 +57,13 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
     }
     
     tt.tick();
-    #pragma omp parallel default(none) shared(dim,PCSet_1,order,PCTerms_1,pcType,nStep,dis0,vel0,dTym,inpParams,force_1,dis_1)
+    #pragma omp parallel default(none) shared(dof, dim,PCSet_1,order,PCTerms_1,pcType,nStep,initial,dTym,inpParams,force_1,dis_1)
     {
     #pragma omp for
     for (int i=0;i<dim;i++){
-        dis_1(i) = GS(PCSet_1, order, 1, PCTerms_1, pcType, nStep, dis0, vel0, dTym, inpParams, force_1(i));
+        Array1D<Array2D<double> > temp(dof);
+        GS(dof, PCSet_1, order, 1, PCTerms_1, pcType, nStep, initial, dTym, inpParams, force_1(i),temp);
+        dis_1(i) = temp(1);
     }
     }
     tt.tock("Took");
@@ -129,11 +131,13 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
 	    }
     }
     tt.tick();
-    #pragma omp parallel  default(none) shared(k,dis_2,indi_2,indj_2,PCSet_2,order,PCTerms_2,pcType,nStep,dis0,vel0,dTym,inpParams,force_2)
+    #pragma omp parallel  default(none) shared(dof,k,dis_2,indi_2,indj_2,PCSet_2,order,PCTerms_2,pcType,nStep,initial,dTym,inpParams,force_2)
     {
     #pragma omp for
-    for (int i=0;i<k;i++){ 
-        dis_2(indi_2(i),indj_2(i)) = GS(PCSet_2, order, 2, PCTerms_2, pcType, nStep, dis0, vel0, dTym, inpParams, force_2(i));
+    for (int i=0;i<k;i++){
+        Array1D<Array2D<double> > temp(dof);
+        GS(dof, PCSet_2, order, 2, PCTerms_2, pcType, nStep, initial, dTym, inpParams, force_2(i), temp); 
+        dis_2(indi_2(i),indj_2(i)) = temp(1);
     }
     }
     tt.tock("Took");   
@@ -173,11 +177,14 @@ Array1D<double> AAPG(Array1D<double> inpParams, double fbar, double dTym, int or
 	    }
     //start = clock();
     tt.tick();
-    #pragma omp parallel default(none) shared(l,indi_3,indj_3,indk_3,PCSet_3,order,PCTerms_3,pcType,nStep,dis0,vel0,dTym,inpParams,dis_3,force_3)
+    #pragma omp parallel default(none) shared(dof, l,indi_3,indj_3,indk_3,PCSet_3,order,PCTerms_3,pcType,nStep,initial,dTym,inpParams,dis_3,force_3)
     {
     #pragma omp for
-    for (int i=0;i<l;i++)        
-	dis_3(indi_3(i),indj_3(i),indk_3(i)) = GS(PCSet_3, order, 3, PCTerms_3, pcType, nStep, dis0, vel0, dTym, inpParams, force_3(i));
+    for (int i=0;i<l;i++){
+        Array1D<Array2D<double> > temp(dof);
+        GS(dof, PCSet_3, order, 3, PCTerms_3, pcType, nStep, initial, dTym, inpParams, force_3(i),temp);         
+	    dis_3(indi_3(i),indj_3(i),indk_3(i)) = temp(1);
+    }
     }
     tt.tock("Took");
     t(3)=tt.silent_tock();

@@ -245,8 +245,6 @@ int main(int argc, char *argv[])
     // Ghanem-Spanos method
     printf("\nGhanem-Spanos method...\n");
 
-    double dis0 = DIS0;
-    double vel0 = VEL0;
     Array1D<double> t_GS(ord_GS,0.e0);
     
     ostringstream err_stream;
@@ -286,11 +284,11 @@ int main(int argc, char *argv[])
         }
 
         // Assumed deterministic initial conditions
-        Array2D<double> dis_GS(nStep+1,nPCTerms);
+        Array1D<Array2D<double> > result(2);
 
         clock_t start = clock();
     	tt.tick();
-        dis_GS = GS(myPCSet, ord, dim, nPCTerms, pcType, nStep, dis0, vel0, dTym, inpParams, f_GS);
+        GS(dof, myPCSet, ord, dim, nPCTerms, pcType, nStep, initial, dTym, inpParams, f_GS, result);
         t_GS(ord-1) = tt.silent_tock();
 	    cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
 	
@@ -315,7 +313,7 @@ int main(int argc, char *argv[])
             exit(1);    
         }
         
-        Array1D<double> e_GS_ord = postprocess_GS(nPCTerms, nStep, dis0, dis_GS, myPCSet, dTym, GS_dump, GSstat_dump, mstd_MCS);
+        Array1D<double> e_GS_ord = postprocess_GS(nPCTerms, nStep, DIS0, result(1), myPCSet, dTym, GS_dump, GSstat_dump, mstd_MCS);
 
         fprintf(err_dump, "%lg %lg", e_GS_ord(0),e_GS_ord(1));
         fprintf(err_dump, "\n");
@@ -339,7 +337,7 @@ int main(int argc, char *argv[])
     PCSet myPCSet("ISP",ord_AAPG_GS,dim,pcType,0.0,1.0,false); 
     tt.tock("Took");
     
-    Array1D<double> t_AAPG = AAPG(inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, dis0, vel0, myPCSet, factor_OD, ord_AAPG, act_D, p, mstd_MCS, err_dump);
+    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, initial, myPCSet, factor_OD, ord_AAPG, act_D, p, mstd_MCS, err_dump);
     
     // output the timing
     Array1D<double> t(3+ord_GS+ord_AAPG,0.e0);
