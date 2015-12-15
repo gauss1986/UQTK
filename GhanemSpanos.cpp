@@ -1,4 +1,5 @@
 #include <math.h>
+#include <cmath>
 #include "Array2D.h"
 #include "Array1D.h"
 #include "PCSet.h"
@@ -10,20 +11,15 @@
 
 void GS(int dof, PCSet& myPCSet, int order, int dim, int nPCTerms, string pcType, int nStep, Array1D<double>& initial, double dTym, Array1D<double>& inpParams, Array2D<double>& f_GS, Array1D<Array2D<double> >& solution){
 
-    // Working array of the solutions
-    Array1D<double> vel_temp(nPCTerms,0.e0);
-    Array1D<double> dis_temp(nPCTerms,0.e0);
+    // Initialize working variable
     Array1D<Array1D<double> > result(dof);  //variable to store results at each iteration step
-
-    // initial step
-    vel_temp(0) = initial(0);
-    dis_temp(0) = initial(1);
-    result(0) = vel_temp;
-    result(1) = dis_temp;
     for (int i=0;i<dof;i++){
-        Array2D<double> temp(nStep+1,nPCTerms,0.e0);
-        solution(i) = temp;
-        solution(i).replaceRow(result(i),0);
+        Array1D<double> temp(nPCTerms,0.e0);
+        Array2D<double> temp2(nStep+1,nPCTerms,0.e0);
+        temp(0)=initial(i);
+        result(i)=temp;
+        solution(i) = temp2;
+        solution(i).replaceRow(temp,0);
     }
     
     // Forward run
@@ -98,21 +94,28 @@ void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<dou
         }
         int nPCTerms = x(0).Length();
         
-        // parse input parameters
-        const double zeta = inpParams(1);
-        const double epsilon = inpParams(2);
-
-        // buff to store temperary results 
-        Array1D<double> temp(nPCTerms,0.e0);                     
-        
-        // nonlinear term
-        myPCSet.IPow(x(1),temp,3);
-
-        for (int ind=0;ind<nPCTerms;ind++){
-            dev(1)(ind) = x(0)(ind);//velocity term
-            dev(0)(ind) = force(ind)-temp(ind)*epsilon-2*zeta*x(0)(ind)-x(1)(ind);
+        if (abs(inpParams(0))<1e-10){ //Duffing
+            // parse input parameters
+            const double zeta = inpParams(1);
+            const double epsilon = inpParams(2);
+            // buff to store temperary results 
+            Array1D<double> temp(nPCTerms,0.e0);                     
+            // nonlinear term
+            myPCSet.IPow(x(1),temp,3);
+            for (int ind=0;ind<nPCTerms;ind++){
+                dev(1)(ind) = x(0)(ind);//velocity term
+                dev(0)(ind) = force(ind)-temp(ind)*epsilon-2*zeta*x(0)(ind)-x(1)(ind);
+            }
         }
+        if (abs(inpParams(0)-1)<1e-10){ //Lorenz
+            // parse input parameters
+            const double a = inpParams(1);
+            const double b = inpParams(2);
+            const double G = inpParams(3);
+            
+            
 
+        }
 }
 
 Array1D<double> postprocess_GS(int nPCTerms, int nStep, double init, Array2D<double>& solution, PCSet& myPCSet, double dTym, FILE* GS_dump, FILE* GSstat_dump, Array2D<double>& mstd_MCS){

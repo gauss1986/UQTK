@@ -89,8 +89,8 @@ double MCS(int dof, int nspl, int dim, int nStep, int nkl, double dTym, double f
    
    Array1D<double> RHS(double force, Array1D<double>& x,Array1D<double>& inpParams){
         Array1D<double> dxdt(x);
-        if (abs(inpParams(0))<1e-10) //Duffing
-            {// parse input parameters
+        if (abs(inpParams(0))<1e-10){ //Duffing
+            // parse input parameters
             const double zeta = inpParams(1);
             const double epsilon = inpParams(2);
 
@@ -102,9 +102,8 @@ double MCS(int dof, int nspl, int dim, int nStep, int nkl, double dTym, double f
             dxdt(0) = force-epsilon*temp-2*zeta*x(0)-x(1);
             dxdt(1) = x(0);
             } 
-        else
-        {   if (abs(inpParams(0)-1)<1e-10) //Lorenz
-            {// parse input parameters
+        if (abs(inpParams(0)-1)<1e-10){ //Lorenz
+            // parse input parameters
             const double a = inpParams(1);
             const double b = inpParams(2);
             const double G = inpParams(3);
@@ -113,7 +112,6 @@ double MCS(int dof, int nspl, int dim, int nStep, int nkl, double dTym, double f
             dxdt(1)=x(0)*x(1)-b*x(0)*x(2)-x(1)+G;
             dxdt(2)=b*x(0)*x(1)+x(0)*x(2)-x(2);
             }
-        }
         return dxdt;
    }
 
@@ -154,8 +152,7 @@ void sample(Array2D<double>& samPts,int iq,int nStep,double fbar,int nkl,Array2D
         if (abs(inpParams(0))<1e-10){ //Duffing
             totalforce(it) = fbar;
         }
-        else 
-        {   if (abs(inpParams(0)-1)<1e-10) //Lorenz
+        if (abs(inpParams(0)-1)<1e-10){ //Lorenz
             totalforce(it) = fbar+inpParams(4)*cos(inpParams(5)*it);
 	    }
         for (int iy=0;iy<nkl;iy++){
