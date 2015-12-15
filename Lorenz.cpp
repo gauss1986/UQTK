@@ -311,7 +311,7 @@ int main(int argc, char *argv[])
         // Prepare the force in PC format
         Array2D<double> f_GS(2*nStep+1,nPCTerms,0.e0);
         for (int i=0;i<2*nStep+1;i++){
-            f_GS(i,0) = fbar;
+            f_GS(i,0) = fbar+inpParams(4)*cos(inpParams(5)*it);;
         }
         for (int i=0;i<nkl;i++){
             Array1D<double> tempf(2*nStep+1,0.e0);

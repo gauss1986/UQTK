@@ -27,13 +27,13 @@ void GS(int dof, PCSet& myPCSet, int order, int dim, int nPCTerms, string pcType
     Array1D<double> force_mid(nPCTerms,0.e0);
     Array1D<double> force_plus(nPCTerms,0.e0);
     for (int ix=0;ix<nStep;ix++){
-        // Subtract the current force
+        // Subtract the force at currect, mid and next step
         getRow(f_GS,2*ix,force_current);
         getRow(f_GS,2*ix+1,force_mid);
         getRow(f_GS,2*ix+2,force_plus);
         // Step forward 
         forward_duffing_GS(dof, myPCSet, inpParams, force_current, force_mid, force_plus, dTym, result);
-        // Update dis/vel
+        // Update solution
         for (int i=0;i<dof;i++){
             solution(i).replaceRow(result(i),ix+1);
         }
@@ -112,9 +112,35 @@ void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<dou
             const double a = inpParams(1);
             const double b = inpParams(2);
             const double G = inpParams(3);
-            
-            
-
+            // update x
+            Array1D<double> temp(nPCTerms,0.e0);
+            addVecAlphaVecPow(temp,a,force,1); //aF
+            addVecAlphaVecPow(temp,-a,x(0),1);//aF-ax
+            Array1D<double> temp2(nPCTerms,0.e0);
+            myPCSet.IPow(x(1),temp2,2); //y^2
+            addVecAlphaVecPow(temp,-1,temp2,1);//-y^2-ax+aF
+            myPCSet.IPow(x(2),temp2,2); //z^2
+            addVecAlphaVecPow(temp,-1,temp2,1);//-y^2-z^2-ax+aF
+            dev(0) = temp;
+            // update y
+            Array1D<double> tempxy(nPCTerms,0.e0);
+            Array1D<double> tempxz(nPCTerms,0.e0);
+            myPCSet.Prod(x(0),x(1),tempxy); //xy
+            myPCSet.Prod(x(0),x(2),tempxz); //xz
+            copy(tempxy,temp);
+            copy(tempxz,temp2);
+            addVecAlphaVecPow(temp,-b,temp2,1);//xy-bxz
+            subtractVec(x(1),temp);//xy-bxz-y
+            temp2.Resize(nPCTerms);
+            temp2(0) = G;
+            addVec(temp2,temp);//xy-bxz-y-G
+            dev(1) = temp;
+            // update z
+            copy(tempxz,temp);
+            copy(tempxy,temp2);
+            addVecAlphaVecPow(temp,b,temp2,1);//bxy+xz
+            subtractVec(x(2),temp);
+            dev(2) = temp;
         }
 }
 
