@@ -227,6 +227,7 @@ int main(int argc, char *argv[])
     initial(1) = y0;
     initial(2) = z0;
     WriteMeanStdDevToFilePtr_lorenz(0, initial(0), initial(1), initial(2), f_mean);        
+    WriteMeanStdDevToFilePtr_lorenz(0, 0, 0, 0, f_std);        
     cout << "\nMCS...\n" << endl;  
     double t_MCS = MCS(dof, nspl, dim, nStep, nkl, dTym, fbar, scaledKLmodes, inpParams, samPts, result, initial);
     Array2D<double> mean(dof,nStep+1,0.e0);
@@ -236,7 +237,7 @@ int main(int argc, char *argv[])
     for (int ivar=0;ivar<dof;ivar++){
         Array2D<double> temp(2,nStep+1,0.e0);
         mstd_MCS(ivar) = temp;
-        for (int ix=0;ix<nStep;ix++){
+        for (int ix=1;ix<nStep+1;ix++){
             Array1D<double> temp(nspl,0.e0);
             getRow(result(ivar),ix,temp);
             Array1D<double> mstd(2,0.e0);
@@ -247,7 +248,7 @@ int main(int argc, char *argv[])
         }
     }
     // save results
-    for (int ix=0;ix<nStep;ix++){
+    for (int ix=1;ix<nStep+1;ix++){
         WriteMeanStdDevToFilePtr_lorenz((ix+1)*dTym, mean(0,ix),mean(1,ix),mean(2,ix),f_mean);         
         WriteMeanStdDevToFilePtr_lorenz((ix+1)*dTym, std(0,ix),std(1,ix),std(2,ix),f_std);         
     }
