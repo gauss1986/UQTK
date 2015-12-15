@@ -4,7 +4,7 @@
 #include "PCSet.h"
 #include "arraytools.h"
 #include "uqtktools.h"
-#include "UtilsDuffing.h"
+#include "Utils.h"
 #include "AAPG.h"
 #include "MCS.h"
 #include "lapack.h"

@@ -29,47 +29,8 @@
 #include <cstdio>
 #include <string>
 #include <iostream>
-#include "UtilsDuffing.h"
+#include "UtilsLorenz.h"
 #include "Array1D.h"
-
-void WriteToFile(Array1D<double>& data, const char* filename)
-{
-  int nx=data.XSize();
-  
-  FILE* f_out;
-  if(!(f_out = fopen(filename,"w"))){ 
-    printf("WriteToFile: could not open file '%s'\n",filename); 
-    exit(1); 
-  }
-
- for(int ix = 0 ; ix < nx ; ix++){
-   fprintf(f_out, "%lg\n", data(ix));
- }
-
- if(fclose(f_out)){ 
-   printf("WriteToFile: could not close file '%s'\n",filename); 
-   exit(1); 
- }
-
- printf("Data written to '%s'\n", filename);
-
- return; 
-}
-
-void WriteModesToFilePtr(const double tym, const double* u, const int n, FILE* f_dump)
-{
-  // Write time
-  fprintf(f_dump, "%lg ", tym);
-
-  // Write modes
-  for (int ip=0; ip < n; ip++){
-    fprintf(f_dump, "%lg ", u[ip]);
-  }
-
-  fprintf(f_dump, "\n");
-  
-  return;
-}
 
 void WriteMeanStdDevToFilePtr_lorenz(const double tym, const double x, const double y, const double z,  FILE* f_dump)
 {

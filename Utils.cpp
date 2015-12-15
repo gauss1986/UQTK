@@ -29,7 +29,7 @@
 #include <cstdio>
 #include <string>
 #include <iostream>
-#include "UtilsDuffing.h"
+#include "Utils.h"
 #include "Array1D.h"
 
 void WriteToFile(Array1D<double>& data, const char* filename)

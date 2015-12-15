@@ -7,7 +7,7 @@
 #include "uqtktools.h"
 #include "MCS.h"
 #include "GhanemSpanos.h"
-#include "UtilsDuffing.h"
+#include "Utils.h"
 
 void GS(int dof, PCSet& myPCSet, int order, int dim, int nPCTerms, string pcType, int nStep, Array1D<double>& initial, double dTym, Array1D<double>& inpParams, Array2D<double>& f_GS, Array1D<Array2D<double> >& solution){
 

@@ -26,22 +26,6 @@
 ===================================================================================== */
 #include "Array1D.h"
 
-/// \brief Write Array data to a file with name filename
-/// 
-/// \note opens and closes the file
-void WriteToFile(Array1D<double>& data, const char* filename);
-
-/// \brief Write all PC modes to a file
-///
-/// Arguments:
-///   \li const double tym: current time
-///   \li const double u*: vector with PC coefficients for three solution components u
-///   \li const int n: number of PC terms
-///   \li FILE* f_dump: C file pointer to write to
-/// \note Assumes the file to be open already
-void WriteModesToFilePtr(const double tym, const double* u, const int n, FILE* f_dump);
-
-
 /// \brief Write mean and std. dev. to a file
 ///
 /// Arguments:

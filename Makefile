@@ -6,8 +6,8 @@ include $(TOPDIR)/config/config3.site
 TARGET = Duffing.x
 TARGET2 = Lorenz.x
 
-SRCS = ticktock.cpp KL.cpp MCS.cpp GhanemSpanos.cpp AAPG.cpp Duffing.cpp UtilsDuffing.cpp 
-SRCS2 = ticktock.cpp KL.cpp MCS.cpp Lorenz.cpp UtilsLorenz.cpp 
+SRCS = ticktock.cpp KL.cpp MCS.cpp GhanemSpanos.cpp AAPG.cpp Duffing.cpp Utils.cpp 
+SRCS2 = ticktock.cpp KL.cpp MCS.cpp GhanemSpanos.cpp Lorenz.cpp UtilsLorenz.cpp Utils.cpp Utilsave.cpp 
 
 OBJ = $(SRCS:.cpp=.o)
 OBJ2 = $(SRCS2:.cpp=.o)
