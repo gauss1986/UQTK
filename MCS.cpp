@@ -116,15 +116,19 @@ double MCS(int dof, int nspl, int dim, int nStep, int nkl, double dTym, double f
    }
 
    Array1D<double> mStd(Array1D<double>& x,int nspl){
+        // mean
         Array1D<double> mstd(2,0.e0);
         double sum = 0.e0;
-        double sum2 = 0.e0;
         for (int i=0;i<nspl;i++){
             sum += x(i);
-            sum2 += pow(x(i),2);
         }
         mstd(0) = sum/nspl;
-        mstd(1) = sqrt((sum2-nspl*pow(mstd(0),2))/nspl); 
+        // std
+        double sum2 = 0.e0;
+        for (int i=0;i<nspl;i++){
+            sum2 += pow((x(i)-mstd(0)),2);
+        }
+        mstd(1) = sqrt(sum2); 
         return(mstd);   
    }
 

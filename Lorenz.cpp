@@ -27,7 +27,7 @@ Dec 14, 2015
 
 #define DIM 5
 #define CLEN 0.1
-#define SIG 0.2
+#define SIG 0.0
 #define ORDER_GS 2
 #define ORDER_AAPG_GS 2
 #define ORDER_AAPG 3
