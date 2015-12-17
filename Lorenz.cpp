@@ -327,14 +327,18 @@ int main(int argc, char *argv[])
     for(int ord=1;ord<ord_GS+1;ord++){
         TickTock tt;
     	tt.tick();
-	    PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
-            tt.tock("Took");
-	    cout << "Order "<< ord << endl;
-
+	    PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0);
 	    // The number of PC terms
         const int nPCTerms = myPCSet.GetNumberPCTerms();
+        Array1D<double> normsq(nPCTerms,0.e0); 
+        myPCSet.EvalNormSq(normsq);
+        tt.tock("Took");
+	    cout << "Order "<< ord << endl;
+
         cout << "The number of PC terms in an expansion is " << nPCTerms << endl;
         // Print the multiindices on screen
+        for (int i=0;i<nPCTerms;i++)
+            cout << "Normsq of term No." << i << " is " << normsq(i) << endl;
     
         // Prepare the force in PC format
         Array2D<double> f_GS(2*nStep+1,nPCTerms,0.e0);
@@ -349,7 +353,14 @@ int main(int argc, char *argv[])
 
         // Allocate result variable
         Array1D<Array2D<double> > result(3);
-        Array1D<double> initial_GS(dof,1.0);
+        // initial conditions
+        Array1D<Array1D<double> > initial_GS(dof);
+        Array1D<double> temp(nPCTerms,0.e0);
+        for (int i=0;i<dof;i++)
+            initial_GS(i)=temp;
+        myPCSet.InitMeanStDv(x0,sigma,1,initial_GS(0));
+        myPCSet.InitMeanStDv(y0,sigma,2,initial_GS(1));
+        myPCSet.InitMeanStDv(z0,sigma,3,initial_GS(2));
 
         clock_t start = clock();
     	tt.tick();
@@ -385,9 +396,9 @@ int main(int argc, char *argv[])
         string SoluGSstat_z(sz.str());
         FILE *GSstat_dump_z = createfile(SoluGSstat_z);
         
-        Array1D<double> e_GS_ord_x = postprocess_GS(nPCTerms, nStep, x0, result(0), myPCSet, dTym, GS_dump_x, GSstat_dump_x, mstd_MCS(0));
-        Array1D<double> e_GS_ord_y = postprocess_GS(nPCTerms, nStep, y0, result(1), myPCSet, dTym, GS_dump_y, GSstat_dump_y, mstd_MCS(1));
-        Array1D<double> e_GS_ord_z = postprocess_GS(nPCTerms, nStep, z0, result(2), myPCSet, dTym, GS_dump_z, GSstat_dump_z, mstd_MCS(2));
+        Array1D<double> e_GS_ord_x = postprocess_GS(nPCTerms, nStep, result(0), myPCSet, dTym, GS_dump_x, GSstat_dump_x, mstd_MCS(0));
+        Array1D<double> e_GS_ord_y = postprocess_GS(nPCTerms, nStep, result(1), myPCSet, dTym, GS_dump_y, GSstat_dump_y, mstd_MCS(1));
+        Array1D<double> e_GS_ord_z = postprocess_GS(nPCTerms, nStep, result(2), myPCSet, dTym, GS_dump_z, GSstat_dump_z, mstd_MCS(2));
 
         fprintf(err_dump, "%lg %lg", e_GS_ord_x(0),e_GS_ord_x(1));
         fprintf(err_dump, "\n");

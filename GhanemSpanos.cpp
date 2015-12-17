@@ -9,17 +9,13 @@
 #include "GhanemSpanos.h"
 #include "Utils.h"
 
-void GS(int dof, PCSet& myPCSet, int order, int dim, int nPCTerms, string pcType, int nStep, Array1D<double>& initial, double dTym, Array1D<double>& inpParams, Array2D<double>& f_GS, Array1D<Array2D<double> >& solution){
+void GS(int dof, PCSet& myPCSet, int order, int dim, int nPCTerms, string pcType, int nStep, Array1D<Array1D<double> >& result, double dTym, Array1D<double>& inpParams, Array2D<double>& f_GS, Array1D<Array2D<double> >& solution){
 
     // Initialize working variable
-    Array1D<Array1D<double> > result(dof);  //variable to store results at each iteration step
     for (int i=0;i<dof;i++){
-        Array1D<double> temp(nPCTerms,0.e0);
-        Array2D<double> temp2(nStep+1,nPCTerms,0.e0);
-        temp(0)=initial(i);
-        result(i)=temp;
-        solution(i) = temp2;
-        solution(i).replaceRow(temp,0);
+        Array2D<double> temp(nStep+1,nPCTerms,0.e0);
+        solution(i) = temp;
+        solution(i).replaceRow(result(i),0);
     }
     
     // Forward run
@@ -144,21 +140,19 @@ void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<dou
         }
 }
 
-Array1D<double> postprocess_GS(int nPCTerms, int nStep, double init, Array2D<double>& solution, PCSet& myPCSet, double dTym, FILE* GS_dump, FILE* GSstat_dump, Array2D<double>& mstd_MCS){
+Array1D<double> postprocess_GS(int nPCTerms, int nStep,  Array2D<double>& solution, PCSet& myPCSet, double dTym, FILE* GS_dump, FILE* GSstat_dump, Array2D<double>& mstd_MCS){
     // Output solution (mean and std) 
     Array1D<double> temp(nPCTerms,0.e0);
-    temp(0) = init;
     Array1D<double> StDv(nStep+1,0.e0);
     for (int i=0;i<nStep+1;i++){
         getRow(solution,i,temp); 
-        double StDv_temp = myPCSet.StDv(temp);
-        StDv(i) = StDv_temp; 
+        StDv(i) = myPCSet.StDv(temp);
         // Write time and solution to file
         WriteModesToFilePtr(i, temp.GetArrayPointer(), nPCTerms, GS_dump);
         // Write dis (mean and std) to file and screen
-        WriteMeanStdDevToFilePtr(i,temp(0),StDv_temp,GSstat_dump);
+        WriteMeanStdDevToFilePtr(i,temp(0),StDv(i),GSstat_dump);
         if (i % ((int) nStep/10) == 0){
-            WriteMeanStdDevToStdOut(i,i*dTym,temp(0),StDv_temp);
+            WriteMeanStdDevToStdOut(i,i*dTym,temp(0),StDv(i));
         }
     }
 
