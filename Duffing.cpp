@@ -234,7 +234,7 @@ int main(int argc, char *argv[])
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
         Array1D<double> totalforce=sample_force(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,inpParams);
-        Array2D<double> temp = det(dof, nspl, nStep, nkl, dTym, totalforce, inpParams, samPts, initial);
+        Array2D<double> temp = det(dof, nspl, nStep, nkl, dTym, totalforce, inpParams, initial);
         for (int idof=0;idof<dof;idof++){
             for (int it=0;it<nStep;it++){
                 result(idof)(it,iq) = temp(idof,it);

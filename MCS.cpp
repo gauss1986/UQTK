@@ -10,7 +10,7 @@
 #include <ctime>
 #include "ticktock.h"
 
-Array2D<double> det(int dof, int nspl, int nStep, int nkl, double dTym, Array1D<double>& totalforce, Array1D<double>& inpParams, Array2D<double>& samPts, Array1D<double>& initial){
+Array2D<double> det(int dof, int nspl, int nStep, int nkl, double dTym, Array1D<double>& totalforce, Array1D<double>& inpParams, Array1D<double>& initial){
         Array2D<double> result(dof,nStep+1);
         // initialize solution
         Array1D<double> tempx(initial);
@@ -30,7 +30,7 @@ Array2D<double> det(int dof, int nspl, int nStep, int nkl, double dTym, Array1D<
         return result;
 }
    
-    void forward_duffing_dt(Array1D<double>& inpParams, Array1D<double>& force,  double dTym, Array1D<double>& x){
+void forward_duffing_dt(Array1D<double>& inpParams, Array1D<double>& force,  double dTym, Array1D<double>& x){
         // Integrate with classical 4th order Runge-Kutta
 
         //Save solution at current time step
@@ -60,9 +60,9 @@ Array2D<double> det(int dof, int nspl, int nStep, int nkl, double dTym, Array1D<
         for (unsigned int i=0;i<x.XSize();i++){
             x(i) = x0(i)+dTym/6*(dxdt1(i)+2*dxdt2(i)+2*dxdt3(i)+dxdt4(i));
         }
-   }
+}
    
-   Array1D<double> RHS(double force, Array1D<double>& x,Array1D<double>& inpParams){
+Array1D<double> RHS(double force, Array1D<double>& x,Array1D<double>& inpParams){
         Array1D<double> dxdt(x);
         if (abs(inpParams(0))<1e-10){ //Duffing
             // parse input parameters
@@ -88,9 +88,9 @@ Array2D<double> det(int dof, int nspl, int nStep, int nkl, double dTym, Array1D<
             dxdt(2)=b*x(0)*x(1)+x(0)*x(2)-x(2);
             }
         return dxdt;
-   }
+}
 
-   Array1D<double> mStd(Array1D<double>& x,int nspl){
+Array1D<double> mStd(Array1D<double>& x,int nspl){
         // mean
         Array1D<double> mstd(2,0.e0);
         double sum = 0.e0;
@@ -105,9 +105,9 @@ Array2D<double> det(int dof, int nspl, int nStep, int nkl, double dTym, Array1D<
         }
         mstd(1) = sqrt(sum2/nspl); 
         return(mstd);   
-   }
+}
 
-   Array1D<double> error(Array1D<double>& dis, Array1D<double>& StDv, Array2D<double>& mstd_MCS){
+Array1D<double> error(Array1D<double>& dis, Array1D<double>& StDv, Array2D<double>& mstd_MCS){
    // Return the integrated error in mean/std
         Array1D<double> e(2,0.e0);
         for (unsigned int i=0;i<dis.XSize();i++){
@@ -124,7 +124,7 @@ Array2D<double> det(int dof, int nspl, int nStep, int nkl, double dTym, Array1D<
         e(1) = e(1)/sum(temp_s)*100;
     
         return e;
-    }
+}
 
 Array1D<double>  sample_force(Array2D<double>& samPts,int iq,int nStep,double fbar,int nkl,Array2D<double>& scaledKLmodes, Array1D<double>& inpParams){    
     Array1D<double> totalforce(nStep+1,0.e0);

@@ -28,7 +28,7 @@ Dec 14, 2015
 
 #define DIM 3
 #define CLEN 0.1
-#define SIG 0.0
+#define SIG 1.0
 #define ORDER_GS 2
 #define ORDER_AAPG_GS 2
 #define ORDER_AAPG 3
@@ -37,9 +37,9 @@ Dec 14, 2015
 #define NSPL 10000
 #define AMP 0.0
 #define FBAR 8.0
-#define x0 1.0 // A point on or nearly on the attractor by Lorenz 2005
+#define x0 0.0 // A point on or nearly on the attractor by Lorenz 2005
 #define y0 0.0
-#define z0 -0.75
+#define z0 0.0
 #define FACTOR_OD 1.0
 #define ACTD false
 #define THRESHOLD 0.99
@@ -170,7 +170,7 @@ int main(int argc, char *argv[])
     cout << "Lorenz model--" << endl<<flush;
     cout << " - Number of KL modes:              " << dim  << endl<<flush;
     cout << " - Monte Carlo sample size:         " << nspl  << endl<<flush;
-    cout << " - Will generate covariance of type "<<cov_type<<", with correlation length "<<clen<<" and standard deviation "<<sigma<<endl<<flush;
+    //cout << " - Will generate covariance of type "<<cov_type<<", with correlation length "<<clen<<" and standard deviation "<<sigma<<endl<<flush;
     cout << " - Time marching step:              " << dTym  << endl<<flush;
     cout << " - Process end time:                " << tf  << endl<<flush;
     cout << " - Dynamical orthogonal AAPG factor:" << factor_OD  << endl<<flush;
@@ -215,7 +215,7 @@ int main(int argc, char *argv[])
     int Rand_force = 1;
     // Draw Monte Carlo samples
     Array2D<double> samPts(nspl,dim,0.e0);
-    PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
+    PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,sigma);
     MCPCSet.DrawSampleVar(samPts);
     Array1D<double> samPts_1D(nspl,0.e0);
     getCol(samPts,0,samPts_1D);
@@ -237,23 +237,25 @@ int main(int argc, char *argv[])
     result(1) = y;
     result(2) = z;
     // Define and write solutions at initial step
-    Array1D<double> initial(dof,0.e0);  // deterministic initial condition
-    initial(0) = x0;
-    initial(1) = y0;
-    initial(2) = z0;
-    WriteMeanStdDevToFilePtr_lorenz(0, initial(0), initial(1), initial(2), f_mean);        
-    WriteMeanStdDevToFilePtr_lorenz(0, 0, 0, 0, f_std);        
+    WriteMeanStdDevToFilePtr_lorenz(0, x0, y0, z0, f_mean);        
+    WriteMeanStdDevToFilePtr_lorenz(0, sigma, sigma, sigma, f_std);        
     cout << "\nMCS...\n" << endl; 
     int nthreads;
     // Time marching steps
     TickTock tt;
     tt.tick();
-    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts,nkl,dTym,inpParams,nthreads,initial,fbar,scaledKLmodes) 
+    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts,nkl,dTym,inpParams,nthreads,fbar,scaledKLmodes) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
-        Array1D<double> totalforce=sample_force(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,inpParams);
-        Array2D<double> temp = det(dof, nspl, nStep, nkl, dTym, totalforce, inpParams, samPts, initial);
+        //Array1D<double> totalforce=sample_force(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,inpParams);
+        Array1D<double> totalforce(nStep+1,0.e0);
+        for (int it=0;it<nStep;it++)
+            totalforce(it) = fbar+inpParams(4)*cos(inpParams(5)*it);
+        //initial condition
+        Array1D<double> initial(dof,0.e0);
+        getRow(samPts,iq,initial); 
+        Array2D<double> temp = det(dof, nspl, nStep, nkl, dTym, totalforce, inpParams, initial);
         for (int idof=0;idof<dof;idof++){
             for (int it=0;it<nStep;it++){
                 result(idof)(it,iq) = temp(idof,it);
@@ -347,10 +349,11 @@ int main(int argc, char *argv[])
 
         // Allocate result variable
         Array1D<Array2D<double> > result(3);
+        Array1D<double> initial_GS(dof,1.0);
 
         clock_t start = clock();
     	tt.tick();
-        GS(dof, myPCSet, ord, dim, nPCTerms, pcType, nStep, initial, dTym, inpParams, f_GS, result);
+        GS(dof, myPCSet, ord, dim, nPCTerms, pcType, nStep, initial_GS, dTym, inpParams, f_GS, result);
         t_GS(ord-1) = tt.silent_tock();
 	    cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
 	
