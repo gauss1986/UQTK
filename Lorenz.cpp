@@ -211,6 +211,7 @@ int main(int argc, char *argv[])
     inpParams(4) = AMP;     //AMP
     inpParams(5) = 2*M_PI/73; //w
     double fbar = FBAR;
+    int Rand_force = 1;
     // Draw Monte Carlo samples
     Array2D<double> samPts(nspl,dim,0.e0);
     PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
@@ -241,8 +242,14 @@ int main(int argc, char *argv[])
     initial(2) = z0;
     WriteMeanStdDevToFilePtr_lorenz(0, initial(0), initial(1), initial(2), f_mean);        
     WriteMeanStdDevToFilePtr_lorenz(0, 0, 0, 0, f_std);        
-    cout << "\nMCS...\n" << endl;  
-    double t_MCS = MCS(dof, nspl, dim, nStep, nkl, dTym, fbar, scaledKLmodes, inpParams, samPts, result, initial);
+    cout << "\nMCS...\n" << endl; 
+    Array1D<Array1D<double> >totalforce(nspl);
+    if (Rand_force == 1){//sample force if its is random 
+        for (int i=0;i<nspl;i++){
+            totalforce(i)=sample_force(samPts,i,2*nStep,fbar,nkl,scaledKLmodes,inpParams);
+        }
+    }
+    double t_MCS = MCS(dof, nspl, dim, nStep, nkl, dTym, totalforce, inpParams, samPts, result, initial);
     Array2D<double> mean(dof,nStep+1,0.e0);
     Array2D<double> std(dof,nStep+1,0.e0);
     Array1D<Array2D<double> > mstd_MCS(dof);

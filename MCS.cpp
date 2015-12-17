@@ -11,31 +11,28 @@
 #include <omp.h>
 #include "ticktock.h"
 
-double MCS(int dof, int nspl, int dim, int nStep, int nkl, double dTym, double fbar, Array2D<double>& scaledKLmodes, Array1D<double>& inpParams, Array2D<double>& samPts, Array1D<Array2D<double> >& result, Array1D<double>& initial){
+double MCS(int dof, int nspl, int dim, int nStep, int nkl, double dTym, Array1D<Array1D<double> >& totalforce, Array1D<double>& inpParams, Array2D<double>& samPts, Array1D<Array2D<double> >& result, Array1D<double>& initial){
     // Time marching steps
     TickTock tt;
     tt.tick();
 
     int nthreads;
-    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,fbar,samPts,nkl,scaledKLmodes,dTym,inpParams,nthreads,initial) 
+    #pragma omp parallel default(none) shared(result,dof,totalforce,nStep,nspl,samPts,nkl,dTym,inpParams,nthreads,initial) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
-        Array1D<double> totalforce(2*nStep+1,0.e0);
-        sample(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,totalforce,inpParams);
-        
         // zero initial condition
         Array1D<double> tempx(initial);
         // initialize the forcing terms
         Array1D<double> tempf(3,0.e0);
-        tempf(2) = totalforce(0);
+        tempf(2) = totalforce(iq)(0);
         for (int idof=0;idof<dof;idof++){
             result(idof)(0,iq) = tempx(idof);
         }
         for (int ix=0;ix<nStep;ix++){
             tempf(0) = tempf(2);
-            tempf(1) = totalforce(ix*2+1);
-            tempf(2) = totalforce(ix*2+2);
+            tempf(1) = totalforce(iq)(ix*2+1);
+            tempf(2) = totalforce(iq)(ix*2+2);
             forward_duffing_dt(inpParams, tempf, dTym, tempx);
             for (int idof=0;idof<dof;idof++){
                 result(idof)(ix+1,iq) = tempx(idof);
@@ -151,7 +148,8 @@ double MCS(int dof, int nspl, int dim, int nStep, int nkl, double dTym, double f
         return e;
     }
 
-void sample(Array2D<double>& samPts,int iq,int nStep,double fbar,int nkl,Array2D<double>& scaledKLmodes,Array1D<double>& totalforce, Array1D<double>& inpParams){    
+Array1D<double>  sample_force(Array2D<double>& samPts,int iq,int nStep,double fbar,int nkl,Array2D<double>& scaledKLmodes, Array1D<double>& inpParams){    
+    Array1D<double> totalforce(nStep+1,0.e0);
     for (int it=0;it<nStep+1;it++){
         if (abs(inpParams(0))<1e-10){ //Duffing
             totalforce(it) = fbar;
@@ -163,5 +161,6 @@ void sample(Array2D<double>& samPts,int iq,int nStep,double fbar,int nkl,Array2D
             totalforce(it) = totalforce(it)+samPts(iq,iy)*scaledKLmodes(it,iy);
         }
     }
+    return (totalforce);
 }
 
