@@ -25,7 +25,7 @@ Dec 14, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define DIM 5
+#define DIM 3
 #define CLEN 0.1
 #define SIG 0.0
 #define ORDER_GS 2
@@ -34,8 +34,8 @@ Dec 14, 2015
 #define TFINAL 10.0
 #define DTYM 0.01
 #define NSPL 10000
-#define AMP 2.0
-#define FBAR 7.0
+#define AMP 0.0
+#define FBAR 8.0
 #define x0 1.0 // A point on or nearly on the attractor by Lorenz 2005
 #define y0 0.0
 #define z0 -0.75
@@ -44,7 +44,7 @@ Dec 14, 2015
 #define THRESHOLD 0.99
 
 #define COVTYPE "Exp"
-#define PCTYPE "LU"
+#define PCTYPE "HG"
 
 /// \brief Displays information about this program
 int usage(){
@@ -183,6 +183,14 @@ int main(int argc, char *argv[])
     else{
         cout << " - Full AAPG applied"<<endl<<flush;
     }
+    if (!strcmp(pcType.c_str(),"LU")){
+        cout << " - Unifrom random variable used."<<endl<<flush;
+    }
+    else{
+        if (!strcmp(pcType.c_str(),"HG"))
+        cout << " - Gaussian random variable used"<<endl<<flush;
+    }
+
 
     // Number of steps
     int nStep=(int) tf / dTym;
@@ -207,6 +215,11 @@ int main(int argc, char *argv[])
     Array2D<double> samPts(nspl,dim,0.e0);
     PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
     MCPCSet.DrawSampleVar(samPts);
+    Array1D<double> samPts_1D(nspl,0.e0);
+    getCol(samPts,0,samPts_1D);
+    Array1D<double> sample_mstd = mStd(samPts_1D,nspl);
+    cout << "Mean of sample is "<< sample_mstd(0) << endl;
+    cout << "Std of sample is "<< sample_mstd(1) << endl;
     // Open files to write out
     string Solufile_mean = "Lorenz/MCS_mean.dat";
     string Solufile_std = "Lorenz/MCS_std.dat";

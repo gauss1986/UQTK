@@ -128,7 +128,7 @@ double MCS(int dof, int nspl, int dim, int nStep, int nkl, double dTym, double f
         for (int i=0;i<nspl;i++){
             sum2 += pow((x(i)-mstd(0)),2);
         }
-        mstd(1) = sqrt(sum2); 
+        mstd(1) = sqrt(sum2/nspl); 
         return(mstd);   
    }
 
