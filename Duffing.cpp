@@ -9,6 +9,7 @@ July 25, 2015
 #include <sstream>
 #include <fstream>
 #include <iostream>
+#include <omp.h>
 #include "uqtktools.h"
 #include "uqtkmcmc.h"
 #include "PCSet.h"
@@ -202,6 +203,7 @@ int main(int argc, char *argv[])
     inpParams(1) = ZETA;
     inpParams(2) = epsilon;
     double fbar = FBAR;
+    int Rand_force = 1;
     Array2D<double> samPts(nspl,dim,0.e0);
     PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
     MCPCSet.DrawSampleVar(samPts);
@@ -222,8 +224,31 @@ int main(int argc, char *argv[])
     Array1D<double> initial(2,0.e0);
     initial(0) = VEL0;
     initial(1) = DIS0;
-    cout << "\nMCS...\n" << endl;  
-    double t_MCS = MCS(dof,nspl, dim, nStep, nkl, dTym, fbar, scaledKLmodes, inpParams, samPts, result, initial);
+    cout << "\nMCS...\n" << endl; 
+    int nthreads;
+    // Time marching steps
+    TickTock tt;
+    tt.tick();
+    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts,nkl,dTym,inpParams,nthreads,initial,fbar,scaledKLmodes) 
+    {
+    #pragma omp for 
+    for (int iq=0;iq<nspl;iq++){
+        Array1D<double> totalforce=sample_force(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,inpParams);
+        Array2D<double> temp = det(dof, nspl, nStep, nkl, dTym, totalforce, inpParams, samPts, initial);
+        for (int idof=0;idof<dof;idof++){
+            for (int it=0;it<nStep;it++){
+                result(idof)(it,iq) = temp(idof,it);
+            }
+        }
+    }
+    //output the number of threads
+    #pragma omp single
+    nthreads = omp_get_num_threads();
+    }
+    //report the time cost
+    tt.tock("Took");
+    double t_MCS = tt.silent_tock();
+    cout << "Number of threads in OMP:" << nthreads << endl;
     Array2D<double> mstd_MCS(2,nStep,0.e0);
     // post-process the solution
     for (int ix=0;ix<nStep;ix++){
@@ -261,7 +286,6 @@ int main(int argc, char *argv[])
         exit(1);    
     }
     for(int ord=1;ord<ord_GS+1;ord++){
-        TickTock tt;
     	tt.tick();
 	    PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
             tt.tock("Took");
@@ -332,7 +356,6 @@ int main(int argc, char *argv[])
 
     // AAPG
     printf("\nAAPG...\n");
-    TickTock tt;
     tt.tick();
     PCSet myPCSet("ISP",ord_AAPG_GS,dim,pcType,0.0,1.0,false); 
     tt.tock("Took");

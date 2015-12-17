@@ -8,48 +8,26 @@
 #include "uqtktools.h"
 #include "MCS.h"
 #include <ctime>
-#include <omp.h>
 #include "ticktock.h"
 
-double MCS(int dof, int nspl, int dim, int nStep, int nkl, double dTym, Array1D<Array1D<double> >& totalforce, Array1D<double>& inpParams, Array2D<double>& samPts, Array1D<Array2D<double> >& result, Array1D<double>& initial){
-    // Time marching steps
-    TickTock tt;
-    tt.tick();
-
-    int nthreads;
-    #pragma omp parallel default(none) shared(result,dof,totalforce,nStep,nspl,samPts,nkl,dTym,inpParams,nthreads,initial) 
-    {
-    #pragma omp for 
-    for (int iq=0;iq<nspl;iq++){
-        // zero initial condition
+Array2D<double> det(int dof, int nspl, int nStep, int nkl, double dTym, Array1D<double>& totalforce, Array1D<double>& inpParams, Array2D<double>& samPts, Array1D<double>& initial){
+        Array2D<double> result(dof,nStep+1);
+        // initialize solution
         Array1D<double> tempx(initial);
         // initialize the forcing terms
         Array1D<double> tempf(3,0.e0);
-        tempf(2) = totalforce(iq)(0);
-        for (int idof=0;idof<dof;idof++){
-            result(idof)(0,iq) = tempx(idof);
-        }
+        tempf(2) = totalforce(0);
+        // initialize result where solution from each step is stored
+        result.replaceCol(tempx,0);
+        // time marching steps
         for (int ix=0;ix<nStep;ix++){
             tempf(0) = tempf(2);
-            tempf(1) = totalforce(iq)(ix*2+1);
-            tempf(2) = totalforce(iq)(ix*2+2);
+            tempf(1) = totalforce(ix*2+1);
+            tempf(2) = totalforce(ix*2+2);
             forward_duffing_dt(inpParams, tempf, dTym, tempx);
-            for (int idof=0;idof<dof;idof++){
-                result(idof)(ix+1,iq) = tempx(idof);
-            }
+            result.replaceCol(tempx,ix+1);
         }
-       
-    }
-    //output the number of threads
-    #pragma omp single
-    nthreads = omp_get_num_threads();
-    }
-    cout << "Number of threads in OMP:" << nthreads << endl;
-    
-    //report the time cost
-    tt.tock("Took");
-    double t = tt.silent_tock();
-    return (t);
+        return result;
 }
    
     void forward_duffing_dt(Array1D<double>& inpParams, Array1D<double>& force,  double dTym, Array1D<double>& x){

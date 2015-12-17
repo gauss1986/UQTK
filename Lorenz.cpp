@@ -9,6 +9,7 @@ Dec 14, 2015
 #include <fstream>
 #include <iostream>
 #include <math.h>
+#include <omp.h>
 #include "uqtktools.h"
 #include "uqtkmcmc.h"
 #include "PCSet.h"
@@ -243,13 +244,30 @@ int main(int argc, char *argv[])
     WriteMeanStdDevToFilePtr_lorenz(0, initial(0), initial(1), initial(2), f_mean);        
     WriteMeanStdDevToFilePtr_lorenz(0, 0, 0, 0, f_std);        
     cout << "\nMCS...\n" << endl; 
-    Array1D<Array1D<double> >totalforce(nspl);
-    if (Rand_force == 1){//sample force if its is random 
-        for (int i=0;i<nspl;i++){
-            totalforce(i)=sample_force(samPts,i,2*nStep,fbar,nkl,scaledKLmodes,inpParams);
+    int nthreads;
+    // Time marching steps
+    TickTock tt;
+    tt.tick();
+    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts,nkl,dTym,inpParams,nthreads,initial,fbar,scaledKLmodes) 
+    {
+    #pragma omp for 
+    for (int iq=0;iq<nspl;iq++){
+        Array1D<double> totalforce=sample_force(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,inpParams);
+        Array2D<double> temp = det(dof, nspl, nStep, nkl, dTym, totalforce, inpParams, samPts, initial);
+        for (int idof=0;idof<dof;idof++){
+            for (int it=0;it<nStep;it++){
+                result(idof)(it,iq) = temp(idof,it);
+            }
         }
     }
-    double t_MCS = MCS(dof, nspl, dim, nStep, nkl, dTym, totalforce, inpParams, samPts, result, initial);
+    //output the number of threads
+    #pragma omp single
+    nthreads = omp_get_num_threads();
+    }
+    //report the time cost
+    tt.tock("Took");
+    double t_MCS = tt.silent_tock();
+    cout << "Number of threads in OMP:" << nthreads << endl;
     Array2D<double> mean(dof,nStep+1,0.e0);
     Array2D<double> std(dof,nStep+1,0.e0);
     Array1D<Array2D<double> > mstd_MCS(dof);
