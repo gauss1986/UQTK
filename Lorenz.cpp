@@ -28,18 +28,18 @@ Dec 14, 2015
 
 #define DIM 3
 #define CLEN 0.1
-#define SIG 1.0
+#define SIG 0.01*sqrt(3)
 #define ORDER_GS 2
 #define ORDER_AAPG_GS 2
 #define ORDER_AAPG 3
 #define TFINAL 10.0
 #define DTYM 0.01
-#define NSPL 10000
+#define NSPL 100000
 #define AMP 0.0
 #define FBAR 8.0
-#define x0 0.0 // A point on or nearly on the attractor by Lorenz 2005
+#define x0 1.0 // A point on or nearly on the attractor by Lorenz 2005
 #define y0 0.0
-#define z0 0.0
+#define z0 -0.75
 #define FACTOR_OD 1.0
 #define ACTD false
 #define THRESHOLD 0.99
@@ -171,6 +171,9 @@ int main(int argc, char *argv[])
     cout << " - Number of KL modes:              " << dim  << endl<<flush;
     cout << " - Monte Carlo sample size:         " << nspl  << endl<<flush;
     //cout << " - Will generate covariance of type "<<cov_type<<", with correlation length "<<clen<<" and standard deviation "<<sigma<<endl<<flush;
+    cout << " - Standard deviation:              " << sigma <<endl <<flush;
+    cout << " - Initial condition:               " << "x0="<<x0 <<",y0="<< y0<<",z0="<<z0 <<endl <<flush;
+    cout << " - Mean of force:                   " << FBAR <<endl <<flush;
     cout << " - Time marching step:              " << dTym  << endl<<flush;
     cout << " - Process end time:                " << tf  << endl<<flush;
     cout << " - Dynamical orthogonal AAPG factor:" << factor_OD  << endl<<flush;
@@ -215,13 +218,20 @@ int main(int argc, char *argv[])
     int Rand_force = 1;
     // Draw Monte Carlo samples
     Array2D<double> samPts(nspl,dim,0.e0);
-    PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,sigma);
+    PCSet MCPCSet("NISP",ord_GS,dim,pcType,0.0,sigma);//alpha and beta coeff is useless in LU and HG
     MCPCSet.DrawSampleVar(samPts);
-    Array1D<double> samPts_1D(nspl,0.e0);
-    getCol(samPts,0,samPts_1D);
-    Array1D<double> sample_mstd = mStd(samPts_1D,nspl);
-    cout << "Mean of sample is "<< sample_mstd(0) << endl;
-    cout << "Std of sample is "<< sample_mstd(1) << endl;
+    for (int i=0;i<nspl+1;i++){
+        samPts(i,0)=samPts(i,0)*sigma+x0;
+        samPts(i,1)=samPts(i,1)*sigma+y0;
+        samPts(i,2)=samPts(i,2)*sigma+z0;
+    }
+    for (int i=0;i<dof;i++){
+        Array1D<double> samPts_1D(nspl,0.e0);
+        getCol(samPts,i,samPts_1D);
+        Array1D<double> sample_mstd = mStd(samPts_1D,nspl);
+        cout << "Mean of sample on dof " << i << " is "<< sample_mstd(0) << endl;
+        cout << "Std of sample on dof "<< i << " is " <<sample_mstd(1) << endl;
+    }
     // Open files to write out
     string Solufile_mean = "Lorenz/MCS_mean.dat";
     string Solufile_std = "Lorenz/MCS_std.dat";
@@ -237,27 +247,25 @@ int main(int argc, char *argv[])
     result(1) = y;
     result(2) = z;
     // Define and write solutions at initial step
-    WriteMeanStdDevToFilePtr_lorenz(0, x0, y0, z0, f_mean);        
-    WriteMeanStdDevToFilePtr_lorenz(0, sigma, sigma, sigma, f_std);        
+    //WriteMeanStdDevToFilePtr_lorenz(0, x0, y0, z0, f_mean);        
+    //WriteMeanStdDevToFilePtr_lorenz(0, sigma, sigma, sigma, f_std);        
+    Array1D<double> totalforce(2*nStep,fbar);
     cout << "\nMCS...\n" << endl; 
     int nthreads;
     // Time marching steps
     TickTock tt;
     tt.tick();
-    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts,nkl,dTym,inpParams,nthreads,fbar,scaledKLmodes) 
+    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts,nkl,dTym,inpParams,nthreads,totalforce) 
     {
     #pragma omp for 
-    for (int iq=0;iq<nspl;iq++){
-        //Array1D<double> totalforce=sample_force(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,inpParams);
-        Array1D<double> totalforce(nStep+1,0.e0);
-        for (int it=0;it<nStep;it++)
-            totalforce(it) = fbar+inpParams(4)*cos(inpParams(5)*it);
-        //initial condition
+    for (int iq=0;iq<nspl+1;iq++){
+        // sample initial condition
         Array1D<double> initial(dof,0.e0);
-        getRow(samPts,iq,initial); 
+        getRow(samPts,iq,initial);
+        // compute the solution with different initial conditions
         Array2D<double> temp = det(dof, nspl, nStep, nkl, dTym, totalforce, inpParams, initial);
         for (int idof=0;idof<dof;idof++){
-            for (int it=0;it<nStep;it++){
+            for (int it=0;it<nStep+1;it++){
                 result(idof)(it,iq) = temp(idof,it);
             }
         }
@@ -275,9 +283,9 @@ int main(int argc, char *argv[])
     Array1D<Array2D<double> > mstd_MCS(dof);
     // post-process the solution
     for (int ivar=0;ivar<dof;ivar++){
-        Array2D<double> temp(2,nStep+1,0.e0);
-        mstd_MCS(ivar) = temp;
-        for (int ix=1;ix<nStep+1;ix++){
+        Array2D<double> temp2(2,nStep+1,0.e0);
+        mstd_MCS(ivar) = temp2;
+        for (int ix=0;ix<nStep+1;ix++){
             Array1D<double> temp(nspl,0.e0);
             getRow(result(ivar),ix,temp);
             Array1D<double> mstd(2,0.e0);
@@ -288,22 +296,22 @@ int main(int argc, char *argv[])
         }
     }
     // save results
-    for (int ix=1;ix<nStep+1;ix++){
-        WriteMeanStdDevToFilePtr_lorenz((ix+1)*dTym, mean(0,ix),mean(1,ix),mean(2,ix),f_mean);         
-        WriteMeanStdDevToFilePtr_lorenz((ix+1)*dTym, std(0,ix),std(1,ix),std(2,ix),f_std);         
+    for (int ix=0;ix<nStep+1;ix++){
+        WriteMeanStdDevToFilePtr_lorenz(ix*dTym, mean(0,ix),mean(1,ix),mean(2,ix),f_mean);         
+        WriteMeanStdDevToFilePtr_lorenz(ix*dTym, std(0,ix),std(1,ix),std(2,ix),f_std);         
     }
     cout << "Results of mean..." << endl;
     // Output mean to scren
-    for (int ix=0;ix<nStep;ix++){
-        if ((ix+1) % ((int) nStep/10) == 0){
-            WriteMeanStdDevToStdOut_lorenz(ix+1, (ix+1)*dTym, mean(0,ix), mean(1,ix), mean(2,ix));
+    for (int ix=0;ix<nStep+1;ix++){
+        if (ix % ((int) nStep/10) == 0){
+            WriteMeanStdDevToStdOut_lorenz(ix, ix*dTym, mean(0,ix), mean(1,ix), mean(2,ix));
         }
     }
     cout << "Results of std..." << endl;
     // Output std to scren
-    for (int ix=0;ix<nStep;ix++){
-        if ((ix+1) % ((int) nStep/10) == 0){
-            WriteMeanStdDevToStdOut_lorenz(ix+1, (ix+1)*dTym, std(0,ix), std(1,ix), std(2,ix));
+    for (int ix=0;ix<nStep+1;ix++){
+        if (ix % ((int) nStep/10) == 0){
+            WriteMeanStdDevToStdOut_lorenz(ix, ix*dTym, std(0,ix), std(1,ix), std(2,ix));
         }
     }
     closefile(f_mean,Solufile_mean);
@@ -343,13 +351,13 @@ int main(int argc, char *argv[])
         // Prepare the force in PC format
         Array2D<double> f_GS(2*nStep+1,nPCTerms,0.e0);
         for (int i=0;i<2*nStep+1;i++){
-            f_GS(i,0) = fbar+inpParams(4)*cos(inpParams(5)*i);;
+            f_GS(i,0) = fbar;
         }
-        for (int i=0;i<nkl;i++){
-            Array1D<double> tempf(2*nStep+1,0.e0);
-            getCol(scaledKLmodes,i,tempf);
-            f_GS.replaceCol(tempf,i+1);
-        }
+        //for (int i=0;i<nkl;i++){
+        //    Array1D<double> tempf(2*nStep+1,0.e0);
+        //    getCol(scaledKLmodes,i,tempf);
+        //    f_GS.replaceCol(tempf,i+1);
+        //}
 
         // Allocate result variable
         Array1D<Array2D<double> > result(3);
