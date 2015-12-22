@@ -34,12 +34,12 @@ Dec 14, 2015
 #define ORDER_AAPG 3
 #define TFINAL 10.0
 #define DTYM 0.01
-#define NSPL 100000
+#define NSPL 1000000
 #define AMP 0.0
 #define FBAR 8.0
-#define x0 1.0 // A point on or nearly on the attractor by Lorenz 2005
+#define x0 0.0 // A point on or nearly on the attractor by Lorenz 2005
 #define y0 0.0
-#define z0 -0.75
+#define z0 0.0
 #define FACTOR_OD 1.0
 #define ACTD false
 #define THRESHOLD 0.99
@@ -201,9 +201,9 @@ int main(int argc, char *argv[])
 
     // Generate the KL expansion of the excitation force
     int nkl = dim;
-    Array2D<double> scaledKLmodes(2*nStep+1,nkl,0.0);
-    genKL(scaledKLmodes, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
-    write_datafile(scaledKLmodes,"Lorenz/KL.dat");
+    //Array2D<double> scaledKLmodes(2*nStep+1,nkl,0.0);
+    //genKL(scaledKLmodes, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
+    //write_datafile(scaledKLmodes,"Lorenz/KL.dat");
  
     // Monte Carlo simulation
     // Define input parameters
@@ -225,12 +225,18 @@ int main(int argc, char *argv[])
         samPts(i,1)=samPts(i,1)*sigma+y0;
         samPts(i,2)=samPts(i,2)*sigma+z0;
     }
+    Array2D<double> sample_mstd_2D(dof,2);
     for (int i=0;i<dof;i++){
         Array1D<double> samPts_1D(nspl,0.e0);
         getCol(samPts,i,samPts_1D);
         Array1D<double> sample_mstd = mStd(samPts_1D,nspl);
         cout << "Mean of sample on dof " << i << " is "<< sample_mstd(0) << endl;
         cout << "Std of sample on dof "<< i << " is " <<sample_mstd(1) << endl;
+        sample_mstd_2D.replaceRow(sample_mstd,i); 
+        ostringstream name;
+        name << "sample_dof" << i << ".dat";
+        string name_str = name.str();
+        write_datafile_1d(samPts_1D,name_str.c_str());
     }
     // Open files to write out
     string Solufile_mean = "Lorenz/MCS_mean.dat";
@@ -240,12 +246,12 @@ int main(int argc, char *argv[])
 
     // Initialize solutions
     Array2D<double> x(nStep+1,nspl,0.e0);
-    Array2D<double> y(nStep+1,nspl,0.e0);
-    Array2D<double> z(nStep+1,nspl,0.e0);
-    Array1D<Array2D<double> > result(3);
-    result(0) = x;
-    result(1) = y;
-    result(2) = z;
+    //Array2D<double> y(nStep+1,nspl,0.e0);
+    //Array2D<double> z(nStep+1,nspl,0.e0);
+    //Array1D<Array2D<double> > result(1);
+    //result(0) = x;
+    //result(1) = y;
+    //result(2) = z;
     // Define and write solutions at initial step
     //WriteMeanStdDevToFilePtr_lorenz(0, x0, y0, z0, f_mean);        
     //WriteMeanStdDevToFilePtr_lorenz(0, sigma, sigma, sigma, f_std);        
@@ -255,7 +261,7 @@ int main(int argc, char *argv[])
     // Time marching steps
     TickTock tt;
     tt.tick();
-    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts,nkl,dTym,inpParams,nthreads,totalforce) 
+    #pragma omp parallel default(none) shared(x,dof,nStep,nspl,samPts,nkl,dTym,inpParams,nthreads,totalforce) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl+1;iq++){
@@ -264,11 +270,11 @@ int main(int argc, char *argv[])
         getRow(samPts,iq,initial);
         // compute the solution with different initial conditions
         Array2D<double> temp = det(dof, nspl, nStep, nkl, dTym, totalforce, inpParams, initial);
-        for (int idof=0;idof<dof;idof++){
+        //for (int idof=0;idof<dof;idof++){
             for (int it=0;it<nStep+1;it++){
-                result(idof)(it,iq) = temp(idof,it);
+                x(it,iq) = temp(0,it);
             }
-        }
+        //}
     }
     //output the number of threads
     #pragma omp single
@@ -281,19 +287,26 @@ int main(int argc, char *argv[])
     Array2D<double> mean(dof,nStep+1,0.e0);
     Array2D<double> std(dof,nStep+1,0.e0);
     Array1D<Array2D<double> > mstd_MCS(dof);
-    // post-process the solution
     for (int ivar=0;ivar<dof;ivar++){
         Array2D<double> temp2(2,nStep+1,0.e0);
         mstd_MCS(ivar) = temp2;
-        for (int ix=0;ix<nStep+1;ix++){
+    }
+    // post-process the solution
+    #pragma omp parallel default(none) shared(x,nStep,dof,nspl,mstd_MCS,mean,std) 
+    {
+    #pragma omp for
+    for (int ix=0;ix<nStep+1;ix++){
+        //for (int ivar=0;ivar<1;ivar++){
             Array1D<double> temp(nspl,0.e0);
-            getRow(result(ivar),ix,temp);
+            getRow(x,ix,temp);
             Array1D<double> mstd(2,0.e0);
             mstd = mStd(temp,nspl);
-            mstd_MCS(ivar).replaceCol(mstd,ix); 
-            mean(ivar,ix) = mstd(0);
-            std(ivar,ix) = mstd(1);
-        }
+            mstd_MCS(0)(0,ix)=mstd(0); 
+            mstd_MCS(0)(1,ix)=mstd(1); 
+            mean(0,ix) = mstd(0);
+            std(0,ix) = mstd(1);
+        //}
+    }
     }
     // save results
     for (int ix=0;ix<nStep+1;ix++){
@@ -364,11 +377,10 @@ int main(int argc, char *argv[])
         // initial conditions
         Array1D<Array1D<double> > initial_GS(dof);
         Array1D<double> temp(nPCTerms,0.e0);
-        for (int i=0;i<dof;i++)
+        for (int i=0;i<dof;i++){
             initial_GS(i)=temp;
-        myPCSet.InitMeanStDv(x0,sigma,1,initial_GS(0));
-        myPCSet.InitMeanStDv(y0,sigma,2,initial_GS(1));
-        myPCSet.InitMeanStDv(z0,sigma,3,initial_GS(2));
+            myPCSet.InitMeanStDv(sample_mstd_2D(i,0),sample_mstd_2D(i,1),i+1,initial_GS(i));
+        }
 
         clock_t start = clock();
     	tt.tick();

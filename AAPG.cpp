@@ -40,12 +40,19 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     
     // Compute first order terms
     printf("First-order terms...");
-    // initialize the displacement and force terms
-    Array1D<Array2D<double> > dis_1(dim);
-    Array1D<Array2D<double> > force_1(dim);
     // generate PCSet and the number of terms in it
     PCSet PCSet_1("ISP",order,1,pcType,0.0,1.0); 
     int PCTerms_1 = PCSet_1.GetNumberPCTerms();
+    // initialize the displacement and force terms
+    Array1D<Array2D<double> > dis_1(dim);
+    Array1D<Array2D<double> > force_1(dim);
+    // Initial condition
+    Array1D<Array1D<double> > initial_GS1(2);
+    Array1D<double> temp_init(PCTerms_1,0.e0);
+    initial_GS1(0)=temp_init;
+    initial_GS1(0)(0) = initial(0);
+    initial_GS1(1) = temp_init;
+    initial_GS1(1)(0)=initial(1);
     // Generate the forcing on each dim
     for (int i=0;i<dim;i++){
         Array2D<double> f_1(2*nStep+1,PCTerms_1,0.e0);
@@ -57,12 +64,12 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     }
     
     tt.tick();
-    #pragma omp parallel default(none) shared(dof, dim,PCSet_1,order,PCTerms_1,pcType,nStep,initial,dTym,inpParams,force_1,dis_1)
+    #pragma omp parallel default(none) shared(dof, dim,PCSet_1,order,PCTerms_1,pcType,nStep,initial_GS1,dTym,inpParams,force_1,dis_1)
     {
     #pragma omp for
     for (int i=0;i<dim;i++){
         Array1D<Array2D<double> > temp(dof);
-        GS(dof, PCSet_1, order, 1, PCTerms_1, pcType, nStep, initial, dTym, inpParams, force_1(i),temp);
+        GS(dof, PCSet_1, order, 1, PCTerms_1, pcType, nStep, initial_GS1, dTym, inpParams, force_1(i),temp);
         dis_1(i) = temp(1);
     }
     }
@@ -114,6 +121,13 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
         printf("Second-order terms...");
         PCSet PCSet_2("ISP",order,2,pcType,0.0,1.0); 
         PCTerms_2 = PCSet_2.GetNumberPCTerms();
+        // Initial condition
+        Array1D<Array1D<double> > initial_GS2(2);
+        Array1D<double> temp_init2(PCTerms_2,0.e0);
+        initial_GS2(0)=temp_init2;
+        initial_GS2(0)(0) = initial(0);
+        initial_GS2(1) = temp_init2;
+        initial_GS2(1)(0)=initial(1);
         Array1D<Array2D<double> > force_2(N_adof*(N_adof-1)/2);
         int k = 0;
         for (int i=0;i<N_adof-1;i++){
@@ -131,12 +145,12 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
 	    }
     }
     tt.tick();
-    #pragma omp parallel  default(none) shared(dof,k,dis_2,indi_2,indj_2,PCSet_2,order,PCTerms_2,pcType,nStep,initial,dTym,inpParams,force_2)
+    #pragma omp parallel  default(none) shared(dof,k,dis_2,indi_2,indj_2,PCSet_2,order,PCTerms_2,pcType,nStep,initial_GS2,dTym,inpParams,force_2)
     {
     #pragma omp for
     for (int i=0;i<k;i++){
         Array1D<Array2D<double> > temp(dof);
-        GS(dof, PCSet_2, order, 2, PCTerms_2, pcType, nStep, initial, dTym, inpParams, force_2(i), temp); 
+        GS(dof, PCSet_2, order, 2, PCTerms_2, pcType, nStep, initial_GS2, dTym, inpParams, force_2(i), temp); 
         dis_2(indi_2(i),indj_2(i)) = temp(1);
     }
     }
@@ -155,6 +169,13 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     printf("Third-order terms...");
     PCSet PCSet_3("ISP",order,3,pcType,0.0,1.0); 
     PCTerms_3 = PCSet_3.GetNumberPCTerms();
+    // Initial condition
+    Array1D<Array1D<double> > initial_GS3(2);
+    Array1D<double> temp_init3(PCTerms_3,0.e0);
+    initial_GS3(0)=temp_init3;
+    initial_GS3(0)(0) = initial(0);
+    initial_GS3(1) = temp_init3;
+    initial_GS3(1)(0)=initial(1);
     Array1D<Array2D<double> > force_3(N_adof*(N_adof-1)*(N_adof-2)/6);
     int l=0;
     for (int i=0;i<N_adof-2;i++){
@@ -177,12 +198,12 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
 	    }
     //start = clock();
     tt.tick();
-    #pragma omp parallel default(none) shared(dof, l,indi_3,indj_3,indk_3,PCSet_3,order,PCTerms_3,pcType,nStep,initial,dTym,inpParams,dis_3,force_3)
+    #pragma omp parallel default(none) shared(dof, l,indi_3,indj_3,indk_3,PCSet_3,order,PCTerms_3,pcType,nStep,initial_GS3,dTym,inpParams,dis_3,force_3)
     {
     #pragma omp for
     for (int i=0;i<l;i++){
         Array1D<Array2D<double> > temp(dof);
-        GS(dof, PCSet_3, order, 3, PCTerms_3, pcType, nStep, initial, dTym, inpParams, force_3(i),temp);         
+        GS(dof, PCSet_3, order, 3, PCTerms_3, pcType, nStep, initial_GS3, dTym, inpParams, force_3(i),temp);         
 	    dis_3(indi_3(i),indj_3(i),indk_3(i)) = temp(1);
     }
     }

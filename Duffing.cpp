@@ -309,10 +309,16 @@ int main(int argc, char *argv[])
 
         // Assumed deterministic initial conditions
         Array1D<Array2D<double> > result(2);
+        Array1D<Array1D<double> > initial_GS(2);
+        Array1D<double> temp(nPCTerms,0.e0);
+        initial_GS(0)=temp;
+        initial_GS(0)(0) = VEL0;
+        initial_GS(1) = temp;
+        initial_GS(1)(0)=DIS0;
 
         clock_t start = clock();
     	tt.tick();
-        GS(dof, myPCSet, ord, dim, nPCTerms, pcType, nStep, initial, dTym, inpParams, f_GS, result);
+        GS(dof, myPCSet, ord, dim, nPCTerms, pcType, nStep, initial_GS, dTym, inpParams, f_GS, result);
         t_GS(ord-1) = tt.silent_tock();
 	    cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
 	
@@ -337,7 +343,7 @@ int main(int argc, char *argv[])
             exit(1);    
         }
         
-        Array1D<double> e_GS_ord = postprocess_GS(nPCTerms, nStep, DIS0, result(1), myPCSet, dTym, GS_dump, GSstat_dump, mstd_MCS);
+        Array1D<double> e_GS_ord = postprocess_GS(nPCTerms, nStep, result(1), myPCSet, dTym, GS_dump, GSstat_dump, mstd_MCS);
 
         fprintf(err_dump, "%lg %lg", e_GS_ord(0),e_GS_ord(1));
         fprintf(err_dump, "\n");

@@ -9,13 +9,16 @@
 #include "GhanemSpanos.h"
 #include "Utils.h"
 
-void GS(int dof, PCSet& myPCSet, int order, int dim, int nPCTerms, string pcType, int nStep, Array1D<Array1D<double> >& result, double dTym, Array1D<double>& inpParams, Array2D<double>& f_GS, Array1D<Array2D<double> >& solution){
+void GS(int dof, PCSet& myPCSet, int order, int dim, int nPCTerms, string pcType, int nStep, Array1D<Array1D<double> >& initial, double dTym, Array1D<double>& inpParams, Array2D<double>& f_GS, Array1D<Array2D<double> >& solution){
 
     // Initialize working variable
+    Array1D<Array1D<double> > result(dof);
     for (int i=0;i<dof;i++){
         Array2D<double> temp(nStep+1,nPCTerms,0.e0);
         solution(i) = temp;
-        solution(i).replaceRow(result(i),0);
+        solution(i).replaceRow(initial(i),0);
+        Array1D<double> temp2(initial(i));
+        result(i)=temp2;
     }
     
     // Forward run
