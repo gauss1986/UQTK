@@ -35,8 +35,8 @@ Dec 14, 2015
 #define TFINAL 10.0
 #define DTYM 0.01
 #define NSPL 1000000
-#define AMP 0.0
-#define FBAR 8.0
+#define AMP 1.0
+#define FBAR 7.0
 #define x0 0.0 // A point on or nearly on the attractor by Lorenz 2005
 #define y0 0.0
 #define z0 0.0
@@ -45,7 +45,7 @@ Dec 14, 2015
 #define THRESHOLD 0.99
 
 #define COVTYPE "Exp"
-#define PCTYPE "HG"
+#define PCTYPE "LU"
 
 /// \brief Displays information about this program
 int usage(){
@@ -215,13 +215,13 @@ int main(int argc, char *argv[])
     // Monte Carlo simulation
     // Draw Monte Carlo samples
     Array2D<double> samPts(nspl,dim,0.e0);
-    PCSet MCPCSet("NISP",ord_GS,dim,pcType,0.0,sigma);//alpha and beta coeff is useless in LU and HG
+    PCSet MCPCSet("NISP",ord_GS,dim,pcType,0.0,1);//alpha and beta coeff is useless in LU and HG
     MCPCSet.DrawSampleVar(samPts);
-    for (int i=0;i<nspl+1;i++){
-        samPts(i,0)=samPts(i,0)*sigma+x0;
-        samPts(i,1)=samPts(i,1)*sigma+y0;
-        samPts(i,2)=samPts(i,2)*sigma+z0;
-    }
+    //for (int i=0;i<nspl+1;i++){
+    //    samPts(i,0)=samPts(i,0)*sigma+x0;
+    //    samPts(i,1)=samPts(i,1)*sigma+y0;
+    //    samPts(i,2)=samPts(i,2)*sigma+z0;
+    //}
     // Examine the mean/std of the sample
     Array2D<double> sample_mstd_2D(dof,2);
     for (int i=0;i<dof;i++){
@@ -250,19 +250,26 @@ int main(int argc, char *argv[])
     result(0) = x;
     result(1) = y;
     result(2) = z;
-    Array1D<double> totalforce(2*nStep,fbar);
+    Array1D<double> initial(dof,0.e0);
+    initial(0) = x0;
+    initial(1) = y0;
+    initial(2) = z0;
+    Array1D<double> totalforce(2*nStep+1,fbar);
     cout << "\nMCS...\n" << endl; 
     int nthreads;
     // Time marching steps
     TickTock tt;
     tt.tick();
-    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts,dim,dTym,inpParams,nthreads,totalforce) 
+    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts,dim,dTym,inpParams,nthreads,totalforce,scaledKLmodes,initial) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl+1;iq++){
-        // sample initial condition
-        Array1D<double> initial(dof,0.e0);
-        getRow(samPts,iq,initial);
+        // sample force
+        Array1D<double> temp_f(nspl,0.e0);
+        getRow(samPts,iq,temp_f);
+        for (int it=0;it<2*nStep+1;it++)
+            for (int j=0;j<dim;j++)
+                    totalforce(it)+=temp_f(j)*scaledKLmodes(it,j);
         // compute the solution with different initial conditions
         Array2D<double> temp = det(dof, nspl, nStep, dim, dTym, totalforce, inpParams, initial);
         for (int idof=0;idof<dof;idof++){
@@ -362,11 +369,11 @@ int main(int argc, char *argv[])
         for (int i=0;i<2*nStep+1;i++){
             f_GS(i,0) = fbar;
         }
-        //for (int i=0;i<dim;i++){
-        //    Array1D<double> tempf(2*nStep+1,0.e0);
-        //    getCol(scaledKLmodes,i,tempf);
-        //    f_GS.replaceCol(tempf,i+1);
-        //}
+        for (int i=0;i<dim;i++){
+            Array1D<double> tempf(2*nStep+1,0.e0);
+            getCol(scaledKLmodes,i,tempf);
+            f_GS.replaceCol(tempf,i+1);
+        }
 
         // Allocate result variable
         Array1D<Array2D<double> > result(3);
@@ -375,7 +382,7 @@ int main(int argc, char *argv[])
         Array1D<double> temp(nPCTerms,0.e0);
         for (int i=0;i<dof;i++){
             initial_GS(i)=temp;
-            myPCSet.InitMeanStDv(sample_mstd_2D(i,0),sample_mstd_2D(i,1),i+1,initial_GS(i));
+            //myPCSet.InitMeanStDv(sample_mstd_2D(i,0),sample_mstd_2D(i,1),i+1,initial_GS(i));
         }
 
         clock_t start = clock();
