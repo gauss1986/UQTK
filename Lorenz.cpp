@@ -109,11 +109,23 @@ int main(int argc, char *argv[])
     double p = THRESHOLD;
     // spatial dof
     double dof = 3;
-
+    // mean of force
+    double fbar = FBAR;
     // Time marching info
     double dTym = DTYM;
     double tf = TFINAL;
+    // Number of steps
+    int nStep=(int) tf / dTym;
   
+    // Define input parameters
+    Array1D<double> inpParams(6,0.e0);
+    inpParams(0) = 1;       // code for problem: 0-Duffing, 1-Lorenz
+    inpParams(1) = 0.25;    //a, from Lorenz 2005
+    inpParams(2) = 4.0;     //b, from Lorenz 2005
+    inpParams(3) = 1.23;    //G, from Lorenz 2005
+    inpParams(4) = AMP;     //AMP
+    inpParams(5) = 2*M_PI/73; //w
+
     /* Read the user input */
     int c;
 
@@ -195,27 +207,12 @@ int main(int argc, char *argv[])
         cout << " - Gaussian random variable used"<<endl<<flush;
     }
 
-
-    // Number of steps
-    int nStep=(int) tf / dTym;
-
     // Generate the KL expansion of the excitation force
-    int nkl = dim;
-    //Array2D<double> scaledKLmodes(2*nStep+1,nkl,0.0);
-    //genKL(scaledKLmodes, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
-    //write_datafile(scaledKLmodes,"Lorenz/KL.dat");
+    Array2D<double> scaledKLmodes(2*nStep+1,dim,0.0);
+    genKL(scaledKLmodes, 2*nStep+1, dim, clen, sigma, tf, cov_type);
+    write_datafile(scaledKLmodes,"Lorenz/KL.dat");
  
     // Monte Carlo simulation
-    // Define input parameters
-    Array1D<double> inpParams(6,0.e0);
-    inpParams(0) = 1;       // code for problem: 0-Duffing, 1-Lorenz
-    inpParams(1) = 0.25;    //a, from Lorenz 2005
-    inpParams(2) = 4.0;     //b, from Lorenz 2005
-    inpParams(3) = 1.23;    //G, from Lorenz 2005
-    inpParams(4) = AMP;     //AMP
-    inpParams(5) = 2*M_PI/73; //w
-    double fbar = FBAR;
-    int Rand_force = 1;
     // Draw Monte Carlo samples
     Array2D<double> samPts(nspl,dim,0.e0);
     PCSet MCPCSet("NISP",ord_GS,dim,pcType,0.0,sigma);//alpha and beta coeff is useless in LU and HG
@@ -225,6 +222,7 @@ int main(int argc, char *argv[])
         samPts(i,1)=samPts(i,1)*sigma+y0;
         samPts(i,2)=samPts(i,2)*sigma+z0;
     }
+    // Examine the mean/std of the sample
     Array2D<double> sample_mstd_2D(dof,2);
     for (int i=0;i<dof;i++){
         Array1D<double> samPts_1D(nspl,0.e0);
@@ -246,22 +244,19 @@ int main(int argc, char *argv[])
 
     // Initialize solutions
     Array2D<double> x(nStep+1,nspl,0.e0);
-    //Array2D<double> y(nStep+1,nspl,0.e0);
-    //Array2D<double> z(nStep+1,nspl,0.e0);
-    //Array1D<Array2D<double> > result(1);
-    //result(0) = x;
-    //result(1) = y;
-    //result(2) = z;
-    // Define and write solutions at initial step
-    //WriteMeanStdDevToFilePtr_lorenz(0, x0, y0, z0, f_mean);        
-    //WriteMeanStdDevToFilePtr_lorenz(0, sigma, sigma, sigma, f_std);        
+    Array2D<double> y(nStep+1,nspl,0.e0);
+    Array2D<double> z(nStep+1,nspl,0.e0);
+    Array1D<Array2D<double> > result(3);
+    result(0) = x;
+    result(1) = y;
+    result(2) = z;
     Array1D<double> totalforce(2*nStep,fbar);
     cout << "\nMCS...\n" << endl; 
     int nthreads;
     // Time marching steps
     TickTock tt;
     tt.tick();
-    #pragma omp parallel default(none) shared(x,dof,nStep,nspl,samPts,nkl,dTym,inpParams,nthreads,totalforce) 
+    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts,dim,dTym,inpParams,nthreads,totalforce) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl+1;iq++){
@@ -269,21 +264,22 @@ int main(int argc, char *argv[])
         Array1D<double> initial(dof,0.e0);
         getRow(samPts,iq,initial);
         // compute the solution with different initial conditions
-        Array2D<double> temp = det(dof, nspl, nStep, nkl, dTym, totalforce, inpParams, initial);
-        //for (int idof=0;idof<dof;idof++){
+        Array2D<double> temp = det(dof, nspl, nStep, dim, dTym, totalforce, inpParams, initial);
+        for (int idof=0;idof<dof;idof++){
             for (int it=0;it<nStep+1;it++){
-                x(it,iq) = temp(0,it);
+                result(idof)(it,iq) = temp(idof,it);
             }
-        //}
+        }
     }
-    //output the number of threads
     #pragma omp single
     nthreads = omp_get_num_threads();
     }
     //report the time cost
     tt.tock("Took");
     double t_MCS = tt.silent_tock();
+    //output the number of threads
     cout << "Number of threads in OMP:" << nthreads << endl;
+    // output statistics
     Array2D<double> mean(dof,nStep+1,0.e0);
     Array2D<double> std(dof,nStep+1,0.e0);
     Array1D<Array2D<double> > mstd_MCS(dof);
@@ -292,20 +288,20 @@ int main(int argc, char *argv[])
         mstd_MCS(ivar) = temp2;
     }
     // post-process the solution
-    #pragma omp parallel default(none) shared(x,nStep,dof,nspl,mstd_MCS,mean,std) 
+    #pragma omp parallel default(none) shared(result,nStep,dof,nspl,mstd_MCS,mean,std) 
     {
     #pragma omp for
     for (int ix=0;ix<nStep+1;ix++){
-        //for (int ivar=0;ivar<1;ivar++){
+        for (int ivar=0;ivar<dof;ivar++){
             Array1D<double> temp(nspl,0.e0);
-            getRow(x,ix,temp);
+            getRow(result(ivar),ix,temp);
             Array1D<double> mstd(2,0.e0);
             mstd = mStd(temp,nspl);
-            mstd_MCS(0)(0,ix)=mstd(0); 
-            mstd_MCS(0)(1,ix)=mstd(1); 
-            mean(0,ix) = mstd(0);
-            std(0,ix) = mstd(1);
-        //}
+            mstd_MCS(ivar)(0,ix)=mstd(0); 
+            mstd_MCS(ivar)(1,ix)=mstd(1); 
+            mean(ivar,ix) = mstd(0);
+            std(ivar,ix) = mstd(1);
+        }
     }
     }
     // save results
@@ -366,7 +362,7 @@ int main(int argc, char *argv[])
         for (int i=0;i<2*nStep+1;i++){
             f_GS(i,0) = fbar;
         }
-        //for (int i=0;i<nkl;i++){
+        //for (int i=0;i<dim;i++){
         //    Array1D<double> tempf(2*nStep+1,0.e0);
         //    getCol(scaledKLmodes,i,tempf);
         //    f_GS.replaceCol(tempf,i+1);
