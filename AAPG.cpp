@@ -55,7 +55,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
         }
         force_1(i) = f_1;
     }
-    
+   
     tt.tick();
     #pragma omp parallel default(none) shared(sample_mstd_2D,dof, dim,PCSet_1,order,PCTerms_1,pcType,nStep,dTym,inpParams,force_1,dis_1)
     {
@@ -532,14 +532,12 @@ void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
 
     // Assemble first order AAPG solutions
     printf("Assembling the first order terms...\n");
-    Array1D<double> coeffn(nStep+1,0.e0);
     for (int i=0;i<dim;i++){
-        getRow(coeff1,i,coeffn);
         for (int j=1;j<PCTerms_1;j++){
             // retrieve the col-index on the global PC matrix
             int ind = ind1(j,i);
             for (int it=0;it<nStep+1;it++){
-                dis_1_assembled(it,ind)=dis_1_assembled(it,ind)+coeffn(it)*dis_1(i)(it,j);
+                dis_1_assembled(it,ind)=dis_1_assembled(it,ind)+coeff1(i+1,it)*dis_1(i)(it,j);
             }
         }        
     }
@@ -548,6 +546,7 @@ void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
     printf("Assembling the second order terms...\n");
     dis_2_assembled = dis_1_assembled;
     int n = dim+1;
+    Array1D<double> coeffn(nStep+1,0.e0);
     if (AAPG_ord >= 2){
         for (unsigned int i=0;i<indi_2.XSize();i++){
                 getRow(coeff2,n,coeffn);
