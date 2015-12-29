@@ -6,6 +6,7 @@ July 25, 2015
 ===================================================================================== */
 
 #include <math.h>
+#include <cmath>
 #include <sstream>
 #include <fstream>
 #include <iostream>
@@ -24,12 +25,12 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define DIM 50
+#define DIM 2
 #define CLEN 0.1
-#define SIG 0.8
+#define SIG 1.0
 #define ORDER_GS 2
 #define ORDER_AAPG_GS 2
-#define ORDER_AAPG 3
+#define ORDER_AAPG 2
 #define TFINAL 10.0
 #define DTYM 0.01
 #define NSPL 100000
@@ -108,10 +109,19 @@ int main(int argc, char *argv[])
     double p = THRESHOLD;
     // Spatial dof
     double dof = 2;
+    // Define input parameters
+    Array1D<double> inpParams(3,0.e0);
+    inpParams(0) = 3;  // code for problem: 0-Duffing, 1-Lorenz, 3-Duffing with stochastic initial condition
+    inpParams(1) = ZETA;
+    inpParams(2) = epsilon;
 
     // Time marching info
     double dTym = DTYM;
     double tf = TFINAL;
+    // Number of steps
+    int nStep=(int) tf / dTym;
+    // mean of forcing
+    double fbar = FBAR;
   
     /* Read the user input */
     int c;
@@ -171,7 +181,12 @@ int main(int argc, char *argv[])
     /* Print the input information on screen */
     cout << " - Number of KL modes:              " << dim  << endl<<flush;
     cout << " - Monte Carlo sample size:         " << nspl  << endl<<flush;
-    cout << " - Will generate covariance of type "<<cov_type<<", with correlation length "<<clen<<" and standard deviation "<<sigma<<endl<<flush;
+    if (abs(inpParams(0)-1)<1e-10){
+        cout << " - Will generate covariance of type "<<cov_type<<", with correlation length "<<clen<<" and standard deviation "<<sigma<<endl<<flush;
+    }
+    if (abs(inpParams(0)-3)<1e-10){
+        cout << "- Will generate random variable of type "<< pcType << ", with standard deviation " << sigma << endl<< flush;
+    }
     cout << " - Time marching step:              " << dTym  << endl<<flush;
     cout << " - Process end time:                " << tf  << endl<<flush;
     cout << " - Dynamical orthogonal AAPG factor:" << factor_OD  << endl<<flush;
@@ -187,26 +202,37 @@ int main(int argc, char *argv[])
         cout << " - Full AAPG applied"<<endl<<flush;
     }
 
-    // Number of steps
-    int nStep=(int) tf / dTym;
-
     // Generate the KL expansion of the excitation force
     int nkl = dim;
     Array2D<double> scaledKLmodes(2*nStep+1,nkl,0.0);
-    genKL(scaledKLmodes, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
+    if (abs(inpParams(0)-1)<1e-10){
+        genKL(scaledKLmodes, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
+    }
     write_datafile(scaledKLmodes,"KL.dat");
  
     // Monte Carlo simulation
-    // Define input parameters
-    Array1D<double> inpParams(3,0.e0);
-    inpParams(0) = 0;  // code for problem: 0-Duffing, 1-Lorenz
-    inpParams(1) = ZETA;
-    inpParams(2) = epsilon;
-    double fbar = FBAR;
     int Rand_force = 1;
     Array2D<double> samPts(nspl,dim,0.e0);
     PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
     MCPCSet.DrawSampleVar(samPts);
+    for (int i=0;i<nspl;i++){
+        samPts(i,0)=samPts(i,0)*sigma+VEL0;
+        samPts(i,1)=samPts(i,1)*sigma+DIS0;
+    }
+    // Examine the mean/std of the sample
+    Array2D<double> sample_mstd_2D(dof,2);
+    for (int i=0;i<dof;i++){
+        Array1D<double> samPts_1D(nspl,0.e0);
+        getCol(samPts,i,samPts_1D);
+        Array1D<double> sample_mstd = mStd(samPts_1D,nspl);
+        cout << "Mean of sample on dof " << i << " is "<< sample_mstd(0) << endl;
+        cout << "Std of sample on dof "<< i << " is " <<sample_mstd(1) << endl;
+        sample_mstd_2D.replaceRow(sample_mstd,i); 
+        ostringstream name;
+        name << "sample_dof" << i << ".dat";
+        string name_str = name.str();
+        write_datafile_1d(samPts_1D,name_str.c_str());
+    }
     // Open files to write out
     string Solufile = "MCS.dat";
     FILE *f_dump;
@@ -215,51 +241,75 @@ int main(int argc, char *argv[])
         exit(1);    
     }
     // Write solutions at initial step
-    WriteMeanStdDevToFilePtr(0, 0, 0, f_dump);         
     Array2D<double>dis_MC(nStep+1,nspl,0.e0);
     Array2D<double>vel_MC(nStep+1,nspl,0.e0);
     Array1D<Array2D<double> > result(dof);
     result(0) = dis_MC;
     result(1) = vel_MC;
-    Array1D<double> initial(2,0.e0);
-    initial(0) = VEL0;
-    initial(1) = DIS0;
     cout << "\nMCS...\n" << endl; 
     int nthreads;
+    Array1D<double> temp_init(nspl,0);
+    Array1D<double> temp_init2(nspl,0);
     // Time marching steps
     TickTock tt;
     tt.tick();
-    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts,nkl,dTym,inpParams,nthreads,initial,fbar,scaledKLmodes) 
+    #pragma omp parallel default(none) shared(temp_init,temp_init2,result,dof,nStep,nspl,samPts,nkl,dTym,inpParams,nthreads,fbar,scaledKLmodes) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
+        Array1D<double> initial(2,0.e0);
+        if (abs(inpParams(0)-1)<1e-10){
+            initial(0) = VEL0;
+            initial(1) = DIS0;
+        }
+        if (abs(inpParams(0)-3)<1e-10){
+            initial(0) = samPts(iq,0);
+            initial(1) = samPts(iq,1);
+        }
         Array1D<double> totalforce=sample_force(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,inpParams);
         Array2D<double> temp = det(dof, nspl, nStep, nkl, dTym, totalforce, inpParams, initial);
-        for (int idof=0;idof<dof;idof++){
-            for (int it=0;it<nStep;it++){
+        for (int it=0;it<nStep+1;it++){
+            for (int idof=0;idof<dof;idof++){
                 result(idof)(it,iq) = temp(idof,it);
             }
         }
+        temp_init2(iq)=initial(1);
+        temp_init(iq)=temp(1,0);
+        //test if the initial condition is the same as passed in
+        //if (abs(initial(1)-temp(1,0))>10e-5 || abs(initial(0)-temp(0,0))>10e-5){
+        //    temp_init(iq)=1;
+        //}
+        
     }
     //output the number of threads
     #pragma omp single
     nthreads = omp_get_num_threads();
     }
+    write_datafile_1d(temp_init,"initial.dat");
+    write_datafile_1d(temp_init2,"initial2.dat");
+    // output the test result
+    //for (int iq=0;iq<nspl;iq++){
+    //    if (temp_init(iq)==1)
+    //        cout << "The initial state of the solution is different from the initial condition passd in on dof No." << iq << endl;
+    //}
     //report the time cost
     tt.tock("Took");
+    cout << "Size of result(1) is:" <<result(1).XSize() << "X"<<result(1).YSize()<< endl;
     double t_MCS = tt.silent_tock();
     cout << "Number of threads in OMP:" << nthreads << endl;
-    Array2D<double> mstd_MCS(2,nStep,0.e0);
+    Array2D<double> mstd_MCS(2,nStep+1,0.e0);
+    //Array1D<double> tempdis(nspl,0.e0);
+    //getRow(result(1),0,tempdis);
+    //write_datafile_1d(tempdis,"MCS_dis.dat");
     // post-process the solution
-    for (int ix=0;ix<nStep;ix++){
+    for (int ix=0;ix<nStep+1;ix++){
         Array1D<double> tempdis(nspl,0.e0);
         getRow(result(1),ix,tempdis);
-        Array1D<double> mstd(2,0.e0);
-        mstd = mStd(tempdis,nspl);
+        Array1D<double> mstd  = mStd(tempdis,nspl);
         mstd_MCS.replaceCol(mstd,ix); 
-        WriteMeanStdDevToFilePtr((ix+1)*dTym, mstd(0),mstd(1),f_dump);         
-        if ((ix+1) % ((int) nStep/10) == 0){
-            WriteMeanStdDevToStdOut(ix+1, (ix+1)*dTym, mstd(0), mstd(1));
+        WriteMeanStdDevToFilePtr(ix*dTym, mstd(0),mstd(1),f_dump);         
+        if (ix % ((int) nStep/10) == 0){
+            WriteMeanStdDevToStdOut(ix, ix*dTym, mstd(0), mstd(1));
         }
     }
     if(fclose(f_dump)){
@@ -312,9 +362,17 @@ int main(int argc, char *argv[])
         Array1D<Array1D<double> > initial_GS(2);
         Array1D<double> temp(nPCTerms,0.e0);
         initial_GS(0)=temp;
-        initial_GS(0)(0) = VEL0;
         initial_GS(1) = temp;
-        initial_GS(1)(0)=DIS0;
+        if (abs(inpParams(0)-1)<1e-10){
+            initial_GS(0)(0) = VEL0;
+            initial_GS(1)(0)=DIS0;
+        }
+        if (abs(inpParams(0)-3)<1e-10){
+            initial_GS(0)(0) = VEL0;
+            initial_GS(1)(0)=DIS0;
+            myPCSet.InitMeanStDv(sample_mstd_2D(0,0),sample_mstd_2D(0,1),1,initial_GS(0));
+            myPCSet.InitMeanStDv(sample_mstd_2D(1,0),sample_mstd_2D(1,1),2,initial_GS(1));
+        }
 
         clock_t start = clock();
     	tt.tick();
@@ -366,7 +424,8 @@ int main(int argc, char *argv[])
     PCSet myPCSet("ISP",ord_AAPG_GS,dim,pcType,0.0,1.0,false); 
     tt.tock("Took");
     
-    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, initial, myPCSet, factor_OD, ord_AAPG, act_D, p, mstd_MCS, err_dump);
+    Array1D<double> initial_AAPG(2,0.e0);
+    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, initial_AAPG, myPCSet, factor_OD, ord_AAPG, act_D, p, mstd_MCS, err_dump, sample_mstd_2D);
     
     // output the timing
     Array1D<double> t(3+ord_GS+ord_AAPG,0.e0);

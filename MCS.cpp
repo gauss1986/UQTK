@@ -11,9 +11,12 @@
 #include "ticktock.h"
 
 Array2D<double> det(int dof, int nspl, int nStep, int nkl, double dTym, Array1D<double>& totalforce, Array1D<double>& inpParams, Array1D<double>& initial){
-        Array2D<double> result(dof,nStep+1);
+        Array2D<double> result(dof,nStep+1,0.e0);
         // initialize solution
-        Array1D<double> tempx(initial);
+        //Array1D<double> tempx(initial);
+        Array1D<double> tempx(dof,0.e0);
+        tempx(0) = initial(0);
+        tempx(1) = initial(1);
         // initialize the forcing terms
         Array1D<double> tempf(3,0.e0);
         tempf(2) = totalforce(0);
@@ -64,7 +67,7 @@ void forward_duffing_dt(Array1D<double>& inpParams, Array1D<double>& force,  dou
    
 Array1D<double> RHS(double force, Array1D<double>& x,Array1D<double>& inpParams){
         Array1D<double> dxdt(x);
-        if (abs(inpParams(0))<1e-10){ //Duffing
+        if ((abs(inpParams(0))<1e-10)||(abs(inpParams(0)-3)<1e-10)){ //Duffing
             // parse input parameters
             const double zeta = inpParams(1);
             const double epsilon = inpParams(2);
@@ -129,7 +132,7 @@ Array1D<double> error(Array1D<double>& dis, Array1D<double>& StDv, Array2D<doubl
 Array1D<double>  sample_force(Array2D<double>& samPts,int iq,int nStep,double fbar,int nkl,Array2D<double>& scaledKLmodes, Array1D<double>& inpParams){    
     Array1D<double> totalforce(nStep+1,0.e0);
     for (int it=0;it<nStep+1;it++){
-        if (abs(inpParams(0))<1e-10){ //Duffing
+        if ((abs(inpParams(0))<1e-10)||(abs(inpParams(0)-3)<1e-10)){ //Duffing
             totalforce(it) = fbar;
         }
         if (abs(inpParams(0)-1)<1e-10){ //Lorenz

@@ -11,7 +11,7 @@
 #include "GhanemSpanos.h"
 #include "ticktock.h"
 
-Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTym, int order, string pcType, int dim, int nStep, Array2D<double>& scaledKLmodes, Array1D<double>& initial, PCSet& myPCSet, double factor_OD, int AAPG_ord, bool act_D, double p, Array2D<double>& mstd_MCS, FILE* err_dump){
+Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTym, int order, string pcType, int dim, int nStep, Array2D<double>& scaledKLmodes, Array1D<double>& initial, PCSet& myPCSet, double factor_OD, int AAPG_ord, bool act_D, double p, Array2D<double>& mstd_MCS, FILE* err_dump, Array2D<double>& sample_mstd_2D){
     // timing var
     Array1D<double> t(5,0.e0);
     
@@ -49,10 +49,10 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     // Initial condition
     Array1D<Array1D<double> > initial_GS1(2);
     Array1D<double> temp_init(PCTerms_1,0.e0);
-    initial_GS1(0)=temp_init;
-    initial_GS1(0)(0) = initial(0);
+    initial_GS1(0) = temp_init;
     initial_GS1(1) = temp_init;
-    initial_GS1(1)(0)=initial(1);
+    initial_GS1(0)(0) = initial(0);
+    initial_GS1(1)(0) = initial(1);
     // Generate the forcing on each dim
     for (int i=0;i<dim;i++){
         Array2D<double> f_1(2*nStep+1,PCTerms_1,0.e0);
@@ -64,10 +64,11 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     }
     
     tt.tick();
-    #pragma omp parallel default(none) shared(dof, dim,PCSet_1,order,PCTerms_1,pcType,nStep,initial_GS1,dTym,inpParams,force_1,dis_1)
+    #pragma omp parallel default(none) shared(dof, dim,PCSet_1,order,PCTerms_1,pcType,nStep,initial_GS1,dTym,inpParams,force_1,dis_1,sample_mstd_2D)
     {
     #pragma omp for
     for (int i=0;i<dim;i++){
+        PCSet_1.InitMeanStDv(sample_mstd_2D(i,0),sample_mstd_2D(i,1),i+1,initial_GS1(i));
         Array1D<Array2D<double> > temp(dof);
         GS(dof, PCSet_1, order, 1, PCTerms_1, pcType, nStep, initial_GS1, dTym, inpParams, force_1(i),temp);
         dis_1(i) = temp(1);
@@ -128,6 +129,8 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
         initial_GS2(0)(0) = initial(0);
         initial_GS2(1) = temp_init2;
         initial_GS2(1)(0)=initial(1);
+        PCSet_2.InitMeanStDv(sample_mstd_2D(0,0),sample_mstd_2D(0,1),1,initial_GS2(0));
+        PCSet_2.InitMeanStDv(sample_mstd_2D(1,0),sample_mstd_2D(1,1),2,initial_GS2(1));
         Array1D<Array2D<double> > force_2(N_adof*(N_adof-1)/2);
         int k = 0;
         for (int i=0;i<N_adof-1;i++){

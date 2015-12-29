@@ -93,7 +93,7 @@ void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<dou
         }
         int nPCTerms = x(0).Length();
         
-        if (abs(inpParams(0))<1e-10){ //Duffing
+        if ((abs(inpParams(0))<1e-10)||(abs(inpParams(0)-3)<1e-10)){ //Duffing
             // parse input parameters
             const double zeta = inpParams(1);
             const double epsilon = inpParams(2);
@@ -118,8 +118,9 @@ void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<dou
             Array1D<double> temp2(nPCTerms,0.e0);
             myPCSet.IPow(x(1),temp2,2); //y^2
             addVecAlphaVecPow(temp,-1,temp2,1);//-y^2-ax+aF
-            myPCSet.IPow(x(2),temp2,2); //z^2
-            addVecAlphaVecPow(temp,-1,temp2,1);//-y^2-z^2-ax+aF
+            Array1D<double> temp3(nPCTerms,0.e0);
+            myPCSet.IPow(x(2),temp3,2); //z^2
+            addVecAlphaVecPow(temp,-1,temp3,1);//-y^2-z^2-ax+aF
             dev(0) = temp;
             // update y
             Array1D<double> tempxy(nPCTerms,0.e0);
@@ -132,7 +133,7 @@ void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<dou
             subtractVec(x(1),temp);//xy-bxz-y
             temp2.Resize(nPCTerms);
             temp2(0) = G;
-            addVec(temp2,temp);//xy-bxz-y-G
+            addVec(temp2,temp);//xy-bxz-y+G
             dev(1) = temp;
             // update z
             copy(tempxz,temp);

@@ -28,7 +28,7 @@ Dec 14, 2015
 
 #define DIM 3
 #define CLEN 0.1
-#define SIG 0.01*sqrt(3)
+#define SIG 0.1
 #define ORDER_GS 2
 #define ORDER_AAPG_GS 2
 #define ORDER_AAPG 3
@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
     inpParams(0) = 1;       // code for problem: 0-Duffing, 1-Lorenz
     inpParams(1) = 0.25;    //a, from Lorenz 2005
     inpParams(2) = 4.0;     //b, from Lorenz 2005
-    inpParams(3) = 1.23;    //G, from Lorenz 2005
+    inpParams(3) = 1.2;    //G, from Lorenz 2005
     inpParams(4) = AMP;     //AMP
     inpParams(5) = 2*M_PI/73; //w
 
@@ -217,11 +217,11 @@ int main(int argc, char *argv[])
     Array2D<double> samPts(nspl,dim,0.e0);
     PCSet MCPCSet("NISP",ord_GS,dim,pcType,0.0,1);//alpha and beta coeff is useless in LU and HG
     MCPCSet.DrawSampleVar(samPts);
-    //for (int i=0;i<nspl+1;i++){
-    //    samPts(i,0)=samPts(i,0)*sigma+x0;
-    //    samPts(i,1)=samPts(i,1)*sigma+y0;
-    //    samPts(i,2)=samPts(i,2)*sigma+z0;
-    //}
+    for (int i=0;i<nspl+1;i++){
+        samPts(i,0)=samPts(i,0)*sigma+x0;
+        samPts(i,1)=samPts(i,1)*sigma+y0;
+        samPts(i,2)=samPts(i,2)*sigma+z0;
+    }
     // Examine the mean/std of the sample
     Array2D<double> sample_mstd_2D(dof,2);
     for (int i=0;i<dof;i++){
@@ -254,22 +254,23 @@ int main(int argc, char *argv[])
     initial(0) = x0;
     initial(1) = y0;
     initial(2) = z0;
-    Array1D<double> totalforce(2*nStep+1,fbar);
     cout << "\nMCS...\n" << endl; 
     int nthreads;
     // Time marching steps
     TickTock tt;
     tt.tick();
-    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts,dim,dTym,inpParams,nthreads,totalforce,scaledKLmodes,initial) 
+    #pragma omp parallel default(none) shared(fbar,result,dof,nStep,nspl,samPts,dim,dTym,inpParams,nthreads,scaledKLmodes,initial) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl+1;iq++){
+        Array1D<double> totalforce(2*nStep+1,fbar);
         // sample force
         Array1D<double> temp_f(nspl,0.e0);
         getRow(samPts,iq,temp_f);
         for (int it=0;it<2*nStep+1;it++)
             for (int j=0;j<dim;j++)
                     totalforce(it)+=temp_f(j)*scaledKLmodes(it,j);
+        //sample_force(samPts,iq,2*nStep+1,fbar,dim,scaledKLmodes, inpParams);    
         // compute the solution with different initial conditions
         Array2D<double> temp = det(dof, nspl, nStep, dim, dTym, totalforce, inpParams, initial);
         for (int idof=0;idof<dof;idof++){
@@ -381,8 +382,8 @@ int main(int argc, char *argv[])
         Array1D<Array1D<double> > initial_GS(dof);
         Array1D<double> temp(nPCTerms,0.e0);
         for (int i=0;i<dof;i++){
-            initial_GS(i)=temp;
-            //myPCSet.InitMeanStDv(sample_mstd_2D(i,0),sample_mstd_2D(i,1),i+1,initial_GS(i));
+            //initial_GS(i)=temp;
+            myPCSet.InitMeanStDv(sample_mstd_2D(i,0),sample_mstd_2D(i,1),i+1,initial_GS(i));
         }
 
         clock_t start = clock();
