@@ -11,19 +11,19 @@
 #include "GhanemSpanos.h"
 #include "ticktock.h"
 
-Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTym, int order, string pcType, int dim, int nStep, Array2D<double>& scaledKLmodes, Array1D<double>& initial, PCSet& myPCSet, double factor_OD, int AAPG_ord, bool act_D, double p, Array2D<double>& mstd_MCS, FILE* err_dump, Array2D<double>& sample_mstd_2D){
+Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTym, int order, string pcType, int dim, int nStep, Array2D<double>& scaledKLmodes, PCSet& myPCSet, double factor_OD, int AAPG_ord, bool act_D, double p, Array2D<double>& mstd_MCS, FILE* err_dump, Array2D<double>& sample_mstd_2D){
     // timing var
     Array1D<double> t(5,0.e0);
     
-    // Compute zeroth-order term
+    // Compute zeroth-order term with DET initial condition and force
     printf("Zeroth-order term...\n");
-    // variable to store solution at every step. Zero initial condition.
+    // Variable to store solution at every step
     Array1D<double> Temp(2,0.e0);
-    // deterministic force
-    Array1D<double> f_0(2,0.e0);
-    f_0(0)=fbar;
+    getCol(sample_mstd_2D,0,Temp); 
     // store zeroth order solution
     Array2D<double> x_0(nStep+1,2,0.e0);
+    // Initialize x_0
+    x_0.replaceRow(Temp,0);
     // Time marching steps
     TickTock tt;
     tt.tick();
@@ -46,13 +46,6 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     // initialize the displacement and force terms
     Array1D<Array2D<double> > dis_1(dim);
     Array1D<Array2D<double> > force_1(dim);
-    // Initial condition
-    Array1D<Array1D<double> > initial_GS1(2);
-    Array1D<double> temp_init(PCTerms_1,0.e0);
-    initial_GS1(0) = temp_init;
-    initial_GS1(1) = temp_init;
-    initial_GS1(0)(0) = initial(0);
-    initial_GS1(1)(0) = initial(1);
     // Generate the forcing on each dim
     for (int i=0;i<dim;i++){
         Array2D<double> f_1(2*nStep+1,PCTerms_1,0.e0);
@@ -64,12 +57,19 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     }
     
     tt.tick();
-    #pragma omp parallel default(none) shared(dof, dim,PCSet_1,order,PCTerms_1,pcType,nStep,initial_GS1,dTym,inpParams,force_1,dis_1,sample_mstd_2D)
+    #pragma omp parallel default(none) shared(sample_mstd_2D,dof, dim,PCSet_1,order,PCTerms_1,pcType,nStep,dTym,inpParams,force_1,dis_1)
     {
     #pragma omp for
     for (int i=0;i<dim;i++){
-        PCSet_1.InitMeanStDv(sample_mstd_2D(i,0),sample_mstd_2D(i,1),i+1,initial_GS1(i));
         Array1D<Array2D<double> > temp(dof);
+        // Initial condition
+        Array1D<Array1D<double> > initial_GS1(dof);
+        Array1D<double> temp_init(PCTerms_1,0.e0);
+        for (int j=0;j<dof;j++){
+            initial_GS1(j) = temp_init;
+            initial_GS1(j)(0) = sample_mstd_2D(j,0);
+        }
+        PCSet_1.InitMeanStDv(sample_mstd_2D(i,0),sample_mstd_2D(i,1),i+1,initial_GS1(i));
         GS(dof, PCSet_1, order, 1, PCTerms_1, pcType, nStep, initial_GS1, dTym, inpParams, force_1(i),temp);
         dis_1(i) = temp(1);
     }
@@ -125,12 +125,11 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
         // Initial condition
         Array1D<Array1D<double> > initial_GS2(2);
         Array1D<double> temp_init2(PCTerms_2,0.e0);
-        initial_GS2(0)=temp_init2;
-        initial_GS2(0)(0) = initial(0);
-        initial_GS2(1) = temp_init2;
-        initial_GS2(1)(0)=initial(1);
-        PCSet_2.InitMeanStDv(sample_mstd_2D(0,0),sample_mstd_2D(0,1),1,initial_GS2(0));
-        PCSet_2.InitMeanStDv(sample_mstd_2D(1,0),sample_mstd_2D(1,1),2,initial_GS2(1));
+        for (int i=0;i<dof;i++){
+            initial_GS2(i) = temp_init2;
+            PCSet_2.InitMeanStDv(sample_mstd_2D(i,0),sample_mstd_2D(i,1),i+1,initial_GS2(i));
+        }
+        // force
         Array1D<Array2D<double> > force_2(N_adof*(N_adof-1)/2);
         int k = 0;
         for (int i=0;i<N_adof-1;i++){
@@ -176,9 +175,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     Array1D<Array1D<double> > initial_GS3(2);
     Array1D<double> temp_init3(PCTerms_3,0.e0);
     initial_GS3(0)=temp_init3;
-    initial_GS3(0)(0) = initial(0);
     initial_GS3(1) = temp_init3;
-    initial_GS3(1)(0)=initial(1);
     Array1D<Array2D<double> > force_3(N_adof*(N_adof-1)*(N_adof-2)/6);
     int l=0;
     for (int i=0;i<N_adof-2;i++){

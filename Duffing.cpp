@@ -357,7 +357,7 @@ int main(int argc, char *argv[])
             f_GS.replaceCol(tempf,i+1);
         }
 
-        // Assumed deterministic initial conditions
+        // Initial conditions
         Array1D<Array2D<double> > result(2);
         Array1D<Array1D<double> > initial_GS(2);
         Array1D<double> temp(nPCTerms,0.e0);
@@ -368,8 +368,6 @@ int main(int argc, char *argv[])
             initial_GS(1)(0)=DIS0;
         }
         if (abs(inpParams(0)-3)<1e-10){
-            initial_GS(0)(0) = VEL0;
-            initial_GS(1)(0)=DIS0;
             myPCSet.InitMeanStDv(sample_mstd_2D(0,0),sample_mstd_2D(0,1),1,initial_GS(0));
             myPCSet.InitMeanStDv(sample_mstd_2D(1,0),sample_mstd_2D(1,1),2,initial_GS(1));
         }
@@ -424,8 +422,7 @@ int main(int argc, char *argv[])
     PCSet myPCSet("ISP",ord_AAPG_GS,dim,pcType,0.0,1.0,false); 
     tt.tock("Took");
     
-    Array1D<double> initial_AAPG(2,0.e0);
-    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, initial_AAPG, myPCSet, factor_OD, ord_AAPG, act_D, p, mstd_MCS, err_dump, sample_mstd_2D);
+    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, myPCSet, factor_OD, ord_AAPG, act_D, p, mstd_MCS, err_dump, sample_mstd_2D);
     
     // output the timing
     Array1D<double> t(3+ord_GS+ord_AAPG,0.e0);
