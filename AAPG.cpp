@@ -612,21 +612,21 @@ void computeStd(int nStep, int nPCTerms, Array2D<double>& dis_1_assembled, Array
         getRow(dis_1_assembled,i,dis_temp);
         std1(i) = myPCSet.StDv(dis_temp);
     }
-    write_datafile_1d(std1,"AAPG1_std.dat");
+    //write_datafile_1d(std1,"AAPG1_std.dat");
     // Second-order
     for (int i=0;i<nStep+1;i++){
         Array1D<double> dis_temp(nPCTerms,0.e0);
         getRow(dis_2_assembled,i,dis_temp);
         std2(i) = myPCSet.StDv(dis_temp);
     }
-    write_datafile_1d(std2,"AAPG2_std.dat");
+    //write_datafile_1d(std2,"AAPG2_std.dat");
     // Third-order
     for (int i=0;i<nStep+1;i++){
         Array1D<double> dis_temp(nPCTerms,0.e0);
         getRow(dis_3_assembled,i,dis_temp);
         std3(i) = myPCSet.StDv(dis_temp);
     }
-    write_datafile_1d(std3,"AAPG3_std.dat");
+    //write_datafile_1d(std3,"AAPG3_std.dat");
     return;
 }
 

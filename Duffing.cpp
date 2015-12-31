@@ -18,6 +18,7 @@ July 25, 2015
 #include "getopt.h"
 
 #include "Utils.h"
+#include "Utilsave.h"
 #include "Duffing.h"
 #include "KL.h"
 #include "MCS.h"
@@ -44,7 +45,7 @@ July 25, 2015
 #define THRESHOLD 0.99
 
 #define COVTYPE "Exp"
-#define PCTYPE "LU"
+#define PCTYPE "HG"
 
 /// \brief Displays information about this program
 int usage(){
@@ -248,12 +249,10 @@ int main(int argc, char *argv[])
     result(1) = vel_MC;
     cout << "\nMCS...\n" << endl; 
     int nthreads;
-    Array1D<double> temp_init(nspl,0);
-    Array1D<double> temp_init2(nspl,0);
     // Time marching steps
     TickTock tt;
     tt.tick();
-    #pragma omp parallel default(none) shared(temp_init,temp_init2,result,dof,nStep,nspl,samPts,nkl,dTym,inpParams,nthreads,fbar,scaledKLmodes) 
+    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts,nkl,dTym,inpParams,nthreads,fbar,scaledKLmodes) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
@@ -273,35 +272,20 @@ int main(int argc, char *argv[])
                 result(idof)(it,iq) = temp(idof,it);
             }
         }
-        temp_init2(iq)=initial(1);
-        temp_init(iq)=temp(1,0);
-        //test if the initial condition is the same as passed in
-        //if (abs(initial(1)-temp(1,0))>10e-5 || abs(initial(0)-temp(0,0))>10e-5){
-        //    temp_init(iq)=1;
-        //}
-        
     }
     //output the number of threads
     #pragma omp single
     nthreads = omp_get_num_threads();
     }
-    write_datafile_1d(temp_init,"initial.dat");
-    write_datafile_1d(temp_init2,"initial2.dat");
-    // output the test result
-    //for (int iq=0;iq<nspl;iq++){
-    //    if (temp_init(iq)==1)
-    //        cout << "The initial state of the solution is different from the initial condition passd in on dof No." << iq << endl;
-    //}
     //report the time cost
     tt.tock("Took");
     cout << "Size of result(1) is:" <<result(1).XSize() << "X"<<result(1).YSize()<< endl;
     double t_MCS = tt.silent_tock();
     cout << "Number of threads in OMP:" << nthreads << endl;
     Array2D<double> mstd_MCS(2,nStep+1,0.e0);
-    //Array1D<double> tempdis(nspl,0.e0);
-    //getRow(result(1),0,tempdis);
-    //write_datafile_1d(tempdis,"MCS_dis.dat");
-    // post-process the solution
+    Array2D<double> dis_MCS(nspl,11,0.e0);
+    Array2D<double> vel_MCS(nspl,11,0.e0);
+    int ind = 0;
     for (int ix=0;ix<nStep+1;ix++){
         Array1D<double> tempdis(nspl,0.e0);
         getRow(result(1),ix,tempdis);
@@ -310,8 +294,15 @@ int main(int argc, char *argv[])
         WriteMeanStdDevToFilePtr(ix*dTym, mstd(0),mstd(1),f_dump);         
         if (ix % ((int) nStep/10) == 0){
             WriteMeanStdDevToStdOut(ix, ix*dTym, mstd(0), mstd(1));
+            dis_MCS.replaceCol(tempdis,ind); 
+            Array1D<double> tempvel(nspl,0.e0);
+            getRow(result(0),ix,tempvel);
+            vel_MCS.replaceCol(tempvel,ind); 
+            ind++;
         }
     }
+    write_datafile(dis_MCS,"dis_MCS.dat");
+    write_datafile(vel_MCS,"vel_MCS.dat");
     if(fclose(f_dump)){
         printf("Could not close file '%s'\n",Solufile.c_str());
         exit(1);    
@@ -383,37 +374,20 @@ int main(int argc, char *argv[])
         ostringstream s;
         s << "GS_modes_" << ord<<".dat";
         string SoluGSmodes(s.str());
-        FILE *GS_dump;
-        if(!(GS_dump=fopen(SoluGSmodes.c_str(),"w"))){
-            printf("Could not open file '%s'\n",SoluGSmodes.c_str());
-            exit(1);    
-        }
+        FILE *GS_dump=createfile(SoluGSmodes);
         // Open files to write out statistics of the solutions
         ostringstream s1;
         s1 << "GS_stat_" << ord<<".dat";
         string SoluGSstat(s1.str());
-        //string SoluGSstat = "GS_stat.dat";
-        FILE *GSstat_dump;
-        if(!(GSstat_dump=fopen(SoluGSstat.c_str(),"w"))){
-            printf("Could not open file '%s'\n",SoluGSstat.c_str());
-            exit(1);    
-        }
+        FILE *GSstat_dump=createfile(SoluGSstat);
         
         Array1D<double> e_GS_ord = postprocess_GS(nPCTerms, nStep, result(1), myPCSet, dTym, GS_dump, GSstat_dump, mstd_MCS);
 
         fprintf(err_dump, "%lg %lg", e_GS_ord(0),e_GS_ord(1));
         fprintf(err_dump, "\n");
 
-        // close files
-        if(fclose(GS_dump)){
-            printf("Could not close file '%s'\n",SoluGSmodes.c_str());
-            exit(1);    
-        }
-        
-        if(fclose(GSstat_dump)){
-            printf("Could not close file '%s'\n",SoluGSstat.c_str());
-            exit(1);    
-        }
+        closefile(GS_dump, SoluGSmodes); 
+        closefile(GSstat_dump, SoluGSstat); 
     }
 
     // AAPG
