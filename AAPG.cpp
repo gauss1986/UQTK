@@ -72,7 +72,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
             initial_GS1(j) = temp_init;
             initial_GS1(j)(0) = sample_mstd_2D(j,0);
         }
-        PCSet_1.InitMeanStDv(sample_mstd_2D(i,0),sample_mstd_2D(i,1),i+1,initial_GS1(i));
+        PCSet_1.InitMeanStDv(sample_mstd_2D(i,0),sample_mstd_2D(i,1),1,initial_GS1(i));
         GS(dof, PCSet_1, order, 1, PCTerms_1, pcType, nStep, initial_GS1, dTym, inpParams, force_1(i),temp);
         dis_1(i) = temp(1);
         vel_1(i) = temp(0);
@@ -325,6 +325,15 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     computeStd(nStep, nPCTerms, dis_1_assembled,dis_2_assembled, dis_3_assembled, myPCSet, std1, std2, std3);
     tt.tock("Compute std took");
 
+    // output dis_1_assembled for debug
+    ostringstream s0;
+    s0 << name << "_1_assembled"<<".dat";
+    write_datafile(dis_1_assembled,s0.str().c_str());
+    // output dis_2_assembled for debug
+    ostringstream s4;
+    s4 << name << "_2_assembled"<<".dat";
+    write_datafile(dis_2_assembled,s4.str().c_str());
+
     // sample result
     Array2D<double> AAPG_dis_sample_1=sampleGS(dim, nStep, nPCTerms, myPCSet, dis_1_assembled, samPts_norm);
     Array2D<double> AAPG_dis_sample_2=sampleGS(dim, nStep, nPCTerms, myPCSet, dis_2_assembled, samPts_norm);
@@ -542,6 +551,8 @@ void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
         Array1D<int> ind = index1(dim, i, order);
         ind1.replaceCol(ind,i);
     }
+    write_datafile(ind1,"ind1.dat");
+    
     Array3D<int> ind2(dim,dim,PCTerms_2,0);
     for (int i=0;i<dim-1;i++){
         for (int j=i+1;j<dim;j++){
