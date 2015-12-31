@@ -212,62 +212,20 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     cout << "Saving on computational cost using only active dims: " << (1-(N_adof*(N_adof-1)*(N_adof-2)*1.0/dim/(dim-1)/(dim-2)))*100 << "%" << endl;
     }
  
-    printf("\nAssemble the solutions...\n");
-    tt.tick();
-    PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, dis_0, dis_1, dis_2, dis_3, myPCSet, fbar, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, pcType, inpParams, factor_OD, mstd_MCS, err_dump);
-    tt.tock("Took");
-    t(4)=tt.silent_tock();
-   
-    return(t);
-}
-
-void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, int AAPG_ord, Array1D<double>& dis_0, Array1D<Array2D<double> >& dis_1, Array2D<Array2D<double> >& dis_2, Array3D<Array2D<double> >& dis_3, PCSet& myPCSet, double fbar, int dim, int nStep, int PCTerms_1, int PCTerms_2, int PCTerms_3, int order, double dTym, string pcType, Array1D<double>& inpParams, double factor_OD, Array2D<double>& mstd_MCS, FILE* err_dump){
-    TickTock tt;
-    tt.tick();
-    // Post-process the AAPG solutions
-    // initialization
-    int nAAPGTerms = 1+dim+dim*(dim-1)/2+dim*(dim-1)*(dim-2)/6;
-    int nPCTerms = myPCSet.GetNumberPCTerms();
-    Array2D<double> dis_1_assembled(nStep+1,nPCTerms,0.e0);
-    Array2D<double> dis_2_assembled(nStep+1,nPCTerms,0.e0);
-    Array2D<double> dis_3_assembled(nStep+1,nPCTerms,0.e0);
-    Array2D<double> coeffAAPG1(1+dim,nStep+1,1.0);
-    Array2D<double> coeffAAPG2(1+dim+dim*(dim-1)/2,nStep+1,1.0);
-    Array2D<double> coeffAAPG3(nAAPGTerms,nStep+1,1.0);
-
     // initialize the first/second order mean/std of the AAPG solutions
     Array1D<double> dis_1_mean = dis_0;
     Array1D<double> dis_2_mean = dis_0;
     Array1D<double> dis_3_mean = dis_0;
-   
-    tt.tock("Initialization Took");
- 
-    // assemble and save the mean values
-    printf("Assembling the mean...\n");
-    tt.tick();
-    assemblemean(indi_2, indj_2, indi_3, indj_3, indk_3, dis_0, dis_1, dis_2, dis_3, dim, nStep, AAPG_ord, dis_1_mean, dis_2_mean, dis_3_mean, coeffAAPG1, coeffAAPG2, coeffAAPG3);
-    tt.tock("Assemble mean took");   
- 
-    // add the mean to the assembled solution
-    dis_1_assembled.replaceCol(dis_1_mean,0);
-    dis_2_assembled.replaceCol(dis_2_mean,0); 
-    dis_3_assembled.replaceCol(dis_3_mean,0); 
-
-    // assemble the rest PC terms
-    printf("Assembling the rest...\n");
-    tt.tick();
-    assemblerest(indi_2, indj_2, indi_3, indj_3, indk_3, dis_1, dis_2, dis_3, dis_1_assembled, dis_2_assembled, dis_3_assembled, PCTerms_1, PCTerms_2, PCTerms_3, dim, order, nStep, AAPG_ord, coeffAAPG1, coeffAAPG2, coeffAAPG3);
-    tt.tock("Assemble rest took");    
-
-    // compute and print the std values
     Array1D<double> std1(nStep+1,0.e0);
     Array1D<double> std2(nStep+1,0.e0);
     Array1D<double> std3(nStep+1,0.e0);
-    printf("Computing the std...\n");
+   
+    printf("\nAssemble the solutions...\n");
     tt.tick();
-    computeStd(nStep, nPCTerms, dis_1_assembled,dis_2_assembled, dis_3_assembled, myPCSet, std1, std2, std3);
-    tt.tock("Compute std took");
-    
+    PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, dis_0, dis_1, dis_2, dis_3, dis_1_mean, dis_2_mean, dis_3_mean, std1, std2, std3,  myPCSet, fbar, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, pcType, inpParams, factor_OD, mstd_MCS, err_dump);
+    tt.tock("Took");
+    t(4)=tt.silent_tock();
+   
     // print out mean/std valus at specific points for comparison
     printf("First-order AAPG results:\n");
     if (AAPG_ord >= 1){
@@ -308,6 +266,47 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
         fprintf(err_dump,"%lg %lg\n",e3(0),e3(1)); 
         //write_datafile_1d(e3,"e_AAPG_3.dat");
     }
+    return(t);
+}
+
+void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, int AAPG_ord, Array1D<double>& dis_0, Array1D<Array2D<double> >& dis_1, Array2D<Array2D<double> >& dis_2, Array3D<Array2D<double> >& dis_3, Array1D<double>& dis_1_mean, Array1D<double>& dis_2_mean, Array1D<double>& dis_3_mean, Array1D<double>& std1, Array1D<double>& std2, Array1D<double>& std3, PCSet& myPCSet, double fbar, int dim, int nStep, int PCTerms_1, int PCTerms_2, int PCTerms_3, int order, double dTym, string pcType, Array1D<double>& inpParams, double factor_OD, Array2D<double>& mstd_MCS, FILE* err_dump){
+    TickTock tt;
+    tt.tick();
+    // Post-process the AAPG solutions
+    // initialization
+    int nAAPGTerms = 1+dim+dim*(dim-1)/2+dim*(dim-1)*(dim-2)/6;
+    int nPCTerms = myPCSet.GetNumberPCTerms();
+    Array2D<double> dis_1_assembled(nStep+1,nPCTerms,0.e0);
+    Array2D<double> dis_2_assembled(nStep+1,nPCTerms,0.e0);
+    Array2D<double> dis_3_assembled(nStep+1,nPCTerms,0.e0);
+    Array2D<double> coeffAAPG1(1+dim,nStep+1,1.0);
+    Array2D<double> coeffAAPG2(1+dim+dim*(dim-1)/2,nStep+1,1.0);
+    Array2D<double> coeffAAPG3(nAAPGTerms,nStep+1,1.0);
+
+    tt.tock("Initialization Took");
+ 
+    // assemble and save the mean values
+    printf("Assembling the mean...\n");
+    tt.tick();
+    assemblemean(indi_2, indj_2, indi_3, indj_3, indk_3, dis_0, dis_1, dis_2, dis_3, dim, nStep, AAPG_ord, dis_1_mean, dis_2_mean, dis_3_mean, coeffAAPG1, coeffAAPG2, coeffAAPG3);
+    tt.tock("Assemble mean took");   
+ 
+    // add the mean to the assembled solution
+    dis_1_assembled.replaceCol(dis_1_mean,0);
+    dis_2_assembled.replaceCol(dis_2_mean,0); 
+    dis_3_assembled.replaceCol(dis_3_mean,0); 
+
+    // assemble the rest PC terms
+    printf("Assembling the rest...\n");
+    tt.tick();
+    assemblerest(indi_2, indj_2, indi_3, indj_3, indk_3, dis_1, dis_2, dis_3, dis_1_assembled, dis_2_assembled, dis_3_assembled, PCTerms_1, PCTerms_2, PCTerms_3, dim, order, nStep, AAPG_ord, coeffAAPG1, coeffAAPG2, coeffAAPG3);
+    tt.tock("Assemble rest took");    
+
+    // compute and print the std values
+    printf("Computing the std...\n");
+    tt.tick();
+    computeStd(nStep, nPCTerms, dis_1_assembled,dis_2_assembled, dis_3_assembled, myPCSet, std1, std2, std3);
+    tt.tock("Compute std took");
     
     return;     
 }
