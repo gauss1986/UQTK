@@ -11,7 +11,7 @@
 #include "GhanemSpanos.h"
 #include "ticktock.h"
 
-Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTym, int order, string pcType, int dim, int nStep, Array2D<double>& scaledKLmodes, PCSet& myPCSet, double factor_OD, int AAPG_ord, bool act_D, double p, Array2D<double>& mstd_MCS, FILE* err_dump, Array2D<double>& sample_mstd_2D){
+Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTym, int order, string pcType, int dim, int nStep, Array2D<double>& scaledKLmodes, PCSet& myPCSet, double factor_OD, int AAPG_ord, bool act_D, double p, Array2D<double>& mstd_MCS, FILE* err_dump, Array2D<double>& sample_mstd_2D, Array2D<double>& samPts_norm){
     // timing var
     Array1D<double> t(5,0.e0);
     
@@ -37,6 +37,8 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     // abstract the displacement terms
     Array1D<double> dis_0(nStep+1,0.e0);
     getCol(x_0,1,dis_0);
+    Array1D<double> vel_0(nStep+1,0.e0);
+    getCol(x_0,0,vel_0);
     
     // Compute first order terms
     printf("First-order terms...");
@@ -45,6 +47,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     int PCTerms_1 = PCSet_1.GetNumberPCTerms();
     // initialize the displacement and force terms
     Array1D<Array2D<double> > dis_1(dim);
+    Array1D<Array2D<double> > vel_1(dim);
     Array1D<Array2D<double> > force_1(dim);
     // Generate the forcing on each dim
     for (int i=0;i<dim;i++){
@@ -57,7 +60,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     }
    
     tt.tick();
-    #pragma omp parallel default(none) shared(sample_mstd_2D,dof, dim,PCSet_1,order,PCTerms_1,pcType,nStep,dTym,inpParams,force_1,dis_1)
+    #pragma omp parallel default(none) shared(sample_mstd_2D,dof, dim,PCSet_1,order,PCTerms_1,pcType,nStep,dTym,inpParams,force_1,vel_1,dis_1)
     {
     #pragma omp for
     for (int i=0;i<dim;i++){
@@ -72,6 +75,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
         PCSet_1.InitMeanStDv(sample_mstd_2D(i,0),sample_mstd_2D(i,1),i+1,initial_GS1(i));
         GS(dof, PCSet_1, order, 1, PCTerms_1, pcType, nStep, initial_GS1, dTym, inpParams, force_1(i),temp);
         dis_1(i) = temp(1);
+        vel_1(i) = temp(0);
     }
     }
     tt.tock("Took");
@@ -114,6 +118,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     int N_adof = ind.XSize();
 
     // Second order term
+    Array2D<Array2D<double> > vel_2(dim,dim); 
     Array2D<Array2D<double> > dis_2(dim,dim); 
     int PCTerms_2 = 0;
     Array1D<int> indi_2(N_adof*(N_adof-1)/2,0);
@@ -147,12 +152,13 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
 	    }
     }
     tt.tick();
-    #pragma omp parallel  default(none) shared(dof,k,dis_2,indi_2,indj_2,PCSet_2,order,PCTerms_2,pcType,nStep,initial_GS2,dTym,inpParams,force_2)
+    #pragma omp parallel  default(none) shared(dof,k,dis_2,vel_2,indi_2,indj_2,PCSet_2,order,PCTerms_2,pcType,nStep,initial_GS2,dTym,inpParams,force_2)
     {
     #pragma omp for
     for (int i=0;i<k;i++){
         Array1D<Array2D<double> > temp(dof);
         GS(dof, PCSet_2, order, 2, PCTerms_2, pcType, nStep, initial_GS2, dTym, inpParams, force_2(i), temp); 
+        vel_2(indi_2(i),indj_2(i)) = temp(0);
         dis_2(indi_2(i),indj_2(i)) = temp(1);
     }
     }
@@ -163,6 +169,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
  
     // Third order term
     Array3D<Array2D<double> > dis_3(dim,dim,dim); 
+    Array3D<Array2D<double> > vel_3(dim,dim,dim); 
     int PCTerms_3 = 0;
     Array1D<int> indi_3(N_adof*(N_adof-1)*(N_adof-2)/6,0);
     Array1D<int> indj_3(N_adof*(N_adof-1)*(N_adof-2)/6,0);
@@ -198,13 +205,14 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
 	    }
     //start = clock();
     tt.tick();
-    #pragma omp parallel default(none) shared(dof, l,indi_3,indj_3,indk_3,PCSet_3,order,PCTerms_3,pcType,nStep,initial_GS3,dTym,inpParams,dis_3,force_3)
+    #pragma omp parallel default(none) shared(dof, l,indi_3,indj_3,indk_3,PCSet_3,order,PCTerms_3,pcType,nStep,initial_GS3,dTym,inpParams,vel_3,dis_3,force_3)
     {
     #pragma omp for
     for (int i=0;i<l;i++){
         Array1D<Array2D<double> > temp(dof);
         GS(dof, PCSet_3, order, 3, PCTerms_3, pcType, nStep, initial_GS3, dTym, inpParams, force_3(i),temp);         
 	    dis_3(indi_3(i),indj_3(i),indk_3(i)) = temp(1);
+	    vel_3(indi_3(i),indj_3(i),indk_3(i)) = temp(0);
     }
     }
     tt.tock("Took");
@@ -221,10 +229,19 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     Array1D<double> std3(nStep+1,0.e0);
    
     printf("\nAssemble the solutions...\n");
+    string name = "dis";
     tt.tick();
-    PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, dis_0, dis_1, dis_2, dis_3, dis_1_mean, dis_2_mean, dis_3_mean, std1, std2, std3,  myPCSet, fbar, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, pcType, inpParams, factor_OD, mstd_MCS, err_dump);
+    PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, dis_0, dis_1, dis_2, dis_3, dis_1_mean, dis_2_mean, dis_3_mean, std1, std2, std3,  myPCSet, fbar, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, pcType, inpParams, factor_OD, mstd_MCS, err_dump, samPts_norm, name);
     tt.tock("Took");
     t(4)=tt.silent_tock();
+    string name2 = "vel";
+    Array1D<double> vel_1_mean = vel_0;
+    Array1D<double> vel_2_mean = vel_0;
+    Array1D<double> vel_3_mean = vel_0;
+    Array1D<double> std_vel_1(nStep+1,0.e0);
+    Array1D<double> std_vel_2(nStep+1,0.e0);
+    Array1D<double> std_vel_3(nStep+1,0.e0);
+    PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, vel_0, vel_1, vel_2, vel_3, vel_1_mean, vel_2_mean, vel_3_mean, std_vel_1, std_vel_2, std_vel_3,  myPCSet, fbar, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, pcType, inpParams, factor_OD, mstd_MCS, err_dump, samPts_norm, name2);
    
     // print out mean/std valus at specific points for comparison
     printf("First-order AAPG results:\n");
@@ -269,7 +286,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     return(t);
 }
 
-void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, int AAPG_ord, Array1D<double>& dis_0, Array1D<Array2D<double> >& dis_1, Array2D<Array2D<double> >& dis_2, Array3D<Array2D<double> >& dis_3, Array1D<double>& dis_1_mean, Array1D<double>& dis_2_mean, Array1D<double>& dis_3_mean, Array1D<double>& std1, Array1D<double>& std2, Array1D<double>& std3, PCSet& myPCSet, double fbar, int dim, int nStep, int PCTerms_1, int PCTerms_2, int PCTerms_3, int order, double dTym, string pcType, Array1D<double>& inpParams, double factor_OD, Array2D<double>& mstd_MCS, FILE* err_dump){
+void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, int AAPG_ord, Array1D<double>& dis_0, Array1D<Array2D<double> >& dis_1, Array2D<Array2D<double> >& dis_2, Array3D<Array2D<double> >& dis_3, Array1D<double>& dis_1_mean, Array1D<double>& dis_2_mean, Array1D<double>& dis_3_mean, Array1D<double>& std1, Array1D<double>& std2, Array1D<double>& std3, PCSet& myPCSet, double fbar, int dim, int nStep, int PCTerms_1, int PCTerms_2, int PCTerms_3, int order, double dTym, string pcType, Array1D<double>& inpParams, double factor_OD, Array2D<double>& mstd_MCS, FILE* err_dump, Array2D<double>& samPts_norm, string name){
     TickTock tt;
     tt.tick();
     // Post-process the AAPG solutions
@@ -307,7 +324,20 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     tt.tick();
     computeStd(nStep, nPCTerms, dis_1_assembled,dis_2_assembled, dis_3_assembled, myPCSet, std1, std2, std3);
     tt.tock("Compute std took");
-    
+
+    // sample result
+    Array2D<double> AAPG_dis_sample_1=sampleGS(dim, nStep, nPCTerms, myPCSet, dis_1_assembled, samPts_norm);
+    Array2D<double> AAPG_dis_sample_2=sampleGS(dim, nStep, nPCTerms, myPCSet, dis_2_assembled, samPts_norm);
+    Array2D<double> AAPG_dis_sample_3=sampleGS(dim, nStep, nPCTerms, myPCSet, dis_3_assembled, samPts_norm);
+    ostringstream s;
+    s << "AAPG" << name << "sample_1"<<".dat";
+    write_datafile(AAPG_dis_sample_1,s.str().c_str());
+    ostringstream s2;
+    s2 << "AAPG" << name << "sample_2"<<".dat";
+    write_datafile(AAPG_dis_sample_2,s2.str().c_str());
+    ostringstream s3;
+    s3 << "AAPG" << name << "sample_3"<<".dat";
+    write_datafile(AAPG_dis_sample_3,s3.str().c_str());
     return;     
 }
 

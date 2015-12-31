@@ -167,7 +167,8 @@ Array1D<double> postprocess_GS(int nPCTerms, int nStep,  Array2D<double>& soluti
     return e;
 }
 
-Array2D<double> sampleGS(int nspl, int dim, int nStep, int nPCTerms, PCSet& myPCSet, Array2D<double>& solution, Array2D<double>& samPts){
+Array2D<double> sampleGS(int dim, int nStep, int nPCTerms, PCSet& myPCSet, Array2D<double>& solution, Array2D<double>& samPts){
+    int nspl = samPts.XSize();
     Array2D<double> GS_sampt(nspl,11,0.e0);
     int ind = 0;
     Array1D<double> temp(nPCTerms,0.e0);

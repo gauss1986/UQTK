@@ -326,6 +326,7 @@ int main(int argc, char *argv[])
         printf("Could not open file '%s'\n",errstr.c_str());
         exit(1);    
     }
+    Array2D<double> samPts_norm(nspl,2,0.e0);
     for(int ord=1;ord<ord_GS+1;ord++){
     	tt.tick();
 	    PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
@@ -383,7 +384,6 @@ int main(int argc, char *argv[])
         
         //assemble dis and output dis_sample
         Array1D<double> e_GS_ord = postprocess_GS(nPCTerms, nStep, result(1), myPCSet, dTym, GS_dump, GSstat_dump, mstd_MCS);
-        Array2D<double> samPts_norm(nspl,2,0.e0);
         Array1D<double> normsq(nPCTerms,0.e0); 
         myPCSet.OutputNormSquare(normsq);
         for (int i=0;i<nspl;i++){
@@ -391,14 +391,14 @@ int main(int argc, char *argv[])
             samPts_norm(i,1)=samPts_ori(i,1)*sqrt(normsq(2))+DIS0;
         }
         cout << "Sampling dis..."<< endl;
-        Array2D<double> GS_dis_sampt=sampleGS(nspl, dim, nStep, nPCTerms, myPCSet, result(1), samPts_norm);
+        Array2D<double> GS_dis_sampt=sampleGS(dim, nStep, nPCTerms, myPCSet, result(1), samPts_norm);
         ostringstream s2;
         s2 << "GS_dis_sample" << ord<<".dat";
         string SoluGSsample(s2.str());
         write_datafile(GS_dis_sampt,SoluGSsample.c_str());
         //ouput vel_sample
         cout << "Sampling vel..."<< endl;
-        Array2D<double> GS_vel_sampt=sampleGS(nspl, dim, nStep, nPCTerms, myPCSet, result(0), samPts_norm);
+        Array2D<double> GS_vel_sampt=sampleGS(dim, nStep, nPCTerms, myPCSet, result(0), samPts_norm);
         ostringstream s3;
         s3 << "GS_vel_sample" << ord<<".dat";
         SoluGSsample=s3.str();
@@ -417,7 +417,7 @@ int main(int argc, char *argv[])
     PCSet myPCSet("ISP",ord_AAPG_GS,dim,pcType,0.0,1.0,false); 
     tt.tock("Took");
     
-    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, myPCSet, factor_OD, ord_AAPG, act_D, p, mstd_MCS, err_dump, sample_mstd_2D);
+    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, myPCSet, factor_OD, ord_AAPG, act_D, p, mstd_MCS, err_dump, sample_mstd_2D, samPts_norm);
     
     // output the timing
     Array1D<double> t(3+ord_GS+ord_AAPG,0.e0);
