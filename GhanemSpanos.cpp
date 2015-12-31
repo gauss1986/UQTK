@@ -1,4 +1,5 @@
 #include <math.h>
+#include <omp.h>
 #include <cmath>
 #include "Array2D.h"
 #include "Array1D.h"
@@ -149,7 +150,7 @@ Array1D<double> postprocess_GS(int nPCTerms, int nStep,  Array2D<double>& soluti
     Array1D<double> temp(nPCTerms,0.e0);
     Array1D<double> StDv(nStep+1,0.e0);
     for (int i=0;i<nStep+1;i++){
-        getRow(solution,i,temp); 
+        getRow(solution,i,temp);
         StDv(i) = myPCSet.StDv(temp);
         // Write time and solution to file
         WriteModesToFilePtr(i, temp.GetArrayPointer(), nPCTerms, GS_dump);
@@ -164,4 +165,26 @@ Array1D<double> postprocess_GS(int nPCTerms, int nStep,  Array2D<double>& soluti
     getCol(solution,0,mean);
     Array1D<double> e =  error(mean, StDv, mstd_MCS);    
     return e;
+}
+
+Array2D<double> sampleGS(int nspl, int dim, int nStep, int nPCTerms, PCSet& myPCSet, Array2D<double>& solution, Array2D<double>& samPts){
+    Array2D<double> GS_sampt(nspl,11,0.e0);
+    int ind = 0;
+    Array1D<double> temp(nPCTerms,0.e0);
+    for (int i=0;i<nStep+1;i++){
+        if (i % ((int) nStep/10) == 0){
+            getRow(solution,i,temp);
+            #pragma omp parallel default(none) shared(nspl,dim,myPCSet,samPts,temp,GS_sampt,ind) 
+            {
+            #pragma omp for 
+            for (int j=0;j<nspl;j++){
+                Array1D<double> samPt(dim,0.e0);
+                getRow(samPts,j,samPt);
+                GS_sampt(j,ind)=myPCSet.EvalPC(temp, samPt);
+            }
+            }
+            ind++;
+        }
+    }
+    return GS_sampt;
 }

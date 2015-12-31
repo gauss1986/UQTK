@@ -212,13 +212,13 @@ int main(int argc, char *argv[])
     write_datafile(scaledKLmodes,"KL.dat");
  
     // Monte Carlo simulation
-    int Rand_force = 1;
+    Array2D<double> samPts_ori(nspl,dim,0.e0);
     Array2D<double> samPts(nspl,dim,0.e0);
     PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
-    MCPCSet.DrawSampleVar(samPts);
+    MCPCSet.DrawSampleVar(samPts_ori);
     for (int i=0;i<nspl;i++){
-        samPts(i,0)=samPts(i,0)*sigma+VEL0;
-        samPts(i,1)=samPts(i,1)*sigma+DIS0;
+        samPts(i,0)=samPts_ori(i,0)*sigma+VEL0;
+        samPts(i,1)=samPts_ori(i,1)*sigma+DIS0;
     }
     // Examine the mean/std of the sample
     Array2D<double> sample_mstd_2D(dof,2);
@@ -381,7 +381,28 @@ int main(int argc, char *argv[])
         string SoluGSstat(s1.str());
         FILE *GSstat_dump=createfile(SoluGSstat);
         
+        //assemble dis and output dis_sample
         Array1D<double> e_GS_ord = postprocess_GS(nPCTerms, nStep, result(1), myPCSet, dTym, GS_dump, GSstat_dump, mstd_MCS);
+        Array2D<double> samPts_norm(nspl,2,0.e0);
+        Array1D<double> normsq(nPCTerms,0.e0); 
+        myPCSet.OutputNormSquare(normsq);
+        for (int i=0;i<nspl;i++){
+            samPts_norm(i,0)=samPts_ori(i,0)*sqrt(normsq(1))+VEL0;
+            samPts_norm(i,1)=samPts_ori(i,1)*sqrt(normsq(2))+DIS0;
+        }
+        cout << "Sampling dis..."<< endl;
+        Array2D<double> GS_dis_sampt=sampleGS(nspl, dim, nStep, nPCTerms, myPCSet, result(1), samPts_norm);
+        ostringstream s2;
+        s2 << "GS_dis_sample" << ord<<".dat";
+        string SoluGSsample(s2.str());
+        write_datafile(GS_dis_sampt,SoluGSsample.c_str());
+        //ouput vel_sample
+        cout << "Sampling vel..."<< endl;
+        Array2D<double> GS_vel_sampt=sampleGS(nspl, dim, nStep, nPCTerms, myPCSet, result(0), samPts_norm);
+        ostringstream s3;
+        s3 << "GS_vel_sample" << ord<<".dat";
+        SoluGSsample=s3.str();
+        write_datafile(GS_vel_sampt,SoluGSsample.c_str());
 
         fprintf(err_dump, "%lg %lg", e_GS_ord(0),e_GS_ord(1));
         fprintf(err_dump, "\n");
