@@ -145,7 +145,7 @@ void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<dou
         }
 }
 
-Array1D<double> postprocess_GS(int nPCTerms, int nStep,  Array2D<double>& solution, PCSet& myPCSet, double dTym, FILE* GS_dump, FILE* GSstat_dump, Array2D<double>& mstd_MCS){
+Array1D<double> postprocess_GS(int noutput, int nPCTerms, int nStep,  Array2D<double>& solution, PCSet& myPCSet, double dTym, FILE* GS_dump, FILE* GSstat_dump, Array2D<double>& mstd_MCS){
     // Output solution (mean and std) 
     Array1D<double> temp(nPCTerms,0.e0);
     Array1D<double> StDv(nStep+1,0.e0);
@@ -156,7 +156,7 @@ Array1D<double> postprocess_GS(int nPCTerms, int nStep,  Array2D<double>& soluti
         WriteModesToFilePtr(i, temp.GetArrayPointer(), nPCTerms, GS_dump);
         // Write dis (mean and std) to file and screen
         WriteMeanStdDevToFilePtr(i,temp(0),StDv(i),GSstat_dump);
-        if (i % ((int) nStep/10) == 0){
+        if (i % ((int) nStep/noutput) == 0){
             WriteMeanStdDevToStdOut(i,i*dTym,temp(0),StDv(i));
         }
     }
@@ -167,21 +167,26 @@ Array1D<double> postprocess_GS(int nPCTerms, int nStep,  Array2D<double>& soluti
     return e;
 }
 
-Array2D<double> sampleGS(int dim, int nStep, int nPCTerms, PCSet& myPCSet, Array2D<double>& solution, Array2D<double>& samPts){
+Array2D<double> sampleGS(int noutput, int dim, int nStep, int nPCTerms, PCSet& myPCSet, Array2D<double>& solution, Array2D<double>& samPts){
     int nspl = samPts.XSize();
-    Array2D<double> GS_sampt(nspl,11,0.e0);
+    Array2D<double> GS_sampt(nspl,noutput+1,0.e0);
     int ind = 0;
     Array1D<double> temp(nPCTerms,0.e0);
+    Array1D<double> normsq(nPCTerms,0.e0); 
+    myPCSet.OutputNormSquare(normsq);
     for (int i=0;i<nStep+1;i++){
-        if (i % ((int) nStep/10) == 0){
+        if (i % ((int) nStep/noutput) == 0){
             getRow(solution,i,temp);
-            #pragma omp parallel default(none) shared(nspl,dim,myPCSet,samPts,temp,GS_sampt,ind) 
+            #pragma omp parallel default(none) shared(normsq,nspl,dim,myPCSet,samPts,temp,GS_sampt,ind) 
             {
             #pragma omp for 
             for (int j=0;j<nspl;j++){
                 Array1D<double> samPt(dim,0.e0);
                 getRow(samPts,j,samPt);
-                GS_sampt(j,ind)=myPCSet.EvalPC(temp, samPt);
+                //GS_sampt(j,ind)=myPCSet.EvalPC(temp, samPt);
+                GS_sampt(j,ind)=temp(0)+temp(1)*samPt(0)+temp(2)*samPt(1);
+                if(myPCSet.GetOrder()==2)
+                    GS_sampt(j,ind)+=temp(3)*(samPt(0)*samPt(0)-normsq(1))+temp(4)*samPt(0)*samPt(1)+temp(5)*(samPt(1)*samPt(1)-normsq(2));
             }
             }
             ind++;

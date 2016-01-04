@@ -28,7 +28,7 @@ July 25, 2015
 
 #define DIM 2
 #define CLEN 0.1
-#define SIG 1.0
+#define SIG 0.5
 #define ORDER_GS 2
 #define ORDER_AAPG_GS 2
 #define ORDER_AAPG 2
@@ -43,6 +43,7 @@ July 25, 2015
 #define FACTOR_OD 1.0
 #define ACTD false
 #define THRESHOLD 0.99
+#define NOUTPUT 10
 
 #define COVTYPE "Exp"
 #define PCTYPE "HG"
@@ -110,6 +111,8 @@ int main(int argc, char *argv[])
     double p = THRESHOLD;
     // Spatial dof
     double dof = 2;
+    // Number of output points
+    int noutput = NOUTPUT;
     // Define input parameters
     Array1D<double> inpParams(3,0.e0);
     inpParams(0) = 3;  // code for problem: 0-Duffing, 1-Lorenz, 3-Duffing with stochastic initial condition
@@ -235,12 +238,10 @@ int main(int argc, char *argv[])
         write_datafile_1d(samPts_1D,name_str.c_str());
     }
     // Open files to write out
-    string Solufile = "MCS.dat";
-    FILE *f_dump;
-    if(!(f_dump=fopen(Solufile.c_str(),"w"))){
-        printf("Could not open file '%s'\n",Solufile.c_str());
-        exit(1);    
-    }
+    string f_MCS_dis = "MCS_dis.dat"; 
+    string f_MCS_vel = "MCS_vel.dat"; 
+    FILE *f_dump=createfile(f_MCS_dis);
+    FILE *f_dump2=createfile(f_MCS_vel);
     // Write solutions at initial step
     Array2D<double>dis_MC(nStep+1,nspl,0.e0);
     Array2D<double>vel_MC(nStep+1,nspl,0.e0);
@@ -282,17 +283,23 @@ int main(int argc, char *argv[])
     cout << "Size of result(1) is:" <<result(1).XSize() << "X"<<result(1).YSize()<< endl;
     double t_MCS = tt.silent_tock();
     cout << "Number of threads in OMP:" << nthreads << endl;
-    Array2D<double> mstd_MCS(2,nStep+1,0.e0);
-    Array2D<double> dis_MCS(nspl,11,0.e0);
-    Array2D<double> vel_MCS(nspl,11,0.e0);
+    Array2D<double> MCS_s_dis(2,nStep+1,0.e0);
+    Array2D<double> MCS_s_vel(2,nStep+1,0.e0);
+    Array2D<double> dis_MCS(nspl,noutput+1,0.e0);
+    Array2D<double> vel_MCS(nspl,noutput+1,0.e0);
     int ind = 0;
     for (int ix=0;ix<nStep+1;ix++){
         Array1D<double> tempdis(nspl,0.e0);
         getRow(result(1),ix,tempdis);
         Array1D<double> mstd  = mStd(tempdis,nspl);
-        mstd_MCS.replaceCol(mstd,ix); 
+        MCS_s_dis.replaceCol(mstd,ix); 
         WriteMeanStdDevToFilePtr(ix*dTym, mstd(0),mstd(1),f_dump);         
-        if (ix % ((int) nStep/10) == 0){
+        Array1D<double> tempvel(nspl,0.e0);
+        getRow(result(0),ix,tempvel);
+        mstd  = mStd(tempvel,nspl);
+        MCS_s_vel.replaceCol(mstd,ix); 
+        WriteMeanStdDevToFilePtr(ix*dTym, mstd(0),mstd(1),f_dump2);         
+        if (ix % ((int) nStep/noutput) == 0){
             WriteMeanStdDevToStdOut(ix, ix*dTym, mstd(0), mstd(1));
             dis_MCS.replaceCol(tempdis,ind); 
             Array1D<double> tempvel(nspl,0.e0);
@@ -303,10 +310,8 @@ int main(int argc, char *argv[])
     }
     write_datafile(dis_MCS,"dis_MCS.dat");
     write_datafile(vel_MCS,"vel_MCS.dat");
-    if(fclose(f_dump)){
-        printf("Could not close file '%s'\n",Solufile.c_str());
-        exit(1);    
-    }
+    closefile(f_dump, f_MCS_dis); 
+    closefile(f_dump2, f_MCS_vel); 
     
     // Ghanem-Spanos method
     printf("\nGhanem-Spanos method...\n");
@@ -373,32 +378,43 @@ int main(int argc, char *argv[])
         // output and save the solution
         // Open files to write out solutions
         ostringstream s;
-        s << "GS_modes_" << ord<<".dat";
+        s << "GS_dis_modes_" << ord<<".dat";
         string SoluGSmodes(s.str());
         FILE *GS_dump=createfile(SoluGSmodes);
+        ostringstream s0;
+        s0 << "GS_vel_modes_" << ord<<".dat";
+        string SolvGSmodes(s0.str());
+        FILE *GS_dump_v=createfile(SolvGSmodes);
         // Open files to write out statistics of the solutions
         ostringstream s1;
-        s1 << "GS_stat_" << ord<<".dat";
+        s1 << "GS_dis_stat_" << ord<<".dat";
         string SoluGSstat(s1.str());
         FILE *GSstat_dump=createfile(SoluGSstat);
+        ostringstream s4;
+        s4 << "GS_vel_stat_" << ord<<".dat";
+        string SolvGSstat(s4.str());
+        FILE *GSstat_dump_v=createfile(SolvGSstat);
         
         //assemble dis and output dis_sample
-        Array1D<double> e_GS_ord = postprocess_GS(nPCTerms, nStep, result(1), myPCSet, dTym, GS_dump, GSstat_dump, mstd_MCS);
-        Array1D<double> normsq(nPCTerms,0.e0); 
-        myPCSet.OutputNormSquare(normsq);
-        for (int i=0;i<nspl;i++){
-            samPts_norm(i,0)=samPts_ori(i,0)*sqrt(normsq(1))+VEL0;
-            samPts_norm(i,1)=samPts_ori(i,1)*sqrt(normsq(2))+DIS0;
+        Array1D<double> e_GS_ord = postprocess_GS(noutput, nPCTerms, nStep, result(1), myPCSet, dTym,GS_dump, GSstat_dump, MCS_s_dis);
+        Array1D<double> e_GS_ord_vel = postprocess_GS(noutput, nPCTerms, nStep, result(0), myPCSet, dTym, GS_dump_v, GSstat_dump_v, MCS_s_vel);
+        if (ord==1){
+            Array1D<double> normsq(nPCTerms,0.e0); 
+            myPCSet.OutputNormSquare(normsq);
+            for (int i=0;i<nspl;i++){
+                samPts_norm(i,0)=samPts_ori(i,0)*sqrt(normsq(1))+VEL0;
+                samPts_norm(i,1)=samPts_ori(i,1)*sqrt(normsq(2))+DIS0;
+            }
         }
         cout << "Sampling dis..."<< endl;
-        Array2D<double> GS_dis_sampt=sampleGS(dim, nStep, nPCTerms, myPCSet, result(1), samPts_norm);
+        Array2D<double> GS_dis_sampt=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, result(1), samPts_norm);
         ostringstream s2;
         s2 << "GS_dis_sample" << ord<<".dat";
         string SoluGSsample(s2.str());
         write_datafile(GS_dis_sampt,SoluGSsample.c_str());
         //ouput vel_sample
         cout << "Sampling vel..."<< endl;
-        Array2D<double> GS_vel_sampt=sampleGS(dim, nStep, nPCTerms, myPCSet, result(0), samPts_norm);
+        Array2D<double> GS_vel_sampt=sampleGS(noutput, dim, nStep, nPCTerms, myPCSet, result(0), samPts_norm);
         ostringstream s3;
         s3 << "GS_vel_sample" << ord<<".dat";
         SoluGSsample=s3.str();
@@ -408,7 +424,9 @@ int main(int argc, char *argv[])
         fprintf(err_dump, "\n");
 
         closefile(GS_dump, SoluGSmodes); 
+        closefile(GS_dump_v, SolvGSmodes); 
         closefile(GSstat_dump, SoluGSstat); 
+        closefile(GSstat_dump_v, SolvGSstat); 
     }
 
     // AAPG
@@ -417,7 +435,7 @@ int main(int argc, char *argv[])
     PCSet myPCSet("ISP",ord_AAPG_GS,dim,pcType,0.0,1.0,false); 
     tt.tock("Took");
     
-    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, dim, nStep, scaledKLmodes, myPCSet, factor_OD, ord_AAPG, act_D, p, mstd_MCS, err_dump, sample_mstd_2D, samPts_norm);
+    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, myPCSet, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, sample_mstd_2D, samPts_norm);
     
     // output the timing
     Array1D<double> t(3+ord_GS+ord_AAPG,0.e0);
