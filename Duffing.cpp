@@ -6,6 +6,7 @@ July 25, 2015
 ===================================================================================== */
 
 #include <math.h>
+#include <tgmath.h>
 #include <cmath>
 #include <sstream>
 #include <fstream>
@@ -26,53 +27,10 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define DIM 2
-#define CLEN 0.1
-#define SIG 0.5
-#define ORDER_GS 2
-#define ORDER_AAPG_GS 2
-#define ORDER_AAPG 2
-#define TFINAL 10.0
-#define DTYM 0.01
-#define NSPL 100000
-#define ZETA 0.1
-#define EPSILON 1.0
-#define FBAR 2.0
+#define PROB 3
+
 #define DIS0 0.0
 #define VEL0 0.0
-#define FACTOR_OD 1.0
-#define ACTD false
-#define THRESHOLD 0.99
-#define NOUTPUT 10
-
-#define COVTYPE "Exp"
-#define PCTYPE "HG"
-
-/// \brief Displays information about this program
-int usage(){
-  printf("usage: cor_kl [-h] [-c<cov_type>] [-d<dTym>] [-n<dim>] [-p<nspl>] [-s<sigma>] [-l<clen>] [-t<tf>]\n");
-  printf(" -h               : print out this help message \n");
-  printf(" -c <cov_type>    : define wether using analytical covariance (type: %s) or compute it from samples \n",COVTYPE);
-  printf(" -d <dTym>        : define the time marching step (default=%e) \n",DTYM);
-  printf(" -n <dim>         : define the number of KL modes retained (default=%d) \n",DIM);
-  printf(" -p <nspl>        : define the number of samples (default=%d) \n",NSPL);
-  printf(" -s <sigma>       : define standard deviation (default=%e) \n",SIG);
-  printf(" -l <clen>        : define correlation length (default=%e) \n",CLEN);
-  printf(" -t <tf>          : define end time (default=%e) \n",TFINAL);
-  printf(" -f <factor_OD>   : define the factor in overdetermined dynimcal-orthogonal calculation (default=%e) \n", FACTOR_OD);
-  printf(" -e <epsilon>     : define the nonlinearity parameter (default=%e) \n", EPSILON);
-  printf(" -G <ord_GS>      : define the order of Ghanem-Spanos method (default=%d) \n", ORDER_GS);
-  printf(" -A <ord_AAPG_GS> : define the order of Ghanem-Spanos method used in subproblems of AAPG (default=%d) \n", ORDER_AAPG_GS);
-  printf(" -P <ord_AAPG>    : define the order of AAPG method(default=%d) \n", ORDER_AAPG);
-  printf(" -T <p>           : define the threshold used in the adaptive AAPG method(default=%e) \n", THRESHOLD);
-  printf("================================================================================================================\n");
-  printf("Input:: Nothing hard-coded.\n");
-  printf("Output:: \n");
-  printf("        - KLmodes.dat:  eigenmodes scaled with sqrt(eig)\n");
-  printf("================================================================================================================\n");
-  exit(0);
-  return 0;
-}
 
 /// \brief c++ version of the Matlab code GS_duffing_multi.m.
 /// Dynamic response of a Duffing oscillator subject to uncertain excitation force.
@@ -82,59 +40,69 @@ int usage(){
 /// Main program of uncertainty propagation of the ODE model excitation force via intrusive spectral projection (ISP)
 int main(int argc, char *argv[])
 {
-    // UQ specific info
-    // PC type
-    string pcType = PCTYPE;
-    // Stochastic dimensionality
-    int dim = DIM;
-    // Covariance type
-    char* cov_type = (char *)COVTYPE;
-    // Standar deviation
-    double sigma = SIG;
-    // Correlation length
-    double clen = CLEN;
-    // MC sample size
-    int nspl = NSPL;
-    // dynamical-orthogonal info
-    double factor_OD = FACTOR_OD;
-    // Nonlinearity parameter
-    double epsilon = EPSILON;
-    // GS order
-    int ord_GS = ORDER_GS;
-    // AAPG order
-    int ord_AAPG = ORDER_AAPG;
-    // GS order in AAPG subproblems
-    int ord_AAPG_GS = ORDER_AAPG_GS;
-    // wheather doing AAPG adaptive or not
-    bool act_D = ACTD;
-    // Threashold used in the adaptive AAPG scheme
-    double p = THRESHOLD;
-    // Spatial dof
-    double dof = 2;
-    // Number of output points
-    int noutput = NOUTPUT;
-    // Define input parameters
-    Array1D<double> inpParams(3,0.e0);
-    inpParams(0) = 3;  // code for problem: 0-Duffing, 1-Lorenz, 3-Duffing with stochastic initial condition
-    inpParams(1) = ZETA;
-    inpParams(2) = epsilon;
+    string pcType;  //PC type
+    int dim;        //Stochastic dimensionality
+    char* cov_type; //Covariance type
+    double sigma;   //Standard deviation
+    int nspl;       //MCS sample size
+    double factor_OD;//dynamical-orthogonal info
+    double epsilon; //Nonlinearity parameter
+    int ord_GS;     //GS order
+    int ord_AAPG;   //AAPG order
+    int ord_AAPG_GS;//GS order in AAPG subproblems
+    bool act_D;     //wheather doing AAPG adaptive or not
+    double p;       //Threashold used in the adaptive AAPG
+    double dof;     //Spatial dof
+    int noutput;    //Number of output points
+    Array1D<double> inpParams(3,0.e0);//Input parameters
+    double clen;
+    double FBAR;    //Scalar defining mean of f
+    
+    if (PROB==1){//Stochastic forcing and deterministic initial conditions
+        // Correlation length
+        clen = 0.1;
+    }
+    if (PROB==3){//Stochastic initial conditions and deterministic forcing
+        pcType = "HG";
+        dim = 2;
+        cov_type = (char *)"Exp";
+        sigma = 0.5;
+        nspl = 100000;
+        factor_OD = 1.0;
+        epsilon = 1.0;
+        ord_GS = 2;
+        ord_AAPG = 2;
+        ord_AAPG_GS = 2;
+        act_D = false;
+        p = 0.99;
+        dof = 2;
+        noutput = 10;
+        inpParams(0) = 3.0;//Problem to solve 
+        inpParams(1) = 0.1;//zeta
+        inpParams(2) = epsilon;
+        FBAR = 2.0;
+    }
 
     // Time marching info
-    double dTym = DTYM;
-    double tf = TFINAL;
+    double dTym = 0.01;
+    double tf = 10;
     // Number of steps
     int nStep=(int) tf / dTym;
     // mean of forcing
-    double fbar = FBAR;
+    //double fbar = 2.0;
+    Array1D<double> fbar(2*nStep+1,0.e0);
+    double t_temp = 0.0; 
+    for (int i=0;i<2*nStep+1;i++){
+        fbar(i) = FBAR*(1-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+        t_temp +=dTym/2;
+    }
+    write_datafile_1d(fbar,"fbar.dat");
   
     /* Read the user input */
     int c;
 
     while ((c=getopt(argc,(char **)argv,"h:c:d:n:p:s:l:t:f:e:G:A:P:D:T:"))!=-1){
         switch (c) {
-        case 'h':
-            usage();
-            break;
         case 'c':
             cov_type = optarg;
             break;
@@ -209,7 +177,7 @@ int main(int argc, char *argv[])
     // Generate the KL expansion of the excitation force
     int nkl = dim;
     Array2D<double> scaledKLmodes(2*nStep+1,nkl,0.0);
-    if (abs(inpParams(0)-1)<1e-10){
+    if (PROB==1){
         genKL(scaledKLmodes, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
     }
     write_datafile(scaledKLmodes,"KL.dat");
@@ -345,9 +313,11 @@ int main(int argc, char *argv[])
     
         // Prepare the force in PC format
         Array2D<double> f_GS(2*nStep+1,nPCTerms,0.e0);
-        for (int i=0;i<2*nStep+1;i++){
-            f_GS(i,0) = fbar;
-        }
+        //for (int i=0;i<2*nStep+1;i++){
+        //    f_GS(i,0) = fbar;
+        //}
+        f_GS.replaceCol(fbar,0);
+
         for (int i=0;i<nkl;i++){
             Array1D<double> tempf(2*nStep+1,0.e0);
             getCol(scaledKLmodes,i,tempf);

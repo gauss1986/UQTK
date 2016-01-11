@@ -129,14 +129,14 @@ Array1D<double> error(Array1D<double>& dis, Array1D<double>& StDv, Array2D<doubl
         return e;
 }
 
-Array1D<double>  sample_force(Array2D<double>& samPts,int iq,int nStep,double fbar,int nkl,Array2D<double>& scaledKLmodes, Array1D<double>& inpParams){    
+Array1D<double>  sample_force(Array2D<double>& samPts,int iq,int nStep, Array1D<double>& fbar,int nkl,Array2D<double>& scaledKLmodes, Array1D<double>& inpParams){    
     Array1D<double> totalforce(nStep+1,0.e0);
     for (int it=0;it<nStep+1;it++){
         if ((abs(inpParams(0))<1e-10)||(abs(inpParams(0)-3)<1e-10)){ //Duffing
-            totalforce(it) = fbar;
+            totalforce(it) = fbar(it);
         }
         if (abs(inpParams(0)-1)<1e-10){ //Lorenz
-            totalforce(it) = fbar+inpParams(4)*cos(inpParams(5)*it);
+            totalforce(it) = fbar(it)+inpParams(4)*cos(inpParams(5)*it);
 	    }
         for (int iy=0;iy<nkl;iy++){
             totalforce(it) = totalforce(it)+samPts(iq,iy)*scaledKLmodes(it,iy);

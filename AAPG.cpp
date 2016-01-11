@@ -11,7 +11,7 @@
 #include "GhanemSpanos.h"
 #include "ticktock.h"
 
-Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTym, int order, string pcType, int noutput, int dim, int nStep, Array2D<double>& scaledKLmodes, PCSet& myPCSet, double factor_OD, int AAPG_ord, bool act_D, double p, Array2D<double>& mstd_MCS, FILE* err_dump, Array2D<double>& sample_mstd_2D, Array2D<double>& samPts_norm){
+Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, double dTym, int order, string pcType, int noutput, int dim, int nStep, Array2D<double>& scaledKLmodes, PCSet& myPCSet, double factor_OD, int AAPG_ord, bool act_D, double p, Array2D<double>& mstd_MCS, FILE* err_dump, Array2D<double>& sample_mstd_2D, Array2D<double>& samPts_norm){
     // timing var
     Array1D<double> t(5,0.e0);
     
@@ -27,8 +27,11 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     // Time marching steps
     TickTock tt;
     tt.tick();
-    Array1D<double> tempf(3,fbar);
+    Array1D<double> tempf(3,0.e0);
     for (int ix=0;ix<nStep;ix++){
+        tempf(0)=fbar(2*ix);
+        tempf(1)=fbar(2*ix+1);
+        tempf(2)=fbar(2*ix+2);
         forward_duffing_dt(inpParams,tempf,dTym,Temp);
         x_0.replaceRow(Temp,ix+1);
     }
@@ -53,7 +56,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     for (int i=0;i<dim;i++){
         Array2D<double> f_1(2*nStep+1,PCTerms_1,0.e0);
         for (int it=0;it<2*nStep+1;it++){
-            f_1(it,0) = fbar;
+            f_1(it,0) = fbar(it);
             f_1(it,1) = scaledKLmodes(it,i);
         }
         force_1(i) = f_1;
@@ -141,7 +144,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
             for (int j=i+1;j<N_adof;j++){
                 Array2D<double> f_2(2*nStep+1,PCTerms_2,0.e0);
                 for (int it=0;it<2*nStep+1;it++){
-                    f_2(it,0) = fbar;
+                    f_2(it,0) = fbar(it);
                     f_2(it,1) = scaledKLmodes(it,ind(i));
                     f_2(it,2) = scaledKLmodes(it,ind(j));
                 }
@@ -190,7 +193,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
             for (int k=j+1;k<N_adof;k++){
                 Array2D<double> f_3(2*nStep+1,PCTerms_3,0.e0);
                 for (int it=0;it<2*nStep+1;it++){
-                    f_3(it,0) = fbar;
+                    f_3(it,0) = fbar(it);
                     f_3(it,1) = scaledKLmodes(it,ind(i));
                     f_3(it,2) = scaledKLmodes(it,ind(j));
                     f_3(it,3) = scaledKLmodes(it,ind(k));
@@ -231,7 +234,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     printf("\nAssemble the solutions...\n");
     string name = "dis";
     tt.tick();
-    PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, dis_0, dis_1, dis_2, dis_3, dis_1_mean, dis_2_mean, dis_3_mean, std1, std2, std3,  myPCSet, fbar, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, pcType, inpParams, factor_OD, mstd_MCS, err_dump, samPts_norm, name, noutput);
+    PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, dis_0, dis_1, dis_2, dis_3, dis_1_mean, dis_2_mean, dis_3_mean, std1, std2, std3,  myPCSet, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, pcType, inpParams, factor_OD, mstd_MCS, err_dump, samPts_norm, name, noutput);
     tt.tock("Took");
     t(4)=tt.silent_tock();
     string name2 = "vel";
@@ -241,7 +244,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     Array1D<double> std_vel_1(nStep+1,0.e0);
     Array1D<double> std_vel_2(nStep+1,0.e0);
     Array1D<double> std_vel_3(nStep+1,0.e0);
-    PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, vel_0, vel_1, vel_2, vel_3, vel_1_mean, vel_2_mean, vel_3_mean, std_vel_1, std_vel_2, std_vel_3,  myPCSet, fbar, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, pcType, inpParams, factor_OD, mstd_MCS, err_dump, samPts_norm, name2, noutput);
+    PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, vel_0, vel_1, vel_2, vel_3, vel_1_mean, vel_2_mean, vel_3_mean, std_vel_1, std_vel_2, std_vel_3,  myPCSet, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, pcType, inpParams, factor_OD, mstd_MCS, err_dump, samPts_norm, name2, noutput);
    
     // print out mean/std valus at specific points for comparison
     printf("First-order AAPG results:\n");
@@ -292,7 +295,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, double fbar, double dTy
     return(t);
 }
 
-void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, int AAPG_ord, Array1D<double>& dis_0, Array1D<Array2D<double> >& dis_1, Array2D<Array2D<double> >& dis_2, Array3D<Array2D<double> >& dis_3, Array1D<double>& dis_1_mean, Array1D<double>& dis_2_mean, Array1D<double>& dis_3_mean, Array1D<double>& std1, Array1D<double>& std2, Array1D<double>& std3, PCSet& myPCSet, double fbar, int dim, int nStep, int PCTerms_1, int PCTerms_2, int PCTerms_3, int order, double dTym, string pcType, Array1D<double>& inpParams, double factor_OD, Array2D<double>& mstd_MCS, FILE* err_dump, Array2D<double>& samPts_norm, string name,int noutput){
+void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, int AAPG_ord, Array1D<double>& dis_0, Array1D<Array2D<double> >& dis_1, Array2D<Array2D<double> >& dis_2, Array3D<Array2D<double> >& dis_3, Array1D<double>& dis_1_mean, Array1D<double>& dis_2_mean, Array1D<double>& dis_3_mean, Array1D<double>& std1, Array1D<double>& std2, Array1D<double>& std3, PCSet& myPCSet, int dim, int nStep, int PCTerms_1, int PCTerms_2, int PCTerms_3, int order, double dTym, string pcType, Array1D<double>& inpParams, double factor_OD, Array2D<double>& mstd_MCS, FILE* err_dump, Array2D<double>& samPts_norm, string name,int noutput){
     TickTock tt;
     tt.tick();
     // Post-process the AAPG solutions
