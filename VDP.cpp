@@ -1,8 +1,8 @@
 /*===================================================================================== 
-DuffingISP.cpp
-Modified based on the surf_rxn example in UQTK v.2.1.1
+VDP.cpp
+Modified based on the Duffing oscillator test case
 by Lin Gao (lingao.gao@mail.utoronto.ca)
-July 25, 2015
+Jan 15, 2016
 ===================================================================================== */
 
 #include <math.h>
@@ -20,7 +20,6 @@ July 25, 2015
 
 #include "Utils.h"
 #include "Utilsave.h"
-#include "Duffing.h"
 #include "KL.h"
 #include "MCS.h"
 #include "GhanemSpanos.h"
@@ -33,7 +32,7 @@ July 25, 2015
 #define VEL0 0.0
 
 /// \brief c++ version of the Matlab code GS_duffing_multi.m.
-/// Dynamic response of a Duffing oscillator subject to uncertain excitation force.
+/// Dynamic response of a Van der Pol oscillator subject to uncertain excitation force.
 /// The unceratain force is generated using KL expansion.
 /// Mass, stiffness, damping and nonlinear coefficients are assumed to be deterministic.
 
@@ -42,7 +41,7 @@ int main(int argc, char *argv[])
 {
     string pcType;  //PC type
     int dim;        //Stochastic dimensionality
-    char* cov_type; //Covariance type
+    char* cov_type; //Covariance type of the force to be KL discretized
     double sigma;   //Standard deviation
     int nspl;       //MCS sample size
     double factor_OD;//dynamical-orthogonal info
@@ -53,7 +52,7 @@ int main(int argc, char *argv[])
     double p;       //Threashold used in the adaptive AAPG
     double dof;     //Spatial dof
     int noutput;    //Number of output points
-    Array1D<double> inpParams(3,0.e0);//Input parameters
+    Array1D<double> inpParams(2,0.e0);//Input parameters
     double clen;
     double FBAR;    //Scalar defining mean of f
     
@@ -61,10 +60,10 @@ int main(int argc, char *argv[])
         // Correlation length
         clen = 0.05;
         pcType = "LU";
-        dim = 50;
+        dim = 10;
         cov_type = (char *)"Exp";
         sigma = 0.8;
-        nspl = 100000;
+        nspl = 10000;
         factor_OD = 1.0;
         ord_GS = 2;
         ord_AAPG = 3;
@@ -73,28 +72,8 @@ int main(int argc, char *argv[])
         p = 0.99;
         dof = 2;
         noutput = 10;
-        inpParams(0) = 0.0;//Problem to solve 
-        inpParams(1) = 0.1;//zeta
-        inpParams(2) = 1.0;//epsilon
-        FBAR = 2.0;
-    }
-    if (PROB==2){//Stochastic initial conditions and deterministic forcing
-        pcType = "HG";
-        dim = 2;
-        cov_type = (char *)"Exp";
-        sigma = 0.5;
-        nspl = 100000;
-        factor_OD = 1.0;
-        ord_GS = 2;
-        ord_AAPG = 2;
-        ord_AAPG_GS = 2;
-        act_D = false;
-        p = 0.99;
-        dof = 2;
-        noutput = 10;
-        inpParams(0) = 3.0;//Problem to solve 
-        inpParams(1) = 0.1;//zeta
-        inpParams(2) = 1.0;//epsilon
+        inpParams(0) = 4.0;//Problem to solve 
+        inpParams(1) = 1.0;//epsilon
         FBAR = 2.0;
     }
 
@@ -142,7 +121,7 @@ int main(int argc, char *argv[])
             factor_OD = strtod(optarg, (char **)NULL);
             break;
         case 'e':
-            inpParams(2) = strtod(optarg, (char **)NULL);
+            inpParams(1) = strtod(optarg, (char **)NULL);
             break;
         case 'G':
             ord_GS = strtod(optarg, (char **)NULL);
@@ -165,6 +144,7 @@ int main(int argc, char *argv[])
     }
     
     /* Print the input information on screen */
+    cout << "Van der Pol oscillator" << endl<<flush;
     cout << " - Number of KL modes:              " << dim  << endl<<flush;
     cout << " - Monte Carlo sample size:         " << nspl  << endl<<flush;
     if (PROB == 1){
@@ -176,7 +156,7 @@ int main(int argc, char *argv[])
     cout << " - Time marching step:              " << dTym  << endl<<flush;
     cout << " - Process end time:                " << tf  << endl<<flush;
     cout << " - Dynamical orthogonal AAPG factor:" << factor_OD  << endl<<flush;
-    cout << " - Nonlinearity parameter:          " << inpParams(2)  << endl<<flush;
+    cout << " - Nonlinearity parameter:          " << inpParams(1)  << endl<<flush;
     cout << " - The threshold in adaptive AAPG:  " << p  << endl<<flush;
     cout << " - Order of GS:                     " << ord_GS  << endl<<flush;
     cout << " - Order of GS in AAPG subproblems: " << ord_AAPG_GS  << endl<<flush;
@@ -325,10 +305,10 @@ int main(int argc, char *argv[])
     
     ostringstream err_stream;
     if (act_D){
-        err_stream << "error_n" << dim << "_e"<<inpParams(2)<<"_s"<<sigma<<"_actD.dat";
+        err_stream << "error_n" << dim << "_e"<<inpParams(1)<<"_s"<<sigma<<"_actD.dat";
     }
     else {
-        err_stream << "error_n" << dim << "_e"<<inpParams(2)<<"_s"<<sigma<<".dat";
+        err_stream << "error_n" << dim << "_e"<<inpParams(1)<<"_s"<<sigma<<".dat";
     }
     string errstr(err_stream.str());
     FILE *err_dump;
@@ -445,10 +425,10 @@ int main(int argc, char *argv[])
 
     ostringstream time_stream;
     if (act_D){
-        time_stream << "time_n" << dim << "_e"<<inpParams(2)<<"_s"<<sigma<<"_actD.dat";
+        time_stream << "time_n" << dim << "_e"<<inpParams(1)<<"_s"<<sigma<<"_actD.dat";
     }
     else{
-        time_stream << "time_n" << dim << "_e"<<inpParams(2)<<"_s"<<sigma<<".dat";
+        time_stream << "time_n" << dim << "_e"<<inpParams(1)<<"_s"<<sigma<<".dat";
     }
     string timestr(time_stream.str());
     WriteToFile(t, timestr.c_str());

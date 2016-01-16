@@ -143,6 +143,20 @@ void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<dou
             subtractVec(x(2),temp);
             dev(2) = temp;
         }
+        if (abs(inpParams(0)-4)<1e-10){ //VDP
+            // parse input parameters
+            const double epsilon = inpParams(1);
+            // buff to store temperary results 
+            Array1D<double> temp(nPCTerms,0.e0);                     
+            Array1D<double> temp2(nPCTerms,0.e0);                     
+            // nonlinear term
+            myPCSet.Prod(x(1),x(1),temp2);
+            myPCSet.Prod(x(0),temp2,temp);
+            for (int ind=0;ind<nPCTerms;ind++){
+                dev(1)(ind) = x(0)(ind);//velocity term
+                dev(0)(ind) = force(ind)-temp(ind)*epsilon+epsilon*x(0)(ind)-x(1)(ind);
+            }
+        }
 }
 
 Array1D<double> postprocess_GS(int noutput, int nPCTerms, int nStep,  Array2D<double>& solution, PCSet& myPCSet, double dTym, FILE* GS_dump, FILE* GSstat_dump, Array2D<double>& mstd_MCS){

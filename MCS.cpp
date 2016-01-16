@@ -90,6 +90,14 @@ Array1D<double> RHS(double force, Array1D<double>& x,Array1D<double>& inpParams)
             dxdt(1)=x(0)*x(1)-b*x(0)*x(2)-x(1)+G;
             dxdt(2)=b*x(0)*x(1)+x(0)*x(2)-x(2);
             }
+        if (abs(inpParams(0)-4)<1e-10){ //VDP
+            // parse input parameters
+            const double epsilon = inpParams(1);
+
+            double temp =x(1)*x(1)*x(0);
+            dxdt(0) = force-epsilon*temp+epsilon*x(0)-x(1);
+            dxdt(1) = x(0);
+            } 
         return dxdt;
 }
 
@@ -132,7 +140,7 @@ Array1D<double> error(Array1D<double>& dis, Array1D<double>& StDv, Array2D<doubl
 Array1D<double>  sample_force(Array2D<double>& samPts,int iq,int nStep, Array1D<double>& fbar,int nkl,Array2D<double>& scaledKLmodes, Array1D<double>& inpParams){    
     Array1D<double> totalforce(nStep+1,0.e0);
     for (int it=0;it<nStep+1;it++){
-        if ((abs(inpParams(0))<1e-10)||(abs(inpParams(0)-3)<1e-10)){ //Duffing
+        if ((abs(inpParams(0))<1e-10)||(abs(inpParams(0)-3)<1e-10)||(abs(inpParams(0)-4)<1e-10)){ //Duffing or VDP
             totalforce(it) = fbar(it);
         }
         if (abs(inpParams(0)-1)<1e-10){ //Lorenz
