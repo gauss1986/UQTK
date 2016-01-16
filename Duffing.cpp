@@ -27,7 +27,7 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define PROB 3
+#define PROB 1
 
 #define DIS0 0.0
 #define VEL0 0.0
@@ -46,7 +46,6 @@ int main(int argc, char *argv[])
     double sigma;   //Standard deviation
     int nspl;       //MCS sample size
     double factor_OD;//dynamical-orthogonal info
-    double epsilon; //Nonlinearity parameter
     int ord_GS;     //GS order
     int ord_AAPG;   //AAPG order
     int ord_AAPG_GS;//GS order in AAPG subproblems
@@ -60,16 +59,32 @@ int main(int argc, char *argv[])
     
     if (PROB==1){//Stochastic forcing and deterministic initial conditions
         // Correlation length
-        clen = 0.1;
+        clen = 0.05;
+        pcType = "LU";
+        dim = 50;
+        cov_type = (char *)"Exp";
+        sigma = 0.8;
+        nspl = 100000;
+        factor_OD = 1.0;
+        ord_GS = 2;
+        ord_AAPG = 3;
+        ord_AAPG_GS = 2;
+        act_D = false;
+        p = 0.99;
+        dof = 2;
+        noutput = 10;
+        inpParams(0) = 0.0;//Problem to solve 
+        inpParams(1) = 0.1;//zeta
+        inpParams(2) = 1.0;//epsilon
+        FBAR = 2.0;
     }
-    if (PROB==3){//Stochastic initial conditions and deterministic forcing
+    if (PROB==2){//Stochastic initial conditions and deterministic forcing
         pcType = "HG";
         dim = 2;
         cov_type = (char *)"Exp";
         sigma = 0.5;
         nspl = 100000;
         factor_OD = 1.0;
-        epsilon = 1.0;
         ord_GS = 2;
         ord_AAPG = 2;
         ord_AAPG_GS = 2;
@@ -79,7 +94,7 @@ int main(int argc, char *argv[])
         noutput = 10;
         inpParams(0) = 3.0;//Problem to solve 
         inpParams(1) = 0.1;//zeta
-        inpParams(2) = epsilon;
+        inpParams(2) = 1.0;//epsilon
         FBAR = 2.0;
     }
 
@@ -89,11 +104,10 @@ int main(int argc, char *argv[])
     // Number of steps
     int nStep=(int) tf / dTym;
     // mean of forcing
-    //double fbar = 2.0;
     Array1D<double> fbar(2*nStep+1,0.e0);
     double t_temp = 0.0; 
     for (int i=0;i<2*nStep+1;i++){
-        fbar(i) = FBAR*(1-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+        fbar(i) = FBAR*(2-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
         t_temp +=dTym/2;
     }
     write_datafile_1d(fbar,"fbar.dat");
@@ -128,7 +142,7 @@ int main(int argc, char *argv[])
             factor_OD = strtod(optarg, (char **)NULL);
             break;
         case 'e':
-            epsilon = strtod(optarg, (char **)NULL);
+            inpParams(2) = strtod(optarg, (char **)NULL);
             break;
         case 'G':
             ord_GS = strtod(optarg, (char **)NULL);
@@ -153,16 +167,16 @@ int main(int argc, char *argv[])
     /* Print the input information on screen */
     cout << " - Number of KL modes:              " << dim  << endl<<flush;
     cout << " - Monte Carlo sample size:         " << nspl  << endl<<flush;
-    if (abs(inpParams(0)-1)<1e-10){
-        cout << " - Will generate covariance of type "<<cov_type<<", with correlation length "<<clen<<" and standard deviation "<<sigma<<endl<<flush;
+    if (PROB == 1){
+        cout << " - Will generate KL expansion with covariance of type "<<cov_type<<", with correlation length "<<clen<<" and standard deviation "<<sigma<<endl<<flush;
     }
-    if (abs(inpParams(0)-3)<1e-10){
+    if (PROB == 2){
         cout << "- Will generate random variable of type "<< pcType << ", with standard deviation " << sigma << endl<< flush;
     }
     cout << " - Time marching step:              " << dTym  << endl<<flush;
     cout << " - Process end time:                " << tf  << endl<<flush;
     cout << " - Dynamical orthogonal AAPG factor:" << factor_OD  << endl<<flush;
-    cout << " - Nonlinearity parameter:          " << epsilon  << endl<<flush;
+    cout << " - Nonlinearity parameter:          " << inpParams(2)  << endl<<flush;
     cout << " - The threshold in adaptive AAPG:  " << p  << endl<<flush;
     cout << " - Order of GS:                     " << ord_GS  << endl<<flush;
     cout << " - Order of GS in AAPG subproblems: " << ord_AAPG_GS  << endl<<flush;
@@ -182,17 +196,22 @@ int main(int argc, char *argv[])
     }
     write_datafile(scaledKLmodes,"KL.dat");
  
-    // Monte Carlo simulation
-    Array2D<double> samPts_ori(nspl,dim,0.e0);
+    // Generate random samples
     Array2D<double> samPts(nspl,dim,0.e0);
+    Array2D<double> samPts_ori(nspl,dim,0.e0);
     PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
-    MCPCSet.DrawSampleVar(samPts_ori);
-    for (int i=0;i<nspl;i++){
-        samPts(i,0)=samPts_ori(i,0)*sigma+VEL0;
-        samPts(i,1)=samPts_ori(i,1)*sigma+DIS0;
+    Array2D<double> sample_mstd_2D(dof,2,0.e0);
+    if (PROB==1){
+        MCPCSet.DrawSampleVar(samPts);
+        MCPCSet.DrawSampleVar(samPts_ori);
     }
+    if (PROB==3){
+        MCPCSet.DrawSampleVar(samPts_ori);
+        for (int i=0;i<nspl;i++){
+            samPts(i,0)=samPts_ori(i,0)*sigma+VEL0;
+            samPts(i,1)=samPts_ori(i,1)*sigma+DIS0;
+        }
     // Examine the mean/std of the sample
-    Array2D<double> sample_mstd_2D(dof,2);
     for (int i=0;i<dof;i++){
         Array1D<double> samPts_1D(nspl,0.e0);
         getCol(samPts,i,samPts_1D);
@@ -205,14 +224,20 @@ int main(int argc, char *argv[])
         string name_str = name.str();
         write_datafile_1d(samPts_1D,name_str.c_str());
     }
+    }
+
+    // MCS
     // Open files to write out
     string f_MCS_dis = "MCS_dis.dat"; 
     string f_MCS_vel = "MCS_vel.dat"; 
+    string force_MCS = "KL_sample.dat"; 
     FILE *f_dump=createfile(f_MCS_dis);
     FILE *f_dump2=createfile(f_MCS_vel);
+    FILE *force_dump=createfile(force_MCS);
     // Write solutions at initial step
     Array2D<double>dis_MC(nStep+1,nspl,0.e0);
     Array2D<double>vel_MC(nStep+1,nspl,0.e0);
+    Array2D<double>totalforce(2*nStep+1,nspl,0.e0);
     Array1D<Array2D<double> > result(dof);
     result(0) = dis_MC;
     result(1) = vel_MC;
@@ -221,21 +246,23 @@ int main(int argc, char *argv[])
     // Time marching steps
     TickTock tt;
     tt.tick();
-    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts,nkl,dTym,inpParams,nthreads,fbar,scaledKLmodes) 
+    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts,nkl,dTym,inpParams,nthreads,fbar,scaledKLmodes,totalforce) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
         Array1D<double> initial(2,0.e0);
-        if (abs(inpParams(0)-1)<1e-10){
+        if (PROB == 1){
             initial(0) = VEL0;
             initial(1) = DIS0;
         }
-        if (abs(inpParams(0)-3)<1e-10){
+        if (PROB == 2){
             initial(0) = samPts(iq,0);
             initial(1) = samPts(iq,1);
         }
-        Array1D<double> totalforce=sample_force(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,inpParams);
-        Array2D<double> temp = det(dof, nspl, nStep, nkl, dTym, totalforce, inpParams, initial);
+        Array1D<double> sampleforce=sample_force(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,inpParams);
+        for (int i=0;i<2*nStep+1;i++)
+            totalforce(i,iq)=sampleforce(i);
+        Array2D<double> temp = det(dof, nspl, nStep, nkl, dTym, sampleforce, inpParams, initial);
         for (int it=0;it<nStep+1;it++){
             for (int idof=0;idof<dof;idof++){
                 result(idof)(it,iq) = temp(idof,it);
@@ -256,17 +283,26 @@ int main(int argc, char *argv[])
     Array2D<double> dis_MCS(nspl,noutput+1,0.e0);
     Array2D<double> vel_MCS(nspl,noutput+1,0.e0);
     int ind = 0;
+    Array1D<double> mstd;
     for (int ix=0;ix<nStep+1;ix++){
+        Array1D<double> tempforce(nspl,0.e0);
+        // save mean/std of force
+        getRow(totalforce,2*ix,tempforce);
+        mstd  = mStd(tempforce,nspl);
+        WriteMeanStdDevToFilePtr(ix*dTym, mstd(0),mstd(1),force_dump);         
+        // save mean/std of dis
         Array1D<double> tempdis(nspl,0.e0);
         getRow(result(1),ix,tempdis);
-        Array1D<double> mstd  = mStd(tempdis,nspl);
+        mstd  = mStd(tempdis,nspl);
         MCS_s_dis.replaceCol(mstd,ix); 
         WriteMeanStdDevToFilePtr(ix*dTym, mstd(0),mstd(1),f_dump);         
+        // save mean/std of vel
         Array1D<double> tempvel(nspl,0.e0);
         getRow(result(0),ix,tempvel);
         mstd  = mStd(tempvel,nspl);
         MCS_s_vel.replaceCol(mstd,ix); 
         WriteMeanStdDevToFilePtr(ix*dTym, mstd(0),mstd(1),f_dump2);         
+        // report to screen
         if (ix % ((int) nStep/noutput) == 0){
             WriteMeanStdDevToStdOut(ix, ix*dTym, mstd(0), mstd(1));
             dis_MCS.replaceCol(tempdis,ind); 
@@ -280,6 +316,7 @@ int main(int argc, char *argv[])
     write_datafile(vel_MCS,"vel_MCS.dat");
     closefile(f_dump, f_MCS_dis); 
     closefile(f_dump2, f_MCS_vel); 
+    closefile(force_dump, force_MCS); 
     
     // Ghanem-Spanos method
     printf("\nGhanem-Spanos method...\n");
@@ -288,10 +325,10 @@ int main(int argc, char *argv[])
     
     ostringstream err_stream;
     if (act_D){
-        err_stream << "error_n" << dim << "_e"<<epsilon<<"_s"<<sigma<<"_actD.dat";
+        err_stream << "error_n" << dim << "_e"<<inpParams(2)<<"_s"<<sigma<<"_actD.dat";
     }
     else {
-        err_stream << "error_n" << dim << "_e"<<epsilon<<"_s"<<sigma<<".dat";
+        err_stream << "error_n" << dim << "_e"<<inpParams(2)<<"_s"<<sigma<<".dat";
     }
     string errstr(err_stream.str());
     FILE *err_dump;
@@ -313,9 +350,6 @@ int main(int argc, char *argv[])
     
         // Prepare the force in PC format
         Array2D<double> f_GS(2*nStep+1,nPCTerms,0.e0);
-        //for (int i=0;i<2*nStep+1;i++){
-        //    f_GS(i,0) = fbar;
-        //}
         f_GS.replaceCol(fbar,0);
 
         for (int i=0;i<nkl;i++){
@@ -330,14 +364,8 @@ int main(int argc, char *argv[])
         Array1D<double> temp(nPCTerms,0.e0);
         initial_GS(0)=temp;
         initial_GS(1) = temp;
-        if (abs(inpParams(0)-1)<1e-10){
-            initial_GS(0)(0) = VEL0;
-            initial_GS(1)(0)=DIS0;
-        }
-        if (abs(inpParams(0)-3)<1e-10){
-            myPCSet.InitMeanStDv(sample_mstd_2D(0,0),sample_mstd_2D(0,1),1,initial_GS(0));
-            myPCSet.InitMeanStDv(sample_mstd_2D(1,0),sample_mstd_2D(1,1),2,initial_GS(1));
-        }
+        myPCSet.InitMeanStDv(sample_mstd_2D(0,0),sample_mstd_2D(0,1),1,initial_GS(0));
+        myPCSet.InitMeanStDv(sample_mstd_2D(1,0),sample_mstd_2D(1,1),2,initial_GS(1));
 
         clock_t start = clock();
     	tt.tick();
@@ -417,10 +445,10 @@ int main(int argc, char *argv[])
 
     ostringstream time_stream;
     if (act_D){
-        time_stream << "time_n" << dim << "_e"<<epsilon<<"_s"<<sigma<<"_actD.dat";
+        time_stream << "time_n" << dim << "_e"<<inpParams(2)<<"_s"<<sigma<<"_actD.dat";
     }
     else{
-        time_stream << "time_n" << dim << "_e"<<epsilon<<"_s"<<sigma<<".dat";
+        time_stream << "time_n" << dim << "_e"<<inpParams(2)<<"_s"<<sigma<<".dat";
     }
     string timestr(time_stream.str());
     WriteToFile(t, timestr.c_str());
