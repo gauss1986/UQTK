@@ -69,20 +69,14 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
     #pragma omp for
     for (int i=0;i<dim;i++){
         Array1D<Array2D<double> > temp(dof);
-        Array1D<Array1D<double> > initial_GS1(dof);
+        // Initial condition
         Array1D<double> temp_init(PCTerms_1,0.e0);
-        if (abs(inpParams(0)-3)<1e-6){
-            // Initial condition
-            for (int j=0;j<dof;j++){
-                initial_GS1(j) = temp_init;
-                initial_GS1(j)(0) = sample_mstd_2D(j,0);
-            }
-            PCSet_1.InitMeanStDv(sample_mstd_2D(i,0),sample_mstd_2D(i,1),1,initial_GS1(i));
+        Array1D<Array1D<double> > initial_GS1(dof);
+        for (int j=0;j<dof;j++){
+            initial_GS1(j) = temp_init;
+            initial_GS1(j)(0) = sample_mstd_2D(j,0);
         }
-        else{
-            initial_GS1(0) = temp_init;
-            initial_GS1(1) = temp_init;
-        }
+        PCSet_1.InitMeanStDv(sample_mstd_2D(i,0),sample_mstd_2D(i,1),1,initial_GS1(i));
         GS(dof, PCSet_1, order, 1, PCTerms_1, pcType, nStep, initial_GS1, dTym, inpParams, force_1(i),temp);
         dis_1(i) = temp(1);
         vel_1(i) = temp(0);
@@ -191,8 +185,10 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
     // Initial condition
     Array1D<Array1D<double> > initial_GS3(2);
     Array1D<double> temp_init3(PCTerms_3,0.e0);
-    initial_GS3(0)=temp_init3;
-    initial_GS3(1) = temp_init3;
+    for (int i=0;i<dof;i++){
+        initial_GS3(i) = temp_init3;
+        PCSet_3.InitMeanStDv(sample_mstd_2D(i,0),sample_mstd_2D(i,1),i+1,initial_GS3(i));
+    }
     Array1D<Array2D<double> > force_3(N_adof*(N_adof-1)*(N_adof-2)/6);
     int l=0;
     for (int i=0;i<N_adof-2;i++){

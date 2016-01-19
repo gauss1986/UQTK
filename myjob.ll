@@ -21,20 +21,11 @@
 # @ output = $(jobid).out
 # @ error = $(jobid).err
 # @ wall_clock_limit = 24:00:00
-# @ node = 2
+# @ node = 1
 # @ tasks_per_node = 128
 # @ queue
 #
 #===================================
 
 module load gcc
-./Duffing.x -n 10
-mv *.dat ./test_Nov20/n10/
-./Duffing.x -n 20
-mv *.dat ./test_Nov20/n20/
-./Duffing.x -n 30
-mv *.dat ./test_Nov20/n30/
-./Duffing.x -n 50
-mv *.dat ./test_Nov20/n50/
-./Duffing.x -n 200
-mv *.dat ./test_Nov20/n200/
+./VDP.x -e 8.53 -s 0 -t 300 -p 10000

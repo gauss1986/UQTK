@@ -26,9 +26,9 @@ Jan 15, 2016
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define PROB 1
+#define PROB 3
 
-#define DIS0 0.0
+#define DIS0 1.0
 #define VEL0 0.0
 
 /// \brief c++ version of the Matlab code GS_duffing_multi.m.
@@ -43,53 +43,46 @@ int main(int argc, char *argv[])
     int dim;        //Stochastic dimensionality
     char* cov_type; //Covariance type of the force to be KL discretized
     double sigma;   //Standard deviation
-    int nspl;       //MCS sample size
-    double factor_OD;//dynamical-orthogonal info
-    int ord_GS;     //GS order
-    int ord_AAPG;   //AAPG order
-    int ord_AAPG_GS;//GS order in AAPG subproblems
-    bool act_D;     //wheather doing AAPG adaptive or not
-    double p;       //Threashold used in the adaptive AAPG
-    double dof;     //Spatial dof
-    int noutput;    //Number of output points
+    double clen;    //Correlation length of the process
+    int nspl=10000;       //MCS sample size
+    double factor_OD=1.0;//dynamical-orthogonal info
+    int ord_GS=2;     //GS order
+    int ord_AAPG=3;   //AAPG order
+    int ord_AAPG_GS=2;//GS order in AAPG subproblems
+    bool act_D=false;     //wheather doing AAPG adaptive or not
+    double p=0.99;       //Threashold used in the adaptive AAPG
+    double dof=2;     //Spatial dof
+    int noutput=2;    //Number of output points
     Array1D<double> inpParams(2,0.e0);//Input parameters
-    double clen;
-    double FBAR;    //Scalar defining mean of f
+    double em;      // Mean of epsilon
+    double es;      // Std of epsilon
+    inpParams(0) = 4.0;//Problem to solve 
+    double FBAR = 1.2;
     
     if (PROB==1){//Stochastic forcing and deterministic initial conditions
-        // Correlation length
         clen = 0.05;
         pcType = "LU";
         dim = 10;
         cov_type = (char *)"Exp";
         sigma = 0.8;
-        nspl = 10000;
-        factor_OD = 1.0;
-        ord_GS = 2;
-        ord_AAPG = 3;
-        ord_AAPG_GS = 2;
-        act_D = false;
-        p = 0.99;
-        dof = 2;
-        noutput = 10;
-        inpParams(0) = 4.0;//Problem to solve 
         inpParams(1) = 1.0;//epsilon
-        FBAR = 2.0;
+    }
+    if (PROB==2){//Stochastic initial conditions and deterministic forcing
+        pcType = "HG";
+        dim = 2;
+        sigma = 1;
+        inpParams(1) = 1.0;//epsilon
+    }
+    if (PROB==2){//Stochastic epsilon
+        pcType = "LU";
+        dim = 1;
+        dou = 5.0;//mean of epsilon
+        inpParams(3) = 0.25;//range of epsilon
     }
 
     // Time marching info
     double dTym = 0.01;
     double tf = 10;
-    // Number of steps
-    int nStep=(int) tf / dTym;
-    // mean of forcing
-    Array1D<double> fbar(2*nStep+1,0.e0);
-    double t_temp = 0.0; 
-    for (int i=0;i<2*nStep+1;i++){
-        fbar(i) = FBAR*(2-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-        t_temp +=dTym/2;
-    }
-    write_datafile_1d(fbar,"fbar.dat");
   
     /* Read the user input */
     int c;
@@ -148,15 +141,19 @@ int main(int argc, char *argv[])
     cout << " - Number of KL modes:              " << dim  << endl<<flush;
     cout << " - Monte Carlo sample size:         " << nspl  << endl<<flush;
     if (PROB == 1){
+        cout << " - Nonlinearity parameter:          " << inpParams(1)  << endl<<flush;
         cout << " - Will generate KL expansion with covariance of type "<<cov_type<<", with correlation length "<<clen<<" and standard deviation "<<sigma<<endl<<flush;
     }
     if (PROB == 2){
+        cout << " - Nonlinearity parameter:          " << inpParams(1)  << endl<<flush;
         cout << "- Will generate random variable of type "<< pcType << ", with standard deviation " << sigma << endl<< flush;
+    }
+    if (PROB == 3){
+        cout << "- Will generate stochastic epsilon of type " << pcType << ", with min " << inpParams(1)-inpParams(2)<< " and max " << inpParams(1)+inpParams(2) << flush; 
     }
     cout << " - Time marching step:              " << dTym  << endl<<flush;
     cout << " - Process end time:                " << tf  << endl<<flush;
     cout << " - Dynamical orthogonal AAPG factor:" << factor_OD  << endl<<flush;
-    cout << " - Nonlinearity parameter:          " << inpParams(1)  << endl<<flush;
     cout << " - The threshold in adaptive AAPG:  " << p  << endl<<flush;
     cout << " - Order of GS:                     " << ord_GS  << endl<<flush;
     cout << " - Order of GS in AAPG subproblems: " << ord_AAPG_GS  << endl<<flush;
@@ -167,6 +164,18 @@ int main(int argc, char *argv[])
     else{
         cout << " - Full AAPG applied"<<endl<<flush;
     }
+
+    // Number of steps
+    int nStep=(int) tf / dTym;
+    // mean of forcing
+    Array1D<double> fbar(2*nStep+1,0.e0);
+    double t_temp = 0.0; 
+    for (int i=0;i<2*nStep+1;i++){
+        //fbar(i) = FBAR*(2-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+        //fbar(i) = FBAR*sin(2*3.1415926*t_temp/10);
+        t_temp +=dTym/2;
+    }
+    write_datafile_1d(fbar,"fbar.dat");
 
     // Generate the KL expansion of the excitation force
     int nkl = dim;
@@ -180,7 +189,7 @@ int main(int argc, char *argv[])
     Array2D<double> samPts(nspl,dim,0.e0);
     Array2D<double> samPts_ori(nspl,dim,0.e0);
     PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
-    Array2D<double> sample_mstd_2D(dof,2,0.e0);
+    Array2D<double> sample_mstd_2D(dim,2,0.e0);
     if (PROB==1){
         MCPCSet.DrawSampleVar(samPts);
         MCPCSet.DrawSampleVar(samPts_ori);
@@ -191,16 +200,23 @@ int main(int argc, char *argv[])
             samPts(i,0)=samPts_ori(i,0)*sigma+VEL0;
             samPts(i,1)=samPts_ori(i,1)*sigma+DIS0;
         }
+    }
+    if (PROB==3){
+        MCPCSet.DrawSampleVar(samPts_ori);
+        for (int i=0;i<nspl;i++){
+            samPts(i,0)=samPts_ori(i,0)*inpParams(3)+inpParams(2);
+        }
+    }
     // Examine the mean/std of the sample
-    for (int i=0;i<dof;i++){
+    for (int i=0;i<dim;i++){
         Array1D<double> samPts_1D(nspl,0.e0);
         getCol(samPts,i,samPts_1D);
         Array1D<double> sample_mstd = mStd(samPts_1D,nspl);
-        cout << "Mean of sample on dof " << i << " is "<< sample_mstd(0) << endl;
-        cout << "Std of sample on dof "<< i << " is " <<sample_mstd(1) << endl;
+        cout << "Mean of sample on dim " << i << " is "<< sample_mstd(0) << endl;
+        cout << "Std of sample on dim "<< i << " is " <<sample_mstd(1) << endl;
         sample_mstd_2D.replaceRow(sample_mstd,i); 
         ostringstream name;
-        name << "sample_dof" << i << ".dat";
+        name << "sample_dim" << i << ".dat";
         string name_str = name.str();
         write_datafile_1d(samPts_1D,name_str.c_str());
     }
@@ -230,8 +246,9 @@ int main(int argc, char *argv[])
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
+        // sample initial condition
         Array1D<double> initial(2,0.e0);
-        if (PROB == 1){
+        if (PROB==1 || PROB == 3){
             initial(0) = VEL0;
             initial(1) = DIS0;
         }
@@ -239,9 +256,12 @@ int main(int argc, char *argv[])
             initial(0) = samPts(iq,0);
             initial(1) = samPts(iq,1);
         }
+        // sample force
         Array1D<double> sampleforce=sample_force(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,inpParams);
         for (int i=0;i<2*nStep+1;i++)
             totalforce(i,iq)=sampleforce(i);
+        // sample epsilon
+        
         Array2D<double> temp = det(dof, nspl, nStep, nkl, dTym, sampleforce, inpParams, initial);
         for (int it=0;it<nStep+1;it++){
             for (int idof=0;idof<dof;idof++){
