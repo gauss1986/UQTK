@@ -26,7 +26,7 @@ Jan 15, 2016
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define PROB 3
+#define CASE 3
 
 #define DIS0 1.0
 #define VEL0 0.0
@@ -53,13 +53,10 @@ int main(int argc, char *argv[])
     double p=0.99;       //Threashold used in the adaptive AAPG
     double dof=2;     //Spatial dof
     int noutput=2;    //Number of output points
-    Array1D<double> inpParams(2,0.e0);//Input parameters
-    double em;      // Mean of epsilon
-    double es;      // Std of epsilon
+    Array1D<double> inpParams(5,0.e0);//Input parameters
     inpParams(0) = 4.0;//Problem to solve 
-    double FBAR = 1.2;
     
-    if (PROB==1){//Stochastic forcing and deterministic initial conditions
+    if (CASE==1){//Stochastic forcing and deterministic initial conditions
         clen = 0.05;
         pcType = "LU";
         dim = 10;
@@ -67,17 +64,19 @@ int main(int argc, char *argv[])
         sigma = 0.8;
         inpParams(1) = 1.0;//epsilon
     }
-    if (PROB==2){//Stochastic initial conditions and deterministic forcing
+    if (CASE==2){//Stochastic initial conditions and deterministic forcing
         pcType = "HG";
         dim = 2;
         sigma = 1;
         inpParams(1) = 1.0;//epsilon
     }
-    if (PROB==2){//Stochastic epsilon
+    if (CASE==3){//Stochastic epsilon
         pcType = "LU";
         dim = 1;
-        dou = 5.0;//mean of epsilon
-        inpParams(3) = 0.25;//range of epsilon
+        inpParams(1) = 5.0;//mean of epsilon
+        inpParams(2) = 1;//range of epsilon
+        inpParams(3) = VEL0;//pass initial conditions
+        inpParams(4) = DIS0;
     }
 
     // Time marching info
@@ -140,15 +139,15 @@ int main(int argc, char *argv[])
     cout << "Van der Pol oscillator" << endl<<flush;
     cout << " - Number of KL modes:              " << dim  << endl<<flush;
     cout << " - Monte Carlo sample size:         " << nspl  << endl<<flush;
-    if (PROB == 1){
+    if (CASE == 1){
         cout << " - Nonlinearity parameter:          " << inpParams(1)  << endl<<flush;
         cout << " - Will generate KL expansion with covariance of type "<<cov_type<<", with correlation length "<<clen<<" and standard deviation "<<sigma<<endl<<flush;
     }
-    if (PROB == 2){
+    if (CASE == 2){
         cout << " - Nonlinearity parameter:          " << inpParams(1)  << endl<<flush;
         cout << "- Will generate random variable of type "<< pcType << ", with standard deviation " << sigma << endl<< flush;
     }
-    if (PROB == 3){
+    if (CASE == 3){
         cout << "- Will generate stochastic epsilon of type " << pcType << ", with min " << inpParams(1)-inpParams(2)<< " and max " << inpParams(1)+inpParams(2) << flush; 
     }
     cout << " - Time marching step:              " << dTym  << endl<<flush;
@@ -169,18 +168,20 @@ int main(int argc, char *argv[])
     int nStep=(int) tf / dTym;
     // mean of forcing
     Array1D<double> fbar(2*nStep+1,0.e0);
-    double t_temp = 0.0; 
-    for (int i=0;i<2*nStep+1;i++){
-        //fbar(i) = FBAR*(2-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-        //fbar(i) = FBAR*sin(2*3.1415926*t_temp/10);
-        t_temp +=dTym/2;
+    double t_temp = 0.0;
+    if (CASE==1||CASE==2){ 
+        for (int i=0;i<2*nStep+1;i++){
+            fbar(i) = 2*(2-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+            //fbar(i) = FBAR*sin(2*3.1415926*t_temp/10);
+            t_temp +=dTym/2;
+        }
     }
     write_datafile_1d(fbar,"fbar.dat");
 
     // Generate the KL expansion of the excitation force
     int nkl = dim;
     Array2D<double> scaledKLmodes(2*nStep+1,nkl,0.0);
-    if (PROB==1){
+    if (CASE==1){
         genKL(scaledKLmodes, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
     }
     write_datafile(scaledKLmodes,"KL.dat");
@@ -190,21 +191,21 @@ int main(int argc, char *argv[])
     Array2D<double> samPts_ori(nspl,dim,0.e0);
     PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
     Array2D<double> sample_mstd_2D(dim,2,0.e0);
-    if (PROB==1){
+    if (CASE==1){
         MCPCSet.DrawSampleVar(samPts);
         MCPCSet.DrawSampleVar(samPts_ori);
     }
-    if (PROB==2){
+    if (CASE==2){
         MCPCSet.DrawSampleVar(samPts_ori);
         for (int i=0;i<nspl;i++){
             samPts(i,0)=samPts_ori(i,0)*sigma+VEL0;
             samPts(i,1)=samPts_ori(i,1)*sigma+DIS0;
         }
     }
-    if (PROB==3){
+    if (CASE==3){
         MCPCSet.DrawSampleVar(samPts_ori);
         for (int i=0;i<nspl;i++){
-            samPts(i,0)=samPts_ori(i,0)*inpParams(3)+inpParams(2);
+            samPts(i,0)=samPts_ori(i,0)*inpParams(2)+inpParams(1);
         }
     }
     // Examine the mean/std of the sample
@@ -214,12 +215,17 @@ int main(int argc, char *argv[])
         Array1D<double> sample_mstd = mStd(samPts_1D,nspl);
         cout << "Mean of sample on dim " << i << " is "<< sample_mstd(0) << endl;
         cout << "Std of sample on dim "<< i << " is " <<sample_mstd(1) << endl;
-        sample_mstd_2D.replaceRow(sample_mstd,i); 
+        if (CASE==1 || CASE==3){
+            sample_mstd_2D(0,0)=VEL0;
+            sample_mstd_2D(1,0)=DIS0;
+        }
+        if (CASE==2){
+            sample_mstd_2D.replaceRow(sample_mstd,i); 
+        }
         ostringstream name;
         name << "sample_dim" << i << ".dat";
         string name_str = name.str();
         write_datafile_1d(samPts_1D,name_str.c_str());
-    }
     }
 
     // MCS
@@ -246,23 +252,26 @@ int main(int argc, char *argv[])
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
+        Array1D<double> inpParams_MC(inpParams);//local copy of inpParams
         // sample initial condition
         Array1D<double> initial(2,0.e0);
-        if (PROB==1 || PROB == 3){
+        if (CASE==1 || CASE == 3){
             initial(0) = VEL0;
             initial(1) = DIS0;
         }
-        if (PROB == 2){
+        if (CASE == 2){
             initial(0) = samPts(iq,0);
             initial(1) = samPts(iq,1);
         }
         // sample force
-        Array1D<double> sampleforce=sample_force(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,inpParams);
+        Array1D<double> sampleforce=sample_force(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,inpParams_MC);
         for (int i=0;i<2*nStep+1;i++)
             totalforce(i,iq)=sampleforce(i);
         // sample epsilon
-        
-        Array2D<double> temp = det(dof, nspl, nStep, nkl, dTym, sampleforce, inpParams, initial);
+        if (CASE==3){
+            inpParams_MC(1)=samPts(iq,0); 
+        }
+        Array2D<double> temp = det(dof, nspl, nStep, nkl, dTym, sampleforce, inpParams_MC, initial);
         for (int it=0;it<nStep+1;it++){
             for (int idof=0;idof<dof;idof++){
                 result(idof)(it,iq) = temp(idof,it);
@@ -324,11 +333,19 @@ int main(int argc, char *argv[])
     Array1D<double> t_GS(ord_GS,0.e0);
     
     ostringstream err_stream;
+    ostringstream tempstream;
+    if (CASE==3){
+        tempstream << "_es" << inpParams(2); 
+    }
+    else{
+        tempstream << "_s" << sigma;
+    }
+    string tempstr(tempstream.str());
     if (act_D){
-        err_stream << "error_n" << dim << "_e"<<inpParams(1)<<"_s"<<sigma<<"_actD.dat";
+        err_stream << "error_n" << dim << "_e"<<inpParams(1)<< tempstr.c_str() <<"_actD.dat";
     }
     else {
-        err_stream << "error_n" << dim << "_e"<<inpParams(1)<<"_s"<<sigma<<".dat";
+        err_stream << "error_n" << dim << "_e"<<inpParams(1)<< tempstr.c_str() <<".dat";
     }
     string errstr(err_stream.str());
     FILE *err_dump;
@@ -364,9 +381,14 @@ int main(int argc, char *argv[])
         Array1D<double> temp(nPCTerms,0.e0);
         initial_GS(0)=temp;
         initial_GS(1) = temp;
-        myPCSet.InitMeanStDv(sample_mstd_2D(0,0),sample_mstd_2D(0,1),1,initial_GS(0));
-        myPCSet.InitMeanStDv(sample_mstd_2D(1,0),sample_mstd_2D(1,1),2,initial_GS(1));
-
+        if (CASE==1 || CASE==2){
+            myPCSet.InitMeanStDv(sample_mstd_2D(0,0),sample_mstd_2D(0,1),1,initial_GS(0));
+            myPCSet.InitMeanStDv(sample_mstd_2D(1,0),sample_mstd_2D(1,1),2,initial_GS(1));
+        }
+        if (CASE==3){
+            initial_GS(0)(0)=VEL0;
+            initial_GS(1)(0)=DIS0;
+        }
         clock_t start = clock();
     	tt.tick();
         GS(dof, myPCSet, ord, dim, nPCTerms, pcType, nStep, initial_GS, dTym, inpParams, f_GS, result);

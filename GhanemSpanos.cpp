@@ -10,7 +10,7 @@
 #include "GhanemSpanos.h"
 #include "Utils.h"
 
-void GS(int dof, PCSet& myPCSet, int order, int dim, int nPCTerms, string pcType, int nStep, Array1D<Array1D<double> >& initial, double dTym, Array1D<double>& inpParams, Array2D<double>& f_GS, Array1D<Array2D<double> >& solution){
+void GS(int dof, PCSet& myPCSet, int order, int dim, int nPCTerms, int nStep, Array1D<Array1D<double> >& initial, double dTym, Array1D<double>& inpParams, Array2D<double>& f_GS, Array1D<Array2D<double> >& solution){
 
     // Initialize working variable
     Array1D<Array1D<double> > result(dof);
@@ -94,7 +94,7 @@ void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<dou
         }
         int nPCTerms = x(0).Length();
         
-        if ((abs(inpParams(0))<1e-10)||(abs(inpParams(0)-3)<1e-10)){ //Duffing
+        if ((abs(inpParams(0))<1e-10)){ //Duffing
             // parse input parameters
             const double zeta = inpParams(1);
             const double epsilon = inpParams(2);
@@ -144,17 +144,26 @@ void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<dou
             dev(2) = temp;
         }
         if (abs(inpParams(0)-4)<1e-10){ //VDP
+            Array1D<double> epsilon_vector(nPCTerms,0.e0);
             // parse input parameters
-            const double epsilon = inpParams(1);
+            const double epsilon_m = inpParams(1);
+            double epsilon_s = 0;
+            if (inpParams.XSize()==3){
+                epsilon_s = inpParams(2);
+            }
+            myPCSet.InitMeanStDv(epsilon_m,epsilon_s,1,epsilon_vector);
             // buff to store temperary results 
             Array1D<double> temp(nPCTerms,0.e0);                     
             Array1D<double> temp2(nPCTerms,0.e0);                     
             // nonlinear term
             myPCSet.Prod(x(1),x(1),temp2);
             myPCSet.Prod(x(0),temp2,temp);
+            myPCSet.Prod(temp,epsilon_vector,temp2);
+            // damping term
+            myPCSet.Prod(epsilon_vector,x(0),temp);
             for (int ind=0;ind<nPCTerms;ind++){
                 dev(1)(ind) = x(0)(ind);//velocity term
-                dev(0)(ind) = force(ind)-temp(ind)*epsilon+epsilon*x(0)(ind)-x(1)(ind);
+                dev(0)(ind) = force(ind)-temp2(ind)+temp(ind)-x(1)(ind);
             }
         }
 }

@@ -27,7 +27,7 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define PROB 1
+#define CASE 1
 
 #define DIS0 0.0
 #define VEL0 0.0
@@ -57,11 +57,11 @@ int main(int argc, char *argv[])
     double clen;
     double FBAR;    //Scalar defining mean of f
     
-    if (PROB==1){//Stochastic forcing and deterministic initial conditions
+    if (CASE==1){//Stochastic forcing and deterministic initial conditions
         // Correlation length
         clen = 0.05;
-        pcType = "LU";
-        dim = 50;
+        pcType = "HG";
+        dim = 10;
         cov_type = (char *)"Exp";
         sigma = 0.8;
         nspl = 100000;
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
         inpParams(2) = 1.0;//epsilon
         FBAR = 2.0;
     }
-    if (PROB==2){//Stochastic initial conditions and deterministic forcing
+    if (CASE==2){//Stochastic initial conditions and deterministic forcing
         pcType = "HG";
         dim = 2;
         cov_type = (char *)"Exp";
@@ -92,7 +92,27 @@ int main(int argc, char *argv[])
         p = 0.99;
         dof = 2;
         noutput = 10;
-        inpParams(0) = 3.0;//Problem to solve 
+        inpParams(0) = 0.0;//Problem to solve 
+        inpParams(1) = 0.1;//zeta
+        inpParams(2) = 1.0;//epsilon
+        FBAR = 2.0;
+    }
+    if (CASE==3){//stochastic initial conditions and stochastic forcing
+        clen = 0.05;
+        pcType = "LU";
+        dim = 10;
+        cov_type = (char *)"Exp";
+        sigma=0.5;
+        nspl = 100000;
+        factor_OD = 1.0;
+        ord_GS = 2;
+        ord_AAPG = 3;
+        ord_AAPG_GS = 2;
+        act_D = false;
+        p = 0.99;
+        dof = 2;
+        noutput = 10;
+        inpParams(0) = 0.0;//Problem to solve 
         inpParams(1) = 0.1;//zeta
         inpParams(2) = 1.0;//epsilon
         FBAR = 2.0;
@@ -107,7 +127,7 @@ int main(int argc, char *argv[])
     Array1D<double> fbar(2*nStep+1,0.e0);
     double t_temp = 0.0; 
     for (int i=0;i<2*nStep+1;i++){
-        fbar(i) = FBAR*(2-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+        fbar(i) = FBAR*(1-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
         t_temp +=dTym/2;
     }
     write_datafile_1d(fbar,"fbar.dat");
@@ -167,11 +187,14 @@ int main(int argc, char *argv[])
     /* Print the input information on screen */
     cout << " - Number of KL modes:              " << dim  << endl<<flush;
     cout << " - Monte Carlo sample size:         " << nspl  << endl<<flush;
-    if (PROB == 1){
+    if (CASE == 1){
         cout << " - Will generate KL expansion with covariance of type "<<cov_type<<", with correlation length "<<clen<<" and standard deviation "<<sigma<<endl<<flush;
     }
-    if (PROB == 2){
-        cout << "- Will generate random variable of type "<< pcType << ", with standard deviation " << sigma << endl<< flush;
+    if (CASE == 2){
+        cout << " - Will generate random variable of type "<< pcType << ", with standard deviation " << sigma << endl<< flush;
+    }
+    if (CASE == 3){
+        cout << " - Will generate ranodm variable of type "<< pcType <<", with standard deviation and  KL expansion with covariance of type "<<cov_type<<", with correlation length "<<clen<<" and standard deviation "<<sigma<<endl<<flush; 
     }
     cout << " - Time marching step:              " << dTym  << endl<<flush;
     cout << " - Process end time:                " << tf  << endl<<flush;
@@ -191,7 +214,7 @@ int main(int argc, char *argv[])
     // Generate the KL expansion of the excitation force
     int nkl = dim;
     Array2D<double> scaledKLmodes(2*nStep+1,nkl,0.0);
-    if (PROB==1){
+    if (CASE==1 || CASE ==3){
         genKL(scaledKLmodes, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
     }
     write_datafile(scaledKLmodes,"KL.dat");
@@ -201,29 +224,38 @@ int main(int argc, char *argv[])
     Array2D<double> samPts_ori(nspl,dim,0.e0);
     PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
     Array2D<double> sample_mstd_2D(dof,2,0.e0);
-    if (PROB==1){
-        MCPCSet.DrawSampleVar(samPts);
+    sample_mstd_2D(0,0)=VEL0;
+    sample_mstd_2D(1,0)=DIS0;
+    if (CASE==1){
+        //MCPCSet.DrawSampleVar(samPts);
         MCPCSet.DrawSampleVar(samPts_ori);
+        for (int i=0;i<nspl;i++){
+            for (int j=0;j<dim;j++){
+                samPts(i,j)=samPts_ori(i,j)*sqrt(0.3333);
+            }
+        }
     }
-    if (PROB==2){
+    if (CASE==2){
         MCPCSet.DrawSampleVar(samPts_ori);
         for (int i=0;i<nspl;i++){
             samPts(i,0)=samPts_ori(i,0)*sigma+VEL0;
             samPts(i,1)=samPts_ori(i,1)*sigma+DIS0;
         }
+    }
     // Examine the mean/std of the sample
-    for (int i=0;i<dof;i++){
+    for (int i=0;i<dim;i++){
         Array1D<double> samPts_1D(nspl,0.e0);
         getCol(samPts,i,samPts_1D);
         Array1D<double> sample_mstd = mStd(samPts_1D,nspl);
-        cout << "Mean of sample on dof " << i << " is "<< sample_mstd(0) << endl;
-        cout << "Std of sample on dof "<< i << " is " <<sample_mstd(1) << endl;
-        sample_mstd_2D.replaceRow(sample_mstd,i); 
+        cout << "Mean of sample on dim " << i << " is "<< sample_mstd(0) << endl;
+        cout << "Std of sample on dim "<< i << " is " <<sample_mstd(1) << endl;
+        if (CASE==2 || CASE==3){
+            sample_mstd_2D.replaceRow(sample_mstd,i); 
+        }
         ostringstream name;
         name << "sample_dof" << i << ".dat";
         string name_str = name.str();
         write_datafile_1d(samPts_1D,name_str.c_str());
-    }
     }
 
     // MCS
@@ -251,11 +283,11 @@ int main(int argc, char *argv[])
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
         Array1D<double> initial(2,0.e0);
-        if (PROB == 1){
+        if (CASE == 1){
             initial(0) = VEL0;
             initial(1) = DIS0;
         }
-        if (PROB == 2){
+        if (CASE == 2){
             initial(0) = samPts(iq,0);
             initial(1) = samPts(iq,1);
         }
@@ -337,6 +369,7 @@ int main(int argc, char *argv[])
         exit(1);    
     }
     Array2D<double> samPts_norm(nspl,2,0.e0);
+    Array2D<double> e_GS(ord_GS,2);
     for(int ord=1;ord<ord_GS+1;ord++){
     	tt.tick();
 	    PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
@@ -358,7 +391,7 @@ int main(int argc, char *argv[])
             f_GS.replaceCol(tempf,i+1);
         }
 
-        // Initial conditions
+       // Initial conditions
         Array1D<Array2D<double> > result(2);
         Array1D<Array1D<double> > initial_GS(2);
         Array1D<double> temp(nPCTerms,0.e0);
@@ -369,7 +402,7 @@ int main(int argc, char *argv[])
 
         clock_t start = clock();
     	tt.tick();
-        GS(dof, myPCSet, ord, dim, nPCTerms, pcType, nStep, initial_GS, dTym, inpParams, f_GS, result);
+        GS(dof, myPCSet, ord, dim, nPCTerms, nStep, initial_GS, dTym, inpParams, f_GS, result);
         t_GS(ord-1) = tt.silent_tock();
 	    cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
 	
@@ -396,12 +429,25 @@ int main(int argc, char *argv[])
         //assemble dis and output dis_sample
         Array1D<double> e_GS_ord = postprocess_GS(noutput, nPCTerms, nStep, result(1), myPCSet, dTym,GS_dump, GSstat_dump, MCS_s_dis);
         Array1D<double> e_GS_ord_vel = postprocess_GS(noutput, nPCTerms, nStep, result(0), myPCSet, dTym, GS_dump_v, GSstat_dump_v, MCS_s_vel);
-        if (ord==1){
-            Array1D<double> normsq(nPCTerms,0.e0); 
-            myPCSet.OutputNormSquare(normsq);
+        Array1D<double> normsq(nPCTerms,0.e0); 
+        myPCSet.OutputNormSquare(normsq);
+        cout << "Normsq 1=" <<normsq(1)<<endl;
+        cout << "Normsq 2=" <<normsq(2)<<endl;
+
+        if (ord == 1){
             for (int i=0;i<nspl;i++){
-                samPts_norm(i,0)=samPts_ori(i,0)*sqrt(normsq(1))+VEL0;
-                samPts_norm(i,1)=samPts_ori(i,1)*sqrt(normsq(2))+DIS0;
+                if (strcmp(pcType.c_str(),"HG")==0){
+                    samPts_norm(i,0)=samPts_ori(i,0)*sqrt(normsq(1));
+                    samPts_norm(i,1)=samPts_ori(i,1)*sqrt(normsq(2));
+                }
+                else if (strcmp(pcType.c_str(),"LU")==0){
+                    samPts_norm(i,0)=samPts_ori(i,0);
+                    samPts_norm(i,1)=samPts_ori(i,1);
+                }
+                if (CASE==2){
+                    samPts_norm(i,0)=samPts_norm(i,0)+VEL0;
+                    samPts_norm(i,1)=samPts_norm(i,1)+DIS0;
+                }
             }
         }
         cout << "Sampling dis..."<< endl;
@@ -420,6 +466,7 @@ int main(int argc, char *argv[])
 
         fprintf(err_dump, "%lg %lg", e_GS_ord(0),e_GS_ord(1));
         fprintf(err_dump, "\n");
+        e_GS.replaceRow(e_GS_ord,ord-1);
 
         closefile(GS_dump, SoluGSmodes); 
         closefile(GS_dump_v, SolvGSmodes); 
@@ -432,8 +479,9 @@ int main(int argc, char *argv[])
     tt.tick();
     PCSet myPCSet("ISP",ord_AAPG_GS,dim,pcType,0.0,1.0,false); 
     tt.tock("Took");
-    
-    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, myPCSet, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, sample_mstd_2D, samPts_norm);
+   
+    Array2D<double> e_AAPG(ord_AAPG,2,0.e0); 
+    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, myPCSet, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, sample_mstd_2D, samPts_norm, e_AAPG);
     
     // output the timing
     Array1D<double> t(3+ord_GS+ord_AAPG,0.e0);
@@ -442,6 +490,16 @@ int main(int argc, char *argv[])
 	    t(i+1)=t_GS(i);
     for (int i=0;i<ord_AAPG+2;i++)
         t(i+1+ord_GS)=t_AAPG(i);
+
+    // output the error info
+    cout << "Printing the error of GS in displacement..." << endl;
+    for(int i=0;i<ord_GS;i++){
+        cout << "GS ord " << i+1<< " is em="<<e_GS(i,0) <<", es= "<< e_GS(i,1)<< endl;
+    }
+    cout << "Printing the error of AAPG in displacement..." << endl;
+    for(int i=0;i<ord_AAPG;i++){
+        cout << "AAPG ord " << i+1<< " is em="<<e_AAPG(i,0) <<", es= "<< e_AAPG(i,1)<<endl;
+    }
 
     ostringstream time_stream;
     if (act_D){
