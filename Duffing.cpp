@@ -226,20 +226,27 @@ int main(int argc, char *argv[])
     Array2D<double> sample_mstd_2D(dof,2,0.e0);
     sample_mstd_2D(0,0)=VEL0;
     sample_mstd_2D(1,0)=DIS0;
+    MCPCSet.DrawSampleVar(samPts);
     if (CASE==1){
-        //MCPCSet.DrawSampleVar(samPts);
-        MCPCSet.DrawSampleVar(samPts_ori);
-        for (int i=0;i<nspl;i++){
-            for (int j=0;j<dim;j++){
-                samPts(i,j)=samPts_ori(i,j)*sqrt(0.3333);
+        if (strcmp(pcType.c_str(),"HG")==0){
+            for (int i=0;i<nspl;i++){
+                for (int j=0;j<dim;j++){
+                    samPts(i,j)=samPts(i,j)*sqrt(0.3333);
+                }
             }
         }
     }
     if (CASE==2){
-        MCPCSet.DrawSampleVar(samPts_ori);
+        MCPCSet.DrawSampleVar(samPts);
         for (int i=0;i<nspl;i++){
-            samPts(i,0)=samPts_ori(i,0)*sigma+VEL0;
-            samPts(i,1)=samPts_ori(i,1)*sigma+DIS0;
+            if (strcmp(pcType.c_str(),"HG")==0){
+                samPts(i,0)=samPts(i,0)*sigma+VEL0;
+                samPts(i,1)=samPts(i,1)*sigma+DIS0;
+            }
+            if (strcmp(pcType.c_str(),"LU")==0){
+                samPts(i,0)=samPts(i,0)/sqrt(1.0/3.0)*sigma+VEL0;
+                samPts(i,1)=samPts(i,1)/sqrt(1.0/3.0)*sigma+DIS0;
+            }
         }
     }
     // Examine the mean/std of the sample
