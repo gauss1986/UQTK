@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     
     if (CASE==1){//Stochastic forcing and deterministic initial conditions
         clen = 0.05;
-        pcType = "HG";
+        pcType = "LU";
         dim = 10;
         cov_type = (char *)"Exp";
         sigma = 0.8;
@@ -380,6 +380,7 @@ int main(int argc, char *argv[])
     Array2D<double> samPts_norm(nspl,dim,0.e0);
     Array2D<double> e_GS(ord_GS,2);
     Array1D<Array1D<double> > e_GS_sample(ord_GS);
+    Array1D<Array1D<double> > e_GS_sample_vel(ord_GS);
     for(int ord=1;ord<ord_GS+1;ord++){
     	tt.tick();
 	    PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
@@ -463,34 +464,19 @@ int main(int argc, char *argv[])
             }
         }
         cout << "Sampling dis..."<< endl;
-        Array2D<double> GS_dis_sampt=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, result(1), samPts_norm);
+        Array2D<double> GS_dis_sampt=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, result(1), samPts_norm, stat_GS, e_GS_sample(ord-1));
         ostringstream s2;
         s2 << "GS_dis_sample" << ord<<".dat";
         string SoluGSsample(s2.str());
         write_datafile(GS_dis_sampt,SoluGSsample.c_str());
         //ouput vel_sample
         cout << "Sampling vel..."<< endl;
-        Array2D<double> GS_vel_sampt=sampleGS(noutput, dim, nStep, nPCTerms, myPCSet, result(0), samPts_norm);
+        Array2D<double> GS_vel_sampt=sampleGS(noutput, dim, nStep, nPCTerms, myPCSet, result(0), samPts_norm, stat_GS_vel, e_GS_sample_vel(ord-1));
         ostringstream s3;
         s3 << "GS_vel_sample" << ord<<".dat";
         SoluGSsample=s3.str();
         write_datafile(GS_vel_sampt,SoluGSsample.c_str());
 
-        // Compute error of the sampling results against the direct assembly results
-        Array1D<double> m_sample_GS(noutput+1,0.e0);
-        Array1D<double> s_sample_GS(noutput+1,0.e0);
-        //Array2D<double> mstd_MCS_noutput(2,noutput+1,0.e0);
-        Array2D<double> mstd_GS_noutput(2,noutput+1,0.e0);
-        for (int i=0;i<noutput+1;i++){
-            Array1D<double> sample_GS_atT(nspl,0.e0);
-            getCol(GS_dis_sampt,i,sample_GS_atT);
-            Array1D<double> sample_mstd_GS_temp = mStd(sample_GS_atT,nspl);
-            m_sample_GS(i)=sample_mstd_GS_temp(0);
-            s_sample_GS(i)=sample_mstd_GS_temp(1);
-            mstd_GS_noutput(0,i)=stat_GS(0,((int) nStep/noutput)*i);
-            mstd_GS_noutput(1,i)=stat_GS(1,((int) nStep/noutput)*i);
-        }
-        e_GS_sample(ord-1) =  error(m_sample_GS, s_sample_GS, mstd_GS_noutput);
 
         fprintf(err_dump, "%lg %lg", e_GS_ord(0),e_GS_ord(1));
         fprintf(err_dump, "\n");
@@ -509,7 +495,9 @@ int main(int argc, char *argv[])
     tt.tock("Took");
    
     Array2D<double> e_AAPG(ord_AAPG,2,0.e0); 
-    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, myPCSet, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, sample_mstd_2D, samPts_norm, e_AAPG);
+    Array1D<Array1D<double> > e_sample_AAPG_dis(ord_AAPG); 
+    Array1D<Array1D<double> > e_sample_AAPG_vel(ord_AAPG); 
+    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, myPCSet, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, sample_mstd_2D, samPts_norm, e_AAPG, e_sample_AAPG_dis, e_sample_AAPG_vel);
     
     // output the timing
     Array1D<double> t(3+ord_GS+ord_AAPG,0.e0);
@@ -531,6 +519,10 @@ int main(int argc, char *argv[])
     cout << "Printing the error of AAPG in displacement..." << endl;
     for(int i=0;i<ord_AAPG;i++){
         cout << "AAPG ord " << i+1<< " is em="<<e_AAPG(i,0) <<", es= "<< e_AAPG(i,1)<<endl;
+    }
+    cout << "Printing the error of MCS assembled AAPG in displacement..." << endl;
+    for(int i=0;i<ord_AAPG;i++){
+        cout << "AAGP ord " << i+1<< " is em="<<e_sample_AAPG_dis(i)(0) <<", es= "<< e_sample_AAPG_dis(i)(1)<< endl;
     }
 
     ostringstream time_stream;

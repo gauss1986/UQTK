@@ -193,7 +193,7 @@ Array1D<double> postprocess_GS(int noutput, int nPCTerms, int nStep,  Array2D<do
     return e;
 }
 
-Array2D<double> sampleGS(int noutput, int dim, int nStep, int nPCTerms, PCSet& myPCSet, Array2D<double>& solution, Array2D<double>& samPts){
+Array2D<double> sampleGS(int noutput, int dim, int nStep, int nPCTerms, PCSet& myPCSet, Array2D<double>& solution, Array2D<double>& samPts, Array2D<double>& stat, Array1D<double>& e_GS_sample){
     int nspl = samPts.XSize();
     Array2D<double> GS_sampt(nspl,noutput+1,0.e0);
     int ind = 0;
@@ -222,5 +222,21 @@ Array2D<double> sampleGS(int noutput, int dim, int nStep, int nPCTerms, PCSet& m
             ind++;
         }
     }
+
+    // Compute error of the sampling results against the direct assembly results
+    Array1D<double> m_sample_GS(noutput+1,0.e0);
+    Array1D<double> s_sample_GS(noutput+1,0.e0);
+    Array2D<double> mstd_GS_noutput(2,noutput+1,0.e0);
+   for (int i=0;i<noutput+1;i++){  
+        Array1D<double> sample_GS_atT(nspl,0.e0);
+        getCol(GS_sampt,i,sample_GS_atT);
+        Array1D<double> sample_mstd_GS_temp = mStd(sample_GS_atT,nspl);
+        m_sample_GS(i)=sample_mstd_GS_temp(0);
+        s_sample_GS(i)=sample_mstd_GS_temp(1);
+        mstd_GS_noutput(0,i)=stat(0,((int) nStep/noutput)*i);
+        mstd_GS_noutput(1,i)=stat(1,((int) nStep/noutput)*i);
+    }
+    e_GS_sample =  error(m_sample_GS, s_sample_GS, mstd_GS_noutput);
+
     return GS_sampt;
 }
