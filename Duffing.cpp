@@ -27,7 +27,7 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define CASE 1
+#define CASE 2
 
 #define DIS0 0.0
 #define VEL0 0.0
@@ -39,26 +39,26 @@ July 25, 2015
 
 /// Main program of uncertainty propagation of the ODE model excitation force via intrusive spectral projection (ISP)
 int main(int argc, char *argv[])
-{
+{   // Coeffs
     string pcType;  //PC type
     int dim;        //Stochastic dimensionality
     char* cov_type; //Covariance type
     double sigma;   //Standard deviation
     int nspl;       //MCS sample size
+    bool act_D;     //wheather doing AAPG adaptive or not
+    double dof;     //Spatial dof
+    int noutput;    //Number of output points
+    double clen;    // Correlation length of the random process
+    double FBAR;    //Scalar in defining the mean of f
+    Array1D<double> inpParams(3,0.e0);//Input parameters
+
     double factor_OD;//dynamical-orthogonal info
+    double p;       //Threashold used in the adaptive AAPG
     int ord_GS;     //GS order
     int ord_AAPG;   //AAPG order
     int ord_AAPG_GS;//GS order in AAPG subproblems
-    bool act_D;     //wheather doing AAPG adaptive or not
-    double p;       //Threashold used in the adaptive AAPG
-    double dof;     //Spatial dof
-    int noutput;    //Number of output points
-    Array1D<double> inpParams(3,0.e0);//Input parameters
-    double clen;
-    double FBAR;    //Scalar defining mean of f
     
     if (CASE==1){//Stochastic forcing and deterministic initial conditions
-        // Correlation length
         clen = 0.05;
         pcType = "HG";
         dim = 10;
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
         FBAR = 2.0;
     }
     if (CASE==2){//Stochastic initial conditions and deterministic forcing
-        pcType = "HG";
+        pcType = "LU";
         dim = 2;
         cov_type = (char *)"Exp";
         sigma = 0.5;
@@ -188,7 +188,7 @@ int main(int argc, char *argv[])
     cout << " - Number of KL modes:              " << dim  << endl<<flush;
     cout << " - Monte Carlo sample size:         " << nspl  << endl<<flush;
     if (CASE == 1){
-        cout << " - Will generate KL expansion with covariance of type "<<cov_type<<", with correlation length "<<clen<<" and standard deviation "<<sigma<<endl<<flush;
+        cout << " - Will generate KL expansion with covariance of type "<<cov_type<<", with correlation length "<<clen<<" and standard deviation "<<sigma<<". Random variable is of type "<<pcType<<"."<<endl<<flush;
     }
     if (CASE == 2){
         cout << " - Will generate random variable of type "<< pcType << ", with standard deviation " << sigma << endl<< flush;
@@ -226,26 +226,28 @@ int main(int argc, char *argv[])
     Array2D<double> sample_mstd_2D(dof,2,0.e0);
     sample_mstd_2D(0,0)=VEL0;
     sample_mstd_2D(1,0)=DIS0;
-    MCPCSet.DrawSampleVar(samPts);
+    MCPCSet.DrawSampleVar(samPts_ori);
     if (CASE==1){
         if (strcmp(pcType.c_str(),"HG")==0){
             for (int i=0;i<nspl;i++){
                 for (int j=0;j<dim;j++){
-                    samPts(i,j)=samPts(i,j)*sqrt(0.3333);
+                    samPts(i,j)=samPts_ori(i,j)*sqrt(1.0/3.0);
                 }
             }
         }
+        if (strcmp(pcType.c_str(),"LU")==0){
+            MCPCSet.DrawSampleVar(samPts);
+        }
     }
     if (CASE==2){
-        MCPCSet.DrawSampleVar(samPts);
         for (int i=0;i<nspl;i++){
             if (strcmp(pcType.c_str(),"HG")==0){
-                samPts(i,0)=samPts(i,0)*sigma+VEL0;
-                samPts(i,1)=samPts(i,1)*sigma+DIS0;
+                samPts(i,0)=samPts_ori(i,0)*sigma+VEL0;
+                samPts(i,1)=samPts_ori(i,1)*sigma+DIS0;
             }
             if (strcmp(pcType.c_str(),"LU")==0){
-                samPts(i,0)=samPts(i,0)/sqrt(1.0/3.0)*sigma+VEL0;
-                samPts(i,1)=samPts(i,1)/sqrt(1.0/3.0)*sigma+DIS0;
+                samPts(i,0)=samPts_ori(i,0)/sqrt(1.0/3.0)*sigma+VEL0;
+                samPts(i,1)=samPts_ori(i,1)/sqrt(1.0/3.0)*sigma+DIS0;
             }
         }
     }
@@ -375,8 +377,9 @@ int main(int argc, char *argv[])
         printf("Could not open file '%s'\n",errstr.c_str());
         exit(1);    
     }
-    Array2D<double> samPts_norm(nspl,2,0.e0);
+    Array2D<double> samPts_norm(nspl,dim,0.e0);
     Array2D<double> e_GS(ord_GS,2);
+    Array1D<Array1D<double> > e_GS_sample(ord_GS);
     for(int ord=1;ord<ord_GS+1;ord++){
     	tt.tick();
 	    PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
@@ -434,8 +437,10 @@ int main(int argc, char *argv[])
         FILE *GSstat_dump_v=createfile(SolvGSstat);
         
         //assemble dis and output dis_sample
-        Array1D<double> e_GS_ord = postprocess_GS(noutput, nPCTerms, nStep, result(1), myPCSet, dTym,GS_dump, GSstat_dump, MCS_s_dis);
-        Array1D<double> e_GS_ord_vel = postprocess_GS(noutput, nPCTerms, nStep, result(0), myPCSet, dTym, GS_dump_v, GSstat_dump_v, MCS_s_vel);
+        Array2D<double> stat_GS(2,nStep+1,0.e0);
+        Array2D<double> stat_GS_vel(2,nStep+1,0.e0);
+        Array1D<double> e_GS_ord = postprocess_GS(noutput, nPCTerms, nStep, result(1), myPCSet, dTym,GS_dump, GSstat_dump, MCS_s_dis, stat_GS);
+        Array1D<double> e_GS_ord_vel = postprocess_GS(noutput, nPCTerms, nStep, result(0), myPCSet, dTym, GS_dump_v, GSstat_dump_v, MCS_s_vel, stat_GS_vel);
         Array1D<double> normsq(nPCTerms,0.e0); 
         myPCSet.OutputNormSquare(normsq);
         cout << "Normsq 1=" <<normsq(1)<<endl;
@@ -443,13 +448,13 @@ int main(int argc, char *argv[])
 
         if (ord == 1){
             for (int i=0;i<nspl;i++){
-                if (strcmp(pcType.c_str(),"HG")==0){
-                    samPts_norm(i,0)=samPts_ori(i,0)*sqrt(normsq(1));
-                    samPts_norm(i,1)=samPts_ori(i,1)*sqrt(normsq(2));
-                }
-                else if (strcmp(pcType.c_str(),"LU")==0){
-                    samPts_norm(i,0)=samPts_ori(i,0);
-                    samPts_norm(i,1)=samPts_ori(i,1);
+                for (int d=0;d<dim;d++){
+                    if (strcmp(pcType.c_str(),"HG")==0){
+                        samPts_norm(i,d)=samPts_ori(i,d)*sqrt(normsq(d+1));
+                    }
+                    else if (strcmp(pcType.c_str(),"LU")==0){
+                        samPts_norm(i,d)=samPts_ori(i,d);
+                    }
                 }
                 if (CASE==2){
                     samPts_norm(i,0)=samPts_norm(i,0)+VEL0;
@@ -470,6 +475,22 @@ int main(int argc, char *argv[])
         s3 << "GS_vel_sample" << ord<<".dat";
         SoluGSsample=s3.str();
         write_datafile(GS_vel_sampt,SoluGSsample.c_str());
+
+        // Compute error of the sampling results against the direct assembly results
+        Array1D<double> m_sample_GS(noutput+1,0.e0);
+        Array1D<double> s_sample_GS(noutput+1,0.e0);
+        //Array2D<double> mstd_MCS_noutput(2,noutput+1,0.e0);
+        Array2D<double> mstd_GS_noutput(2,noutput+1,0.e0);
+        for (int i=0;i<noutput+1;i++){
+            Array1D<double> sample_GS_atT(nspl,0.e0);
+            getCol(GS_dis_sampt,i,sample_GS_atT);
+            Array1D<double> sample_mstd_GS_temp = mStd(sample_GS_atT,nspl);
+            m_sample_GS(i)=sample_mstd_GS_temp(0);
+            s_sample_GS(i)=sample_mstd_GS_temp(1);
+            mstd_GS_noutput(0,i)=stat_GS(0,((int) nStep/noutput)*i);
+            mstd_GS_noutput(1,i)=stat_GS(1,((int) nStep/noutput)*i);
+        }
+        e_GS_sample(ord-1) =  error(m_sample_GS, s_sample_GS, mstd_GS_noutput);
 
         fprintf(err_dump, "%lg %lg", e_GS_ord(0),e_GS_ord(1));
         fprintf(err_dump, "\n");
@@ -502,6 +523,10 @@ int main(int argc, char *argv[])
     cout << "Printing the error of GS in displacement..." << endl;
     for(int i=0;i<ord_GS;i++){
         cout << "GS ord " << i+1<< " is em="<<e_GS(i,0) <<", es= "<< e_GS(i,1)<< endl;
+    }
+    cout << "Printing the error of MCS assembled GS in displacement..." << endl;
+    for(int i=0;i<ord_GS;i++){
+        cout << "GS ord " << i+1<< " is em="<<e_GS_sample(i)(0) <<", es= "<< e_GS_sample(i)(1)<< endl;
     }
     cout << "Printing the error of AAPG in displacement..." << endl;
     for(int i=0;i<ord_AAPG;i++){

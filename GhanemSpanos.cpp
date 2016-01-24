@@ -168,7 +168,7 @@ void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<dou
         }
 }
 
-Array1D<double> postprocess_GS(int noutput, int nPCTerms, int nStep,  Array2D<double>& solution, PCSet& myPCSet, double dTym, FILE* GS_dump, FILE* GSstat_dump, Array2D<double>& mstd_MCS){
+Array1D<double> postprocess_GS(int noutput, int nPCTerms, int nStep,  Array2D<double>& solution, PCSet& myPCSet, double dTym, FILE* GS_dump, FILE* GSstat_dump, Array2D<double>& mstd_MCS, Array2D<double>& stat){
     // Output solution (mean and std) 
     Array1D<double> temp(nPCTerms,0.e0);
     Array1D<double> StDv(nStep+1,0.e0);
@@ -186,7 +186,10 @@ Array1D<double> postprocess_GS(int noutput, int nPCTerms, int nStep,  Array2D<do
 
     Array1D<double> mean;
     getCol(solution,0,mean);
-    Array1D<double> e =  error(mean, StDv, mstd_MCS);    
+    Array1D<double> e =  error(mean, StDv, mstd_MCS);
+
+    stat.replaceRow(mean,0);
+    stat.replaceRow(StDv,1);    
     return e;
 }
 
@@ -206,11 +209,15 @@ Array2D<double> sampleGS(int noutput, int dim, int nStep, int nPCTerms, PCSet& m
             for (int j=0;j<nspl;j++){
                 Array1D<double> samPt(dim,0.e0);
                 getRow(samPts,j,samPt);
-                //GS_sampt(j,ind)=myPCSet.EvalPC(temp, samPt);
-                GS_sampt(j,ind)=temp(0)+temp(1)*samPt(0)+temp(2)*samPt(1);
-                if(myPCSet.GetOrder()==2)
-                    GS_sampt(j,ind)+=temp(3)*(samPt(0)*samPt(0)-normsq(1))+temp(4)*samPt(0)*samPt(1)+temp(5)*(samPt(1)*samPt(1)-normsq(2));
-            }
+                if (!strcmp(myPCSet.GetPCType().c_str(),"LU")){
+                    GS_sampt(j,ind)=myPCSet.EvalPC(temp, samPt);
+                }
+                else if(!strcmp(myPCSet.GetPCType().c_str(),"HG")){
+                    GS_sampt(j,ind)=temp(0)+temp(1)*samPt(0)+temp(2)*samPt(1);
+                    if(myPCSet.GetOrder()==2)
+                        GS_sampt(j,ind)+=temp(3)*(samPt(0)*samPt(0)-normsq(1))+temp(4)*samPt(0)*samPt(1)+temp(5)*(samPt(1)*samPt(1)-normsq(2));
+                }
+            }            
             }
             ind++;
         }
