@@ -27,7 +27,7 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define CASE 1
+#define CASE 2
 
 #define DIS0 0.0
 #define VEL0 0.0
@@ -239,22 +239,33 @@ int main(int argc, char *argv[])
             MCPCSet.DrawSampleVar(samPts);
         }
     }
+    // Sample initial conditions for MCS 
+    Array2D<double> initial_samples(nspl,dim,0.e0);
+    for (int i=0;i<nspl;i++){
+        initial_samples(i,0) = VEL0;
+        initial_samples(i,1) = DIS0;
+    }
     if (CASE==2){
         for (int i=0;i<nspl;i++){
-            if (strcmp(pcType.c_str(),"HG")==0){
-                samPts(i,0)=samPts_ori(i,0)*sigma+VEL0;
-                samPts(i,1)=samPts_ori(i,1)*sigma+DIS0;
-            }
-            if (strcmp(pcType.c_str(),"LU")==0){
-                samPts(i,0)=samPts_ori(i,0)/sqrt(1.0/3.0)*sigma+VEL0;
-                samPts(i,1)=samPts_ori(i,1)/sqrt(1.0/3.0)*sigma+DIS0;
+            for (int j=0;j<dof;j++){
+                if (strcmp(pcType.c_str(),"HG")==0){
+                    initial_samples(i,j) += samPts_ori(i,j)*sigma;
+                }
+                if (strcmp(pcType.c_str(),"LU")==0){
+                    initial_samples(i,j) += samPts_ori(i,j)/sqrt(1.0/3.0)*sigma;
+                }
             }
         }
     }
     // Examine the mean/std of the sample
     for (int i=0;i<dim;i++){
         Array1D<double> samPts_1D(nspl,0.e0);
-        getCol(samPts,i,samPts_1D);
+        if (CASE==1){
+            getCol(samPts,i,samPts_1D);
+        }
+        if (CASE==2){
+            getCol(initial_samples,i,samPts_1D);
+        }
         Array1D<double> sample_mstd = mStd(samPts_1D,nspl);
         cout << "Mean of sample on dim " << i << " is "<< sample_mstd(0) << endl;
         cout << "Std of sample on dim "<< i << " is " <<sample_mstd(1) << endl;
@@ -287,19 +298,12 @@ int main(int argc, char *argv[])
     // Time marching steps
     TickTock tt;
     tt.tick();
-    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts,nkl,dTym,inpParams,nthreads,fbar,scaledKLmodes,totalforce) 
+    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts,initial_samples,nkl,dTym,inpParams,nthreads,fbar,scaledKLmodes,totalforce) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
         Array1D<double> initial(2,0.e0);
-        if (CASE == 1){
-            initial(0) = VEL0;
-            initial(1) = DIS0;
-        }
-        if (CASE == 2 || CASE==3){
-            initial(0) = samPts(iq,0);
-            initial(1) = samPts(iq,1);
-        }
+        getRow(initial_samples,iq,initial);
         Array1D<double> sampleforce=sample_force(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,inpParams);
         for (int i=0;i<2*nStep+1;i++)
             totalforce(i,iq)=sampleforce(i);
