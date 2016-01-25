@@ -296,7 +296,7 @@ int main(int argc, char *argv[])
             initial(0) = VEL0;
             initial(1) = DIS0;
         }
-        if (CASE == 2){
+        if (CASE == 2 || CASE==3){
             initial(0) = samPts(iq,0);
             initial(1) = samPts(iq,1);
         }
@@ -457,7 +457,7 @@ int main(int argc, char *argv[])
                         samPts_norm(i,d)=samPts_ori(i,d);
                     }
                 }
-                if (CASE==2){
+                if (CASE==2||CASE==3){
                     samPts_norm(i,0)=samPts_norm(i,0)+VEL0;
                     samPts_norm(i,1)=samPts_norm(i,1)+DIS0;
                 }
