@@ -352,12 +352,22 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     Array2D<double> stat1(2,nStep+1,0.e0);
     Array2D<double> stat2(2,nStep+1,0.e0);
     Array2D<double> stat3(2,nStep+1,0.e0);
+    Array1D<double> temp_stat(nStep+1,0.e0);
     stat1.replaceRow(dis_1_mean,0);
-    stat2.replaceRow(dis_2_mean,0);
-    stat3.replaceRow(dis_3_mean,0);
+    getCol(dis_2_assembled,0,temp_stat);
+    stat2.replaceRow(temp_stat,0);
+    getCol(dis_3_assembled,0,temp_stat);
+    stat3.replaceRow(temp_stat,0);
     stat1.replaceRow(std1,1);
     stat2.replaceRow(std2,1);
     stat3.replaceRow(std3,1);
+
+    ostringstream s6;
+    s6 << name << "stat1"<<".dat";
+    write_datafile(stat1,s6.str().c_str());
+    ostringstream s5;
+    s5 << name << "stat2"<<".dat";
+    write_datafile(stat2,s5.str().c_str());
 
     Array2D<double> AAPG_dis_sample_1=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, dis_1_assembled, samPts_norm, stat1, e_sample(0));
     ostringstream s;

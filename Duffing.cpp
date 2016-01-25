@@ -27,7 +27,7 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define CASE 2
+#define CASE 1
 
 #define DIS0 0.0
 #define VEL0 0.0
