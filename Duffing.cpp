@@ -27,7 +27,7 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define CASE 2
+#define CASE 1
 
 #define DIS0 0.0
 #define VEL0 0.0
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
     
     if (CASE==1){//Stochastic forcing and deterministic initial conditions
         clen = 0.05;
-        pcType = "LU";
+        pcType = "HG";
         dim = 10;
         cov_type = (char *)"Exp";
         sigma = 0.8;
@@ -211,6 +211,23 @@ int main(int argc, char *argv[])
         cout << " - Full AAPG applied"<<endl<<flush;
     }
 
+    // Generate random samples
+    Array2D<double> samPts_ori(nspl,dim,0.e0);
+    Array2D<double> samPts_norm(nspl,dim,0.e0);
+    PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
+    MCPCSet.DrawSampleVar(samPts_ori);
+    if (strcmp(pcType.c_str(),"HG")==0){
+        for (int i=0;i<nspl;i++){
+            for (int j=0;j<dim;j++){
+                // normalize samPts so that it has variance 1/3
+                samPts_norm(i,j)=samPts_ori(i,j)*sqrt(1.0/3.0);
+            }  
+        }
+    }
+    else if (strcmp(pcType.c_str(),"LU")==0){
+        MCPCSet.DrawSampleVar(samPts_norm);
+    }
+
     // Generate the KL expansion of the excitation force
     int nkl = dim;
     Array2D<double> scaledKLmodes(2*nStep+1,nkl,0.0);
@@ -219,33 +236,16 @@ int main(int argc, char *argv[])
     }
     write_datafile(scaledKLmodes,"KL.dat");
  
-    // Generate random samples
-    Array2D<double> samPts(nspl,dim,0.e0);
-    Array2D<double> samPts_ori(nspl,dim,0.e0);
-    PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
-    Array2D<double> sample_mstd_2D(dof,2,0.e0);
-    sample_mstd_2D(0,0)=VEL0;
-    sample_mstd_2D(1,0)=DIS0;
-    MCPCSet.DrawSampleVar(samPts_ori);
-    if (CASE==1){
-        if (strcmp(pcType.c_str(),"HG")==0){
-            for (int i=0;i<nspl;i++){
-                for (int j=0;j<dim;j++){
-                    samPts(i,j)=samPts_ori(i,j)*sqrt(1.0/3.0);
-                }
-            }
-        }
-        if (strcmp(pcType.c_str(),"LU")==0){
-            MCPCSet.DrawSampleVar(samPts);
-        }
-    }
     // Sample initial conditions for MCS 
     Array2D<double> initial_samples(nspl,dim,0.e0);
+    Array2D<double> stat_init(dof,2,0.e0);
+    stat_init(0,0)=VEL0;
+    stat_init(1,0)=DIS0;
     for (int i=0;i<nspl;i++){
         initial_samples(i,0) = VEL0;
         initial_samples(i,1) = DIS0;
     }
-    if (CASE==2){
+    if (CASE==2 || CASE == 3){
         for (int i=0;i<nspl;i++){
             for (int j=0;j<dof;j++){
                 if (strcmp(pcType.c_str(),"HG")==0){
@@ -256,26 +256,18 @@ int main(int argc, char *argv[])
                 }
             }
         }
-    }
-    // Examine the mean/std of the sample
-    for (int i=0;i<dim;i++){
-        Array1D<double> samPts_1D(nspl,0.e0);
-        if (CASE==1){
-            getCol(samPts,i,samPts_1D);
-        }
-        if (CASE==2){
+        for (int i=0;i<dof;i++){
+            Array1D<double> samPts_1D(nspl,0.e0);
             getCol(initial_samples,i,samPts_1D);
+            Array1D<double> sample_mstd = mStd(samPts_1D,nspl);
+            cout << "Mean of sample on dim " << i << " is "<< sample_mstd(0) << endl;
+            cout << "Std of sample on dim "<< i << " is " <<sample_mstd(1) << endl;
+            stat_init.replaceRow(sample_mstd,i); 
+            ostringstream name;
+            name << "sample_dof" << i << ".dat";
+            string name_str = name.str();
+            write_datafile_1d(samPts_1D,name_str.c_str());
         }
-        Array1D<double> sample_mstd = mStd(samPts_1D,nspl);
-        cout << "Mean of sample on dim " << i << " is "<< sample_mstd(0) << endl;
-        cout << "Std of sample on dim "<< i << " is " <<sample_mstd(1) << endl;
-        if (CASE==2 || CASE==3){
-            sample_mstd_2D.replaceRow(sample_mstd,i); 
-        }
-        ostringstream name;
-        name << "sample_dof" << i << ".dat";
-        string name_str = name.str();
-        write_datafile_1d(samPts_1D,name_str.c_str());
     }
 
     // MCS
@@ -298,13 +290,13 @@ int main(int argc, char *argv[])
     // Time marching steps
     TickTock tt;
     tt.tick();
-    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts,initial_samples,nkl,dTym,inpParams,nthreads,fbar,scaledKLmodes,totalforce) 
+    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts_norm,initial_samples,nkl,dTym,inpParams,nthreads,fbar,scaledKLmodes,totalforce) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
         Array1D<double> initial(2,0.e0);
         getRow(initial_samples,iq,initial);
-        Array1D<double> sampleforce=sample_force(samPts,iq,2*nStep,fbar,nkl,scaledKLmodes,inpParams);
+        Array1D<double> sampleforce=sample_force(samPts_norm,iq,2*nStep,fbar,nkl,scaledKLmodes,inpParams);
         for (int i=0;i<2*nStep+1;i++)
             totalforce(i,iq)=sampleforce(i);
         Array2D<double> temp = det(dof, nspl, nStep, nkl, dTym, sampleforce, inpParams, initial);
@@ -381,7 +373,6 @@ int main(int argc, char *argv[])
         printf("Could not open file '%s'\n",errstr.c_str());
         exit(1);    
     }
-    Array2D<double> samPts_norm(nspl,dim,0.e0);
     Array2D<double> e_GS(ord_GS,2);
     Array1D<Array1D<double> > e_GS_sample(ord_GS);
     Array1D<Array1D<double> > e_GS_sample_vel(ord_GS);
@@ -412,8 +403,8 @@ int main(int argc, char *argv[])
         Array1D<double> temp(nPCTerms,0.e0);
         initial_GS(0)=temp;
         initial_GS(1) = temp;
-        myPCSet.InitMeanStDv(sample_mstd_2D(0,0),sample_mstd_2D(0,1),1,initial_GS(0));
-        myPCSet.InitMeanStDv(sample_mstd_2D(1,0),sample_mstd_2D(1,1),2,initial_GS(1));
+        myPCSet.InitMeanStDv(stat_init(0,0),stat_init(0,1),1,initial_GS(0));
+        myPCSet.InitMeanStDv(stat_init(1,0),stat_init(1,1),2,initial_GS(1));
 
         clock_t start = clock();
     	tt.tick();
@@ -451,22 +442,8 @@ int main(int argc, char *argv[])
         cout << "Normsq 1=" <<normsq(1)<<endl;
         cout << "Normsq 2=" <<normsq(2)<<endl;
 
-        if (ord == 1){
-            for (int i=0;i<nspl;i++){
-                for (int d=0;d<dim;d++){
-                    if (strcmp(pcType.c_str(),"HG")==0){
-                        samPts_norm(i,d)=samPts_ori(i,d)*sqrt(normsq(d+1));
-                    }
-                    else if (strcmp(pcType.c_str(),"LU")==0){
-                        samPts_norm(i,d)=samPts_ori(i,d);
-                    }
-                }
-                if (CASE==2||CASE==3){
-                    samPts_norm(i,0)=samPts_norm(i,0)+VEL0;
-                    samPts_norm(i,1)=samPts_norm(i,1)+DIS0;
-                }
-            }
-        }
+        //if (ord == 1){
+        //}
         cout << "Sampling dis..."<< endl;
         Array2D<double> GS_dis_sampt=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, result(1), samPts_norm, stat_GS, e_GS_sample(ord-1));
         ostringstream s2;
@@ -501,7 +478,7 @@ int main(int argc, char *argv[])
     Array2D<double> e_AAPG(ord_AAPG,2,0.e0); 
     Array1D<Array1D<double> > e_sample_AAPG_dis(ord_AAPG); 
     Array1D<Array1D<double> > e_sample_AAPG_vel(ord_AAPG); 
-    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, myPCSet, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, sample_mstd_2D, samPts_norm, e_AAPG, e_sample_AAPG_dis, e_sample_AAPG_vel);
+    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, myPCSet, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, stat_init, samPts_norm, e_AAPG, e_sample_AAPG_dis, e_sample_AAPG_vel);
     
     // output the timing
     Array1D<double> t(3+ord_GS+ord_AAPG,0.e0);
