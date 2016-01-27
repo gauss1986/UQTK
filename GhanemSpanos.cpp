@@ -213,6 +213,7 @@ Array2D<double> sampleGS(int noutput, int dim, int nStep, int nPCTerms, PCSet& m
                     GS_sampt(j,ind)=myPCSet.EvalPC(temp, samPt);
                 }
                 else if(!strcmp(myPCSet.GetPCType().c_str(),"HG")){
+                    //GS_sampt(j,ind)=myPCSet.EvalPC(temp, samPt);
                     GS_sampt(j,ind)=temp(0)+temp(1)*samPt(0)+temp(2)*samPt(1);
                     if(myPCSet.GetOrder()==2)
                         GS_sampt(j,ind)+=temp(3)*(samPt(0)*samPt(0)-normsq(1))+temp(4)*samPt(0)*samPt(1)+temp(5)*(samPt(1)*samPt(1)-normsq(2));

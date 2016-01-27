@@ -27,7 +27,7 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define CASE 1
+#define CASE 3
 
 #define DIS0 0.0
 #define VEL0 0.0
@@ -42,6 +42,7 @@ int main(int argc, char *argv[])
 {   // Coeffs
     string pcType;  //PC type
     int dim;        //Stochastic dimensionality
+    int nkl;        //Number of terms retained in KL expansion
     char* cov_type; //Covariance type
     double sigma;   //Standard deviation
     int nspl;       //MCS sample size
@@ -60,8 +61,9 @@ int main(int argc, char *argv[])
     
     if (CASE==1){//Stochastic forcing and deterministic initial conditions
         clen = 0.05;
-        pcType = "HG";
+        pcType = "LU";
         dim = 10;
+        nkl = 10;
         cov_type = (char *)"Exp";
         sigma = 0.8;
         nspl = 100000;
@@ -81,6 +83,7 @@ int main(int argc, char *argv[])
     if (CASE==2){//Stochastic initial conditions and deterministic forcing
         pcType = "LU";
         dim = 2;
+        nkl = 2;
         cov_type = (char *)"Exp";
         sigma = 0.5;
         nspl = 100000;
@@ -100,22 +103,27 @@ int main(int argc, char *argv[])
     if (CASE==3){//stochastic initial conditions and stochastic forcing
         clen = 0.05;
         pcType = "LU";
-        dim = 10;
+        dim = 12;
+        nkl = 10;
+        dof = 2;
         cov_type = (char *)"Exp";
         sigma=0.5;
-        nspl = 100000;
+        nspl = 1000;
         factor_OD = 1.0;
         ord_GS = 2;
         ord_AAPG = 3;
         ord_AAPG_GS = 2;
         act_D = false;
         p = 0.99;
-        dof = 2;
         noutput = 10;
         inpParams(0) = 0.0;//Problem to solve 
         inpParams(1) = 0.1;//zeta
         inpParams(2) = 1.0;//epsilon
         FBAR = 2.0;
+        if ((dof+nkl-dim)>10e-5){
+            cout << "This test case is configured so that total stochastic dim should equal the number of modes in KL exapansion and dof. Now this is not true!!" << endl<<flush;
+            return 1;
+        }
     }
 
     // Time marching info
@@ -185,7 +193,7 @@ int main(int argc, char *argv[])
     }
     
     /* Print the input information on screen */
-    cout << " - Number of KL modes:              " << dim  << endl<<flush;
+    cout << " - Number of KL modes:              " << nkl  << endl<<flush;
     cout << " - Monte Carlo sample size:         " << nspl  << endl<<flush;
     if (CASE == 1){
         cout << " - Will generate KL expansion with covariance of type "<<cov_type<<", with correlation length "<<clen<<" and standard deviation "<<sigma<<". Random variable is of type "<<pcType<<"."<<endl<<flush;
@@ -194,7 +202,7 @@ int main(int argc, char *argv[])
         cout << " - Will generate random variable of type "<< pcType << ", with standard deviation " << sigma << endl<< flush;
     }
     if (CASE == 3){
-        cout << " - Will generate ranodm variable of type "<< pcType <<", with standard deviation and  KL expansion with covariance of type "<<cov_type<<", with correlation length "<<clen<<" and standard deviation "<<sigma<<endl<<flush; 
+        cout << " - Case3, where the initial condition and the forcing are both stochastic, with standard deviation " << sigma << ". Correlation length of the process is " << clen << ". Variance type " << pcType  << endl << flush;
     }
     cout << " - Time marching step:              " << dTym  << endl<<flush;
     cout << " - Process end time:                " << tf  << endl<<flush;
@@ -228,11 +236,16 @@ int main(int argc, char *argv[])
         MCPCSet.DrawSampleVar(samPts_norm);
     }
 
-    // Generate the KL expansion of the excitation force
-    int nkl = dim;
-    Array2D<double> scaledKLmodes(2*nStep+1,nkl,0.0);
+    // Generate the KL expansion of the excitation force, the first nkl terms are stochastic
+    Array2D<double> scaledKLmodes(2*nStep+1,dim,0.e0);
     if (CASE==1 || CASE ==3){
-        genKL(scaledKLmodes, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
+        Array2D<double> scaledKLmodes_small(2*nStep+1,nkl,0.e0);
+        genKL(scaledKLmodes_small, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
+        Array1D<double> KLmodes_temp(2*nStep+1,0.e0);
+        for (int i=0;i<nkl;i++){
+            getCol(scaledKLmodes_small,i,KLmodes_temp);
+            scaledKLmodes.replaceCol(KLmodes_temp,i);
+        }
     }
     write_datafile(scaledKLmodes,"KL.dat");
  
@@ -299,7 +312,7 @@ int main(int argc, char *argv[])
         Array1D<double> sampleforce=sample_force(samPts_norm,iq,2*nStep,fbar,nkl,scaledKLmodes,inpParams);
         for (int i=0;i<2*nStep+1;i++)
             totalforce(i,iq)=sampleforce(i);
-        Array2D<double> temp = det(dof, nspl, nStep, nkl, dTym, sampleforce, inpParams, initial);
+        Array2D<double> temp = det(dof, nspl, nStep, dTym, sampleforce, inpParams, initial);
         for (int it=0;it<nStep+1;it++){
             for (int idof=0;idof<dof;idof++){
                 result(idof)(it,iq) = temp(idof,it);
@@ -484,10 +497,6 @@ int main(int argc, char *argv[])
     Array1D<double> t(3+ord_GS+ord_AAPG,0.e0);
     t(0) = t_MCS;
     for (int i=0;i<ord_GS;i++)
-	    t(i+1)=t_GS(i);
-    for (int i=0;i<ord_AAPG+2;i++)
-        t(i+1+ord_GS)=t_AAPG(i);
-
     // output the error info
     cout << "Printing the error of GS in displacement..." << endl;
     for(int i=0;i<ord_GS;i++){

@@ -10,7 +10,7 @@
 #include <ctime>
 #include "ticktock.h"
 
-Array2D<double> det(int dof, int nspl, int nStep, int nkl, double dTym, Array1D<double>& totalforce, Array1D<double>& inpParams, Array1D<double>& initial){
+Array2D<double> det(int dof, int nspl, int nStep, double dTym, Array1D<double>& totalforce, Array1D<double>& inpParams, Array1D<double>& initial){
         Array2D<double> result(dof,nStep+1,0.e0);
         // initialize solution
         //Array1D<double> tempx(initial);

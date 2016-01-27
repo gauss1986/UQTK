@@ -76,8 +76,11 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
             initial_GS1(j) = temp_init;
             initial_GS1(j)(0) = sample_mstd_2D(j,0);
         }
-        if (i<dof){
-            PCSet_1.InitMeanStDv(sample_mstd_2D(i,0),sample_mstd_2D(i,1),1,initial_GS1(i));
+        if (i==dim-2){
+            PCSet_1.InitMeanStDv(sample_mstd_2D(0,0),sample_mstd_2D(0,1),1,initial_GS1(0));        
+        }
+        if (i==dim-1){
+            PCSet_1.InitMeanStDv(sample_mstd_2D(1,0),sample_mstd_2D(1,1),1,initial_GS1(1));        
         }
         GS(dof, PCSet_1, order, 1, PCTerms_1, nStep, initial_GS1, dTym, inpParams, force_1(i),temp);
         dis_1(i) = temp(1);
@@ -135,20 +138,26 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
         PCTerms_2 = PCSet_2.GetNumberPCTerms();
         // Initial condition
         Array1D<Array1D<Array1D<double> > > initial_GS2(N_adof*(N_adof-1)/2);
-        Array1D<Array2D<double> > force_2(N_adof*(N_adof-1)/2);
+        Array1D<Array1D<double> > temp2(dof);
         Array1D<double> temp_init2(PCTerms_2,0.e0);
+        Array1D<Array2D<double> > force_2(N_adof*(N_adof-1)/2);
         int k = 0;
         for (int i=0;i<N_adof-1;i++){
             for (int j=i+1;j<N_adof;j++){
-                Array1D<Array1D<double> > temp2(dof);
                 initial_GS2(k)=temp2;
                 // Initial condition
                 for (int L=0;L<dof;L++){
                     initial_GS2(k)(L) = temp_init2;
                     initial_GS2(k)(L)(0) = sample_mstd_2D(L,0);
-                    if (i==L || j==L)
-                        PCSet_2.InitMeanStDv(sample_mstd_2D(L,0),sample_mstd_2D(L,1),L+1,initial_GS2(k)(L));
                 }
+                if (i==dim-2)
+                    PCSet_2.InitMeanStDv(sample_mstd_2D(0,0),sample_mstd_2D(0,1),1,initial_GS2(k)(0));
+                if (j==dim-2)
+                    PCSet_2.InitMeanStDv(sample_mstd_2D(0,0),sample_mstd_2D(0,1),2,initial_GS2(k)(0));
+                if (i==dim-1)
+                    PCSet_2.InitMeanStDv(sample_mstd_2D(1,0),sample_mstd_2D(1,1),1,initial_GS2(k)(1));
+                if (j==dim-1)
+                    PCSet_2.InitMeanStDv(sample_mstd_2D(1,0),sample_mstd_2D(1,1),2,initial_GS2(k)(1));
                 // force
                 Array2D<double> f_2(2*nStep+1,PCTerms_2,0.e0);
                 for (int it=0;it<2*nStep+1;it++){
@@ -190,17 +199,32 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
     PCSet PCSet_3("ISP",order,3,pcType,0.0,1.0); 
     PCTerms_3 = PCSet_3.GetNumberPCTerms();
     // Initial condition
-    Array1D<Array1D<double> > initial_GS3(2);
+    Array1D<Array1D<Array1D<double> > > initial_GS3(N_adof*(N_adof-1)*(N_adof-2)/6);
+    Array1D<Array1D<double> > temp3(dof);
     Array1D<double> temp_init3(PCTerms_3,0.e0);
-    for (int i=0;i<dof;i++){
-        initial_GS3(i) = temp_init3;
-        PCSet_3.InitMeanStDv(sample_mstd_2D(i,0),sample_mstd_2D(i,1),i+1,initial_GS3(i));
-    }
     Array1D<Array2D<double> > force_3(N_adof*(N_adof-1)*(N_adof-2)/6);
     int l=0;
     for (int i=0;i<N_adof-2;i++){
         for (int j=i+1;j<N_adof-1;j++){
             for (int k=j+1;k<N_adof;k++){
+                initial_GS3(l)=temp3;
+                // Initial condition
+                for (int L=0;L<dof;L++){
+                    initial_GS3(l)(L) = temp_init3;
+                    initial_GS3(l)(L)(0) = sample_mstd_2D(L,0);
+                }
+                if (i==dim-2)
+                    PCSet_3.InitMeanStDv(sample_mstd_2D(0,0),sample_mstd_2D(0,1),1,initial_GS3(l)(0));
+                if (j==dim-2)
+                    PCSet_3.InitMeanStDv(sample_mstd_2D(0,0),sample_mstd_2D(0,1),2,initial_GS3(l)(0));
+                if (k==dim-2)
+                    PCSet_3.InitMeanStDv(sample_mstd_2D(0,0),sample_mstd_2D(0,1),3,initial_GS3(l)(0));
+                if (i==dim-1)
+                    PCSet_3.InitMeanStDv(sample_mstd_2D(1,0),sample_mstd_2D(1,1),1,initial_GS3(l)(1));
+                if (j==dim-1)
+                    PCSet_3.InitMeanStDv(sample_mstd_2D(1,0),sample_mstd_2D(1,1),2,initial_GS3(l)(1));
+                if (k==dim-1)
+                    PCSet_3.InitMeanStDv(sample_mstd_2D(1,0),sample_mstd_2D(1,1),3,initial_GS3(l)(1));
                 Array2D<double> f_3(2*nStep+1,PCTerms_3,0.e0);
                 for (int it=0;it<2*nStep+1;it++){
                     f_3(it,0) = fbar(it);
@@ -218,12 +242,13 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
 	    }
     //start = clock();
     tt.tick();
+    cout << "Finished generating initial conditions and excition force. Now starting parallel computing of sub-problems..."<< endl<<flush;
     #pragma omp parallel default(none) shared(dof, l,indi_3,indj_3,indk_3,PCSet_3,order,PCTerms_3,nStep,initial_GS3,dTym,inpParams,vel_3,dis_3,force_3)
     {
     #pragma omp for
     for (int i=0;i<l;i++){
         Array1D<Array2D<double> > temp(dof);
-        GS(dof, PCSet_3, order, 3, PCTerms_3, nStep, initial_GS3, dTym, inpParams, force_3(i),temp);         
+        GS(dof, PCSet_3, order, 3, PCTerms_3, nStep, initial_GS3(i), dTym, inpParams, force_3(i),temp);         
 	    dis_3(indi_3(i),indj_3(i),indk_3(i)) = temp(1);
 	    vel_3(indi_3(i),indj_3(i),indk_3(i)) = temp(0);
     }
@@ -664,7 +689,7 @@ void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
                     
                     // Add third-order AAPG terms
                     for (int p=1;p<PCTerms_3;p++){
-                        for (int it=1;it<nStep+1;it++)
+                        for (int it=0;it<nStep+1;it++)
                             dis_3_assembled(it,ind(p))=dis_3_assembled(it,ind(p))+coeffn(it)*dis_3(indi_3(ii),indj_3(ii),indk_3(ii))(it,p);
                     }
 
