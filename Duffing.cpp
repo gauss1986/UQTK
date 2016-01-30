@@ -50,8 +50,15 @@ int main(int argc, char *argv[])
     double dof;     //Spatial dof
     int noutput;    //Number of output points
     double clen;    // Correlation length of the random process
-    double FBAR;    //Scalar in defining the mean of f
     Array1D<double> inpParams(3,0.e0);//Input parameters
+
+    // Time marching info
+    double dTym = 0.01;
+    double tf = 10;
+    // Number of steps
+    int nStep=(int) tf / dTym;
+
+    Array1D<double> fbar(2*nStep+1,0.e0);//mean of forcing
 
     double factor_OD;//dynamical-orthogonal info
     double p;       //Threashold used in the adaptive AAPG
@@ -78,7 +85,11 @@ int main(int argc, char *argv[])
         inpParams(0) = 0.0;//Problem to solve 
         inpParams(1) = 0.1;//zeta
         inpParams(2) = 1.0;//epsilon
-        FBAR = 2.0;
+        double t_temp = 0.0; 
+        for (int i=0;i<2*nStep+1;i++){
+            fbar(i) = 2.0*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+            t_temp +=dTym/2;
+        }
     }
     if (CASE==2){//Stochastic initial conditions and deterministic forcing
         pcType = "LU";
@@ -98,7 +109,11 @@ int main(int argc, char *argv[])
         inpParams(0) = 0.0;//Problem to solve 
         inpParams(1) = 0.1;//zeta
         inpParams(2) = 1.0;//epsilon
-        FBAR = 2.0;
+        double t_temp = 0.0; 
+        for (int i=0;i<2*nStep+1;i++){
+            fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+            t_temp +=dTym/2;
+        }
     }
     if (CASE==3){//stochastic initial conditions and stochastic forcing
         clen = 0.05;
@@ -119,25 +134,18 @@ int main(int argc, char *argv[])
         inpParams(0) = 0.0;//Problem to solve 
         inpParams(1) = 0.1;//zeta
         inpParams(2) = 1.0;//epsilon
-        FBAR = 2.0;
+        double t_temp = 0.0; 
+        for (int i=0;i<2*nStep+1;i++){
+            fbar(i) = 2.0*(1-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+            t_temp +=dTym/2;
+        }
         if ((dof+nkl-dim)>10e-5){
             cout << "This test case is configured so that total stochastic dim should equal the number of modes in KL exapansion and dof. Now this is not true!!" << endl<<flush;
             return 1;
         }
     }
 
-    // Time marching info
-    double dTym = 0.01;
-    double tf = 10;
-    // Number of steps
-    int nStep=(int) tf / dTym;
-    // mean of forcing
-    Array1D<double> fbar(2*nStep+1,0.e0);
-    double t_temp = 0.0; 
-    for (int i=0;i<2*nStep+1;i++){
-        fbar(i) = FBAR*(1-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-        t_temp +=dTym/2;
-    }
+    // Save the force
     write_datafile_1d(fbar,"fbar.dat");
   
     /* Read the user input */
@@ -196,13 +204,13 @@ int main(int argc, char *argv[])
     cout << " - Number of KL modes:              " << nkl  << endl<<flush;
     cout << " - Monte Carlo sample size:         " << nspl  << endl<<flush;
     if (CASE == 1){
-        cout << " - Will generate KL expansion with covariance of type "<<cov_type<<", with correlation length "<<clen<<" and standard deviation "<<sigma<<". Random variable is of type "<<pcType<<"."<<endl<<flush;
+        cout << " - Case 1 with correlation length "<<clen<<", standard deviation "<<sigma<<". Random variable is of type "<<pcType<<"."<<endl<<flush;
     }
     if (CASE == 2){
-        cout << " - Will generate random variable of type "<< pcType << ", with standard deviation " << sigma << endl<< flush;
+        cout << " - Case 2 Will generate random variable of type "<< pcType << ", with standard deviation " << sigma << endl<< flush;
     }
     if (CASE == 3){
-        cout << " - Case3, where the initial condition and the forcing are both stochastic, with standard deviation " << sigma << ". Correlation length of the process is " << clen << ". Variance type " << pcType  << endl << flush;
+        cout << " - Case3 where the initial condition and the forcing are both stochastic, with standard deviation " << sigma << ". Correlation length of the process is " << clen << ". Variance type " << pcType  << endl << flush;
     }
     cout << " - Time marching step:              " << dTym  << endl<<flush;
     cout << " - Process end time:                " << tf  << endl<<flush;
