@@ -27,7 +27,7 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define CASE 3
+#define CASE 4
 
 #define DIS0 0.0
 #define VEL0 0.0
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
     double dof;     //Spatial dof
     int noutput;    //Number of output points
     double clen;    // Correlation length of the random process
-    Array1D<double> inpParams(3,0.e0);//Input parameters
+    Array1D<double> inpParams(5,0.e0);//Input parameters
 
     // Time marching info
     double dTym = 0.01;
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
         }
     }
     if (CASE==2){//Stochastic initial conditions and deterministic forcing
-        pcType = "LU";
+        pcType = "HG";
         dim = 2;
         nkl = 2;
         cov_type = (char *)"Exp";
@@ -126,11 +126,11 @@ int main(int argc, char *argv[])
         nspl = 1000;
         factor_OD = 1.0;
         ord_GS = 2;
-        ord_AAPG = 3;
+        ord_AAPG = 2;
         ord_AAPG_GS = 2;
         act_D = false;
         p = 0.99;
-        noutput = 10;
+        noutput = 2;
         inpParams(0) = 0.0;//Problem to solve 
         inpParams(1) = 0.1;//zeta
         inpParams(2) = 1.0;//epsilon
@@ -142,6 +142,32 @@ int main(int argc, char *argv[])
         if ((dof+nkl-dim)>10e-5){
             cout << "This test case is configured so that total stochastic dim should equal the number of modes in KL exapansion and dof. Now this is not true!!" << endl<<flush;
             return 1;
+        }
+    }
+    if (CASE==4){//Stochastic zeta and epsilon
+        pcType = "LU";
+        dim = 2;
+        nkl = 2;
+        cov_type = (char *)"Exp";
+        sigma = 0.5;
+        nspl = 100000;
+        factor_OD = 1.0;
+        ord_GS = 2;
+        ord_AAPG = 2;
+        ord_AAPG_GS = 2;
+        act_D = false;
+        p = 0.99;
+        dof = 2;
+        noutput = 10;
+        inpParams(0) = 0.0;//Problem to solve 
+        inpParams(1) = 0.1;//zeta
+        inpParams(2) = 1.0;//epsilon
+        inpParams(3) = 0.05;//std for zeta
+        inpParams(4) = 0.6;//std for epsilon
+        double t_temp = 0.0; 
+        for (int i=0;i<2*nStep+1;i++){
+            fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+            t_temp +=dTym/2;
         }
     }
 
@@ -211,6 +237,9 @@ int main(int argc, char *argv[])
     }
     if (CASE == 3){
         cout << " - Case3 where the initial condition and the forcing are both stochastic, with standard deviation " << sigma << ". Correlation length of the process is " << clen << ". Variance type " << pcType  << endl << flush;
+    }
+    if (CASE == 4){
+        cout << " - Case4 where the damping coeff zeta and epsilon are stochastic."<< endl<< flush;
     }
     cout << " - Time marching step:              " << dTym  << endl<<flush;
     cout << " - Process end time:                " << tf  << endl<<flush;
@@ -289,6 +318,36 @@ int main(int argc, char *argv[])
             string name_str = name.str();
             write_datafile_1d(samPts_1D,name_str.c_str());
         }
+    }
+
+    // Sample epsilon and zeta for MCS
+    Array2D<double> temp_inp(nspl,2,0.e0); 
+    for (int i=0;i<nspl;i++){
+        temp_inp(i,0) = inpParams(1);
+        temp_inp(i,1) = inpParams(2);
+        if (CASE == 4){
+            for (int j=0;j<2;j++){
+                if (strcmp(pcType.c_str(),"HG")==0){
+                    temp_inp(i,j) += samPts_ori(i,j)*inpParams(j+3);
+                }
+                if (strcmp(pcType.c_str(),"LU")==0){
+                    temp_inp(i,j) += samPts_ori(i,j)/sqrt(1.0/3.0)*inpParams(j+3);
+                }
+            }
+        }
+    }
+    Array2D<double> stat_inp(2,2,0.e0);
+    for (int i=0;i<2;i++){
+        Array1D<double> samPts_1D(nspl,0.e0);
+        getCol(temp_inp,i,samPts_1D);
+        Array1D<double> sample_mstd = mStd(samPts_1D,nspl);
+        cout << "Mean of sample on dim " << i << " is "<< sample_mstd(0) << endl;
+        cout << "Std of sample on dim "<< i << " is " <<sample_mstd(1) << endl;
+        stat_inp.replaceRow(sample_mstd,i); 
+        ostringstream name;
+        name << "sample_dof" << i << ".dat";
+        string name_str = name.str();
+        write_datafile_1d(samPts_1D,name_str.c_str());
     }
 
     // MCS
