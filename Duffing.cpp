@@ -161,9 +161,9 @@ int main(int argc, char *argv[])
         noutput = 10;
         inpParams(0) = 0.0;//Problem to solve 
         inpParams(1) = 0.1;//zeta
-        inpParams(2) = 1.0;//epsilon
-        inpParams(3) = 0.08;//std for zeta
-        inpParams(4) = 0.8;//std for epsilon
+        inpParams(2) = 5.0;//epsilon
+        inpParams(3) = 0.05;//std for zeta
+        inpParams(4) = 2.5;//std for epsilon
         double t_temp = 0.0; 
         for (int i=0;i<2*nStep+1;i++){
             fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
