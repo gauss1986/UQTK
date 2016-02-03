@@ -27,7 +27,7 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define CASE 4
+#define CASE 3
 
 #define DIS0 0.0
 #define VEL0 0.0
@@ -51,6 +51,8 @@ int main(int argc, char *argv[])
     int noutput;    //Number of output points
     double clen;    // Correlation length of the random process
     Array1D<double> inpParams(5,0.e0);//Input parameters
+    Array1D<int> init_D(2,0);
+    Array1D<int> coeff_D(2,0);
 
     // Time marching info
     double dTym = 0.01;
@@ -90,6 +92,10 @@ int main(int argc, char *argv[])
             fbar(i) = 2.0*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
             t_temp +=dTym/2;
         }
+        init_D(0)=10000;
+        init_D(1)=10001;
+        coeff_D(0)=10000;
+        coeff_D(1)=10001;
     }
     if (CASE==2){//Stochastic initial conditions and deterministic forcing
         pcType = "HG";
@@ -114,6 +120,10 @@ int main(int argc, char *argv[])
             fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
             t_temp +=dTym/2;
         }
+        init_D(0)=0;
+        init_D(1)=1;
+        coeff_D(0)=10000;
+        coeff_D(1)=10001;
     }
     if (CASE==3){//stochastic initial conditions and stochastic forcing
         clen = 0.05;
@@ -126,7 +136,7 @@ int main(int argc, char *argv[])
         nspl = 1000;
         factor_OD = 1.0;
         ord_GS = 2;
-        ord_AAPG = 2;
+        ord_AAPG = 3;
         ord_AAPG_GS = 2;
         act_D = false;
         p = 0.99;
@@ -143,6 +153,10 @@ int main(int argc, char *argv[])
             cout << "This test case is configured so that total stochastic dim should equal the number of modes in KL exapansion and dof. Now this is not true!!" << endl<<flush;
             return 1;
         }
+        init_D(0)=0;
+        init_D(1)=1;
+        coeff_D(0)=10000;
+        coeff_D(1)=10001;
     }
     if (CASE==4){//Stochastic zeta and epsilon
         pcType = "LU";
@@ -169,6 +183,10 @@ int main(int argc, char *argv[])
             fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
             t_temp +=dTym/2;
         }
+        init_D(0)=10000;
+        init_D(1)=10001;
+        coeff_D(0)=0;
+        coeff_D(1)=1;
     }
 
     // Save the force
@@ -563,7 +581,7 @@ int main(int argc, char *argv[])
     Array2D<double> e_AAPG(ord_AAPG,2,0.e0); 
     Array1D<Array1D<double> > e_sample_AAPG_dis(ord_AAPG); 
     Array1D<Array1D<double> > e_sample_AAPG_vel(ord_AAPG); 
-    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, myPCSet, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, stat_init, samPts_norm, e_AAPG, e_sample_AAPG_dis, e_sample_AAPG_vel);
+    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, myPCSet, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, stat_init, samPts_norm, e_AAPG, e_sample_AAPG_dis, e_sample_AAPG_vel, init_D, coeff_D);
     
     // output the timing
     Array1D<double> t(3+ord_GS+ord_AAPG,0.e0);
