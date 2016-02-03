@@ -98,8 +98,8 @@ void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<dou
             // parse input parameters
             Array1D<double> epsilon(nPCTerms,0.e0); 
             Array1D<double> zeta(nPCTerms,0.e0); 
-            myPCSet.InitMeanStDv(inpParams(1),inpParams(3)/sqrt(1.0/3.0),1,zeta);
-            myPCSet.InitMeanStDv(inpParams(2),inpParams(4)/sqrt(1.0/3.0),2,epsilon);
+            myPCSet.InitMeanStDv(inpParams(1),inpParams(3),1,zeta);
+            myPCSet.InitMeanStDv(inpParams(2),inpParams(4),2,epsilon);
             // buff to store temperary results 
             Array1D<double> temp(nPCTerms,0.e0);                     
             Array1D<double> temp2(nPCTerms,0.e0);                     
