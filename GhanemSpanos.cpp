@@ -96,15 +96,20 @@ void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<dou
         
         if ((abs(inpParams(0))<1e-10)){ //Duffing
             // parse input parameters
-            const double zeta = inpParams(1);
-            const double epsilon = inpParams(2);
+            Array1D<double> epsilon(nPCTerms,0.e0); 
+            Array1D<double> zeta(nPCTerms,0.e0); 
+            myPCSet.InitMeanStDv(inpParams(1),inpParams(3)/sqrt(1.0/3.0),1,zeta);
+            myPCSet.InitMeanStDv(inpParams(2),inpParams(4)/sqrt(1.0/3.0),2,epsilon);
             // buff to store temperary results 
             Array1D<double> temp(nPCTerms,0.e0);                     
+            Array1D<double> temp2(nPCTerms,0.e0);                     
             // nonlinear term
             myPCSet.IPow(x(1),temp,3);
+            myPCSet.Prod(epsilon,temp,temp2);
+            myPCSet.Prod(zeta,x(0),temp);
             for (int ind=0;ind<nPCTerms;ind++){
                 dev(1)(ind) = x(0)(ind);//velocity term
-                dev(0)(ind) = force(ind)-temp(ind)*epsilon-2*zeta*x(0)(ind)-x(1)(ind);
+                dev(0)(ind) = force(ind)-temp2(ind)-2*temp(ind)-x(1)(ind);
             }
         }
         if (abs(inpParams(0)-1)<1e-10){ //Lorenz

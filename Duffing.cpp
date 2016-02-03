@@ -162,8 +162,8 @@ int main(int argc, char *argv[])
         inpParams(0) = 0.0;//Problem to solve 
         inpParams(1) = 0.1;//zeta
         inpParams(2) = 5.0;//epsilon
-        inpParams(3) = 0.05;//std for zeta
-        inpParams(4) = 2.5;//std for epsilon
+        inpParams(3) = 0.01;//std for zeta
+        inpParams(4) = 0.1;//std for epsilon
         double t_temp = 0.0; 
         for (int i=0;i<2*nStep+1;i++){
             fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
@@ -335,7 +335,7 @@ int main(int argc, char *argv[])
                 if (strcmp(pcType.c_str(),"LU")==0){
                     temp_inp(i,j) += samPts_ori(i,j)/sqrt(1.0/3.0)*inpParams(j+3);
                 }
-                inpParams_MCS(i)(j+1)+=temp_inp(i,j);
+                inpParams_MCS(i)(j+1)=temp_inp(i,j);
             }
         }
     }
@@ -346,7 +346,9 @@ int main(int argc, char *argv[])
         Array1D<double> sample_mstd = mStd(samPts_1D,nspl);
         cout << "Mean of sample on dim " << i << " is "<< sample_mstd(0) << endl;
         cout << "Std of sample on dim "<< i << " is " <<sample_mstd(1) << endl;
-        stat_inp.replaceRow(sample_mstd,i); 
+        //stat_inp.replaceRow(sample_mstd,i); 
+        inpParams(i+1)=sample_mstd(0);
+        inpParams(i+3)=sample_mstd(1);
         ostringstream name;
         name << "sample_dof" << i << ".dat";
         string name_str = name.str();
