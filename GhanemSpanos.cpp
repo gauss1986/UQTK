@@ -10,7 +10,7 @@
 #include "GhanemSpanos.h"
 #include "Utils.h"
 
-void GS(int dof, PCSet& myPCSet, int order, int dim, int nPCTerms, int nStep, Array1D<Array1D<double> >& initial, double dTym, Array1D<double>& inpParams, Array2D<double>& f_GS, Array1D<Array2D<double> >& solution){
+void GS(int dof, PCSet& myPCSet, int order, Array1D<int>& coeff_D, int nPCTerms, int nStep, Array1D<Array1D<double> >& initial, double dTym, Array1D<double>& inpParams, Array2D<double>& f_GS, Array1D<Array2D<double> >& solution){
 
     // Initialize working variable
     Array1D<Array1D<double> > result(dof);
@@ -32,7 +32,7 @@ void GS(int dof, PCSet& myPCSet, int order, int dim, int nPCTerms, int nStep, Ar
         getRow(f_GS,2*ix+1,force_mid);
         getRow(f_GS,2*ix+2,force_plus);
         // Step forward 
-        forward_duffing_GS(dof, myPCSet, inpParams, force_current, force_mid, force_plus, dTym, result);
+        forward_duffing_GS(dof, myPCSet, inpParams, force_current, force_mid, force_plus, dTym, result, coeff_D);
         // Update solution
         for (int i=0;i<dof;i++){
             solution(i).replaceRow(result(i),ix+1);
@@ -40,7 +40,7 @@ void GS(int dof, PCSet& myPCSet, int order, int dim, int nPCTerms, int nStep, Ar
     }    
 }
 
-void forward_duffing_GS(int dof, PCSet& myPCSet, Array1D<double>& inpParams, Array1D<double>& force_current, Array1D<double>& force_mid, Array1D<double>& force_plus,  double dTym, Array1D<Array1D<double> >& x){
+void forward_duffing_GS(int dof, PCSet& myPCSet, Array1D<double>& inpParams, Array1D<double>& force_current, Array1D<double>& force_mid, Array1D<double>& force_plus,  double dTym, Array1D<Array1D<double> >& x, Array1D<int>& coeff_D){
         //Save solution at current time step
         Array1D<Array1D<double> > x0(x.XSize());
         for (unsigned int i=0;i<x.XSize();i++){
@@ -51,13 +51,13 @@ void forward_duffing_GS(int dof, PCSet& myPCSet, Array1D<double>& inpParams, Arr
         // Integrate with classical 4th order Runge-Kutta
         // k1
         Array1D<Array1D<double> > dev1(dof);
-        RHS_GS(dof, myPCSet, force_current, x, inpParams, dev1);
+        RHS_GS(dof, myPCSet, force_current, x, inpParams, dev1, coeff_D);
         for (unsigned int i=0;i<x.XSize();i++)
             addVecAlphaVecPow(x(i),0.5*dTym,dev1(i),1);
 
         // k2
         Array1D<Array1D<double> > dev2(dof);
-        RHS_GS(dof, myPCSet, force_mid, x, inpParams,dev2);
+        RHS_GS(dof, myPCSet, force_mid, x, inpParams,dev2, coeff_D);
         for (unsigned int i=0;i<x.XSize();i++){
             x(i) = x0(i);
             addVecAlphaVecPow(x(i),0.5*dTym,dev2(i),1);
@@ -65,7 +65,7 @@ void forward_duffing_GS(int dof, PCSet& myPCSet, Array1D<double>& inpParams, Arr
 
         // k3
         Array1D<Array1D<double> > dev3(dof);
-        RHS_GS(dof, myPCSet, force_mid, x, inpParams,dev3);
+        RHS_GS(dof, myPCSet, force_mid, x, inpParams,dev3,coeff_D);
         for (unsigned int i=0;i<x.XSize();i++){
             x(i) = x0(i);
             addVecAlphaVecPow(x(i),dTym,dev3(i),1);
@@ -73,7 +73,7 @@ void forward_duffing_GS(int dof, PCSet& myPCSet, Array1D<double>& inpParams, Arr
 
         // k4
         Array1D<Array1D<double> > dev4(dof);
-        RHS_GS(dof, myPCSet, force_plus, x, inpParams,dev4);
+        RHS_GS(dof, myPCSet, force_plus, x, inpParams,dev4,coeff_D);
 
         // Advance to next time step
         for (unsigned int i=0;i<x.XSize();i++){
@@ -87,7 +87,7 @@ void forward_duffing_GS(int dof, PCSet& myPCSet, Array1D<double>& inpParams, Arr
         }        
    }
    
-void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<double> >& x, Array1D<double>& inpParams, Array1D<Array1D<double> >& dev){
+void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<double> >& x, Array1D<double>& inpParams, Array1D<Array1D<double> >& dev, Array1D<int>& coeff_D){
         for (int i=0;i<dof;i++){
             Array1D<double> temp(x(i));
             dev(i) = temp;
@@ -98,8 +98,8 @@ void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<dou
             // parse input parameters
             Array1D<double> epsilon(nPCTerms,0.e0); 
             Array1D<double> zeta(nPCTerms,0.e0); 
-            myPCSet.InitMeanStDv(inpParams(1),inpParams(3),1,zeta);
-            myPCSet.InitMeanStDv(inpParams(2),inpParams(4),2,epsilon);
+            myPCSet.InitMeanStDv(inpParams(1),inpParams(3),coeff_D(0)+1,zeta);
+            myPCSet.InitMeanStDv(inpParams(2),inpParams(4),coeff_D(1)+1,epsilon);
             // buff to store temperary results 
             Array1D<double> temp(nPCTerms,0.e0);                     
             Array1D<double> temp2(nPCTerms,0.e0);                     

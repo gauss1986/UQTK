@@ -27,7 +27,7 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define CASE 3
+#define CASE 4
 
 #define DIS0 0.0
 #define VEL0 0.0
@@ -153,8 +153,8 @@ int main(int argc, char *argv[])
             cout << "This test case is configured so that total stochastic dim should equal the number of modes in KL exapansion and dof. Now this is not true!!" << endl<<flush;
             return 1;
         }
-        init_D(0)=0;
-        init_D(1)=1;
+        init_D(0)=10;
+        init_D(1)=11;
         coeff_D(0)=10000;
         coeff_D(1)=10001;
     }
@@ -175,9 +175,9 @@ int main(int argc, char *argv[])
         noutput = 10;
         inpParams(0) = 0.0;//Problem to solve 
         inpParams(1) = 0.1;//zeta
-        inpParams(2) = 5.0;//epsilon
-        inpParams(3) = 0.01;//std for zeta
-        inpParams(4) = 0.1;//std for epsilon
+        inpParams(2) = 1.0;//epsilon
+        inpParams(3) = 0.05;//std for zeta
+        inpParams(4) = 0.5;//std for epsilon
         double t_temp = 0.0; 
         for (int i=0;i<2*nStep+1;i++){
             fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
@@ -187,6 +187,37 @@ int main(int argc, char *argv[])
         init_D(1)=10001;
         coeff_D(0)=0;
         coeff_D(1)=1;
+    }
+    if (CASE==5){//Stochastic zeta and epsilon and stochastic forcing
+        clen = 0.05;
+        pcType = "LU";
+        dim = 12;
+        nkl = 10;
+        cov_type = (char *)"Exp";
+        sigma = 0.5;
+        nspl = 100000;
+        factor_OD = 1.0;
+        ord_GS = 2;
+        ord_AAPG = 3;
+        ord_AAPG_GS = 2;
+        act_D = false;
+        p = 0.99;
+        dof = 2;
+        noutput = 10;
+        inpParams(0) = 0.0;//Problem to solve 
+        inpParams(1) = 0.1;//zeta
+        inpParams(2) = 1.0;//epsilon
+        inpParams(3) = 0.05;//std for zeta
+        inpParams(4) = 0.5;//std for epsilon
+        double t_temp = 0.0; 
+        for (int i=0;i<2*nStep+1;i++){
+            fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+            t_temp +=dTym/2;
+        }
+        init_D(0)=10000;
+        init_D(1)=10001;
+        coeff_D(0)=10;
+        coeff_D(1)=11;
     }
 
     // Save the force
@@ -293,7 +324,7 @@ int main(int argc, char *argv[])
 
     // Generate the KL expansion of the excitation force, the first nkl terms are stochastic
     Array2D<double> scaledKLmodes(2*nStep+1,dim,0.e0);
-    if (CASE==1 || CASE ==3){
+    if (CASE==1 || CASE ==3 || CASE==5){
         Array2D<double> scaledKLmodes_small(2*nStep+1,nkl,0.e0);
         genKL(scaledKLmodes_small, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
         Array1D<double> KLmodes_temp(2*nStep+1,0.e0);
@@ -345,7 +376,7 @@ int main(int argc, char *argv[])
         temp_inp(i,0) = inpParams(1);
         temp_inp(i,1) = inpParams(2);
         inpParams_MCS(i) = inpParams;
-        if (CASE == 4){
+        if (CASE==4 || CASE==5){
             for (int j=0;j<2;j++){
                 if (strcmp(pcType.c_str(),"HG")==0){
                     temp_inp(i,j) += samPts_ori(i,j)*inpParams(j+3);
@@ -511,7 +542,7 @@ int main(int argc, char *argv[])
 
         clock_t start = clock();
     	tt.tick();
-        GS(dof, myPCSet, ord, dim, nPCTerms, nStep, initial_GS, dTym, inpParams, f_GS, result);
+        GS(dof, myPCSet, ord, coeff_D, nPCTerms, nStep, initial_GS, dTym, inpParams, f_GS, result);
         t_GS(ord-1) = tt.silent_tock();
 	    cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
 	
