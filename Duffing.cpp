@@ -162,8 +162,8 @@ int main(int argc, char *argv[])
         inpParams(0) = 0.0;//Problem to solve 
         inpParams(1) = 0.1;//zeta
         inpParams(2) = 1.0;//epsilon
-        inpParams(3) = 0.05;//std for zeta
-        inpParams(4) = 0.6;//std for epsilon
+        inpParams(3) = 0.08;//std for zeta
+        inpParams(4) = 0.8;//std for epsilon
         double t_temp = 0.0; 
         for (int i=0;i<2*nStep+1;i++){
             fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
@@ -322,9 +322,11 @@ int main(int argc, char *argv[])
 
     // Sample epsilon and zeta for MCS
     Array2D<double> temp_inp(nspl,2,0.e0); 
+    Array1D<Array1D<double> > inpParams_MCS(nspl);
     for (int i=0;i<nspl;i++){
         temp_inp(i,0) = inpParams(1);
         temp_inp(i,1) = inpParams(2);
+        inpParams_MCS(i) = inpParams;
         if (CASE == 4){
             for (int j=0;j<2;j++){
                 if (strcmp(pcType.c_str(),"HG")==0){
@@ -333,6 +335,7 @@ int main(int argc, char *argv[])
                 if (strcmp(pcType.c_str(),"LU")==0){
                     temp_inp(i,j) += samPts_ori(i,j)/sqrt(1.0/3.0)*inpParams(j+3);
                 }
+                inpParams_MCS(i)(j+1)+=temp_inp(i,j);
             }
         }
     }
@@ -370,16 +373,16 @@ int main(int argc, char *argv[])
     // Time marching steps
     TickTock tt;
     tt.tick();
-    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts_norm,initial_samples,nkl,dTym,inpParams,nthreads,fbar,scaledKLmodes,totalforce) 
+    #pragma omp parallel default(none) shared(result,dof,nStep,nspl,samPts_norm,initial_samples,nkl,dTym,inpParams_MCS,nthreads,fbar,scaledKLmodes,totalforce) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
         Array1D<double> initial(2,0.e0);
         getRow(initial_samples,iq,initial);
-        Array1D<double> sampleforce=sample_force(samPts_norm,iq,2*nStep,fbar,nkl,scaledKLmodes,inpParams);
+        Array1D<double> sampleforce=sample_force(samPts_norm,iq,2*nStep,fbar,nkl,scaledKLmodes,inpParams_MCS(iq));
         for (int i=0;i<2*nStep+1;i++)
             totalforce(i,iq)=sampleforce(i);
-        Array2D<double> temp = det(dof, nspl, nStep, dTym, sampleforce, inpParams, initial);
+        Array2D<double> temp = det(dof, nspl, nStep, dTym, sampleforce, inpParams_MCS(iq), initial);
         for (int it=0;it<nStep+1;it++){
             for (int idof=0;idof<dof;idof++){
                 result(idof)(it,iq) = temp(idof,it);
