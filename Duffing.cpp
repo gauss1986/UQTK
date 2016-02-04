@@ -27,7 +27,7 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define CASE 4
+#define CASE 5
 
 #define DIS0 0.0
 #define VEL0 0.0
@@ -75,7 +75,7 @@ int main(int argc, char *argv[])
         nkl = 10;
         cov_type = (char *)"Exp";
         sigma = 0.8;
-        nspl = 100000;
+        nspl = 10000;
         factor_OD = 1.0;
         ord_GS = 2;
         ord_AAPG = 3;
@@ -94,8 +94,8 @@ int main(int argc, char *argv[])
         }
         init_D(0)=10000;
         init_D(1)=10001;
-        coeff_D(0)=10000;
-        coeff_D(1)=10001;
+        coeff_D(0)=0;
+        coeff_D(1)=1;
     }
     if (CASE==2){//Stochastic initial conditions and deterministic forcing
         pcType = "HG";
@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
         nkl = 2;
         cov_type = (char *)"Exp";
         sigma = 0.5;
-        nspl = 100000;
+        nspl = 10000;
         factor_OD = 1.0;
         ord_GS = 2;
         ord_AAPG = 2;
@@ -122,8 +122,8 @@ int main(int argc, char *argv[])
         }
         init_D(0)=0;
         init_D(1)=1;
-        coeff_D(0)=10000;
-        coeff_D(1)=10001;
+        coeff_D(0)=0;
+        coeff_D(1)=1;
     }
     if (CASE==3){//stochastic initial conditions and stochastic forcing
         clen = 0.05;
@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
         dof = 2;
         cov_type = (char *)"Exp";
         sigma=0.5;
-        nspl = 1000;
+        nspl = 10000;
         factor_OD = 1.0;
         ord_GS = 2;
         ord_AAPG = 3;
@@ -155,8 +155,8 @@ int main(int argc, char *argv[])
         }
         init_D(0)=10;
         init_D(1)=11;
-        coeff_D(0)=10000;
-        coeff_D(1)=10001;
+        coeff_D(0)=0;
+        coeff_D(1)=1;
     }
     if (CASE==4){//Stochastic zeta and epsilon
         pcType = "LU";
@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
         nkl = 2;
         cov_type = (char *)"Exp";
         sigma = 0.5;
-        nspl = 100000;
+        nspl = 10000;
         factor_OD = 1.0;
         ord_GS = 2;
         ord_AAPG = 2;
@@ -195,7 +195,7 @@ int main(int argc, char *argv[])
         nkl = 10;
         cov_type = (char *)"Exp";
         sigma = 0.5;
-        nspl = 100000;
+        nspl = 10000;
         factor_OD = 1.0;
         ord_GS = 2;
         ord_AAPG = 3;
@@ -289,6 +289,9 @@ int main(int argc, char *argv[])
     }
     if (CASE == 4){
         cout << " - Case4 where the damping coeff zeta and epsilon are stochastic."<< endl<< flush;
+    }
+    if (CASE == 5){
+        cout << " - Case5 where zeta and epsilon are stochastic." << endl << flush;
     }
     cout << " - Time marching step:              " << dTym  << endl<<flush;
     cout << " - Process end time:                " << tf  << endl<<flush;
@@ -393,8 +396,8 @@ int main(int argc, char *argv[])
         Array1D<double> samPts_1D(nspl,0.e0);
         getCol(temp_inp,i,samPts_1D);
         Array1D<double> sample_mstd = mStd(samPts_1D,nspl);
-        cout << "Mean of sample on dim " << i << " is "<< sample_mstd(0) << endl;
-        cout << "Std of sample on dim "<< i << " is " <<sample_mstd(1) << endl;
+        cout << "Mean of sample on inpParams " << i << " is "<< sample_mstd(0) << endl;
+        cout << "Std of sample on inpParams "<< i << " is " <<sample_mstd(1) << endl;
         //stat_inp.replaceRow(sample_mstd,i); 
         inpParams(i+1)=sample_mstd(0);
         inpParams(i+3)=sample_mstd(1);

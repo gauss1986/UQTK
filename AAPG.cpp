@@ -93,7 +93,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
         }
         Array1D<int> active_1D(2,0);
         active_1D(0)=0;
-        active_1D(1)=1;
+        active_1D(1)=0;
         GS(dof, PCSet_1, order, active_1D, PCTerms_1, nStep, initial_GS1, dTym, inpParams_1, force_1(i),temp);
         dis_1(i) = temp(1);
         vel_1(i) = temp(0);
@@ -154,8 +154,10 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
         Array1D<double> temp_init2(PCTerms_2,0.e0);
         Array1D<Array2D<double> > force_2(N_adof*(N_adof-1)/2);
         Array1D<Array1D<double> > inpParams_2(N_adof*(N_adof-1)/2);
-        Array1D<double> temp_coeff(5,0.e0);
+        Array1D<double> temp_coeff2(5,0.e0);
         int k = 0;
+        Array1D<Array1D<int> > active_2D(N_adof*(N_adof-1)/2);
+        Array1D<int> temp_active(2,0);
         for (int i=0;i<N_adof-1;i++){
             for (int j=i+1;j<N_adof;j++){
                 initial_GS2(k)=temp2;
@@ -178,13 +180,19 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
                     f_2(it,2) = scaledKLmodes(it,ind(j));
                 }
                 // coeffs on this ANOVA dim
-                inpParams_2(k)=temp_coeff;
+                inpParams_2(k)=temp_coeff2;
                 inpParams_2(k)(0)=inpParams(0);
                 inpParams_2(k)(1)=inpParams(1);
                 inpParams_2(k)(2)=inpParams(2);
+                active_2D(k)= temp_active;
                 for (int l=0;l<2;l++){
-                    if (i==coeff_D(l)||j==coeff_D(l)){
+                    if (i==coeff_D(l)){
+                        inpParams_2(k)(l+3)=inpParams(l+3);
+                        active_2D(k)(l)=0; 
+                    }
+                    if (j==coeff_D(l)){
                         inpParams_2(k)(l+3)=inpParams(l+3); 
+                        active_2D(k)(l)=1; 
                     }
                 }
 	            force_2(k)=f_2;
@@ -194,15 +202,12 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
 	    }
     }
     tt.tick();
-    #pragma omp parallel  default(none) shared(dof,k,dis_2,vel_2,indi_2,indj_2,PCSet_2,order,PCTerms_2,nStep,initial_GS2,dTym,inpParams_2,force_2)
+    #pragma omp parallel  default(none) shared(dof,k,dis_2,vel_2,indi_2,indj_2,PCSet_2,order,PCTerms_2,nStep,initial_GS2,dTym,inpParams_2,force_2, active_2D)
     {
     #pragma omp for
     for (int i=0;i<k;i++){
         Array1D<Array2D<double> > temp(dof);
-        Array1D<int> active_2D(2,0);
-        active_2D(0)=0;
-        active_2D(1)=1;
-        GS(dof, PCSet_2, order, active_2D, PCTerms_2, nStep, initial_GS2(i), dTym, inpParams_2(i), force_2(i), temp); 
+        GS(dof, PCSet_2, order, active_2D(i), PCTerms_2, nStep, initial_GS2(i), dTym, inpParams_2(i), force_2(i), temp); 
         vel_2(indi_2(i),indj_2(i)) = temp(0);
         dis_2(indi_2(i),indj_2(i)) = temp(1);
     }
@@ -228,6 +233,10 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
     Array1D<Array1D<double> > temp3(dof);
     Array1D<double> temp_init3(PCTerms_3,0.e0);
     Array1D<Array2D<double> > force_3(N_adof*(N_adof-1)*(N_adof-2)/6);
+    Array1D<double> temp_coeff3(5,0.e0);
+    Array1D<Array1D<double> > inpParams_3(N_adof*(N_adof-1)*(N_adof-2)/6);
+    Array1D<Array1D<int> > active_3D(N_adof*(N_adof-1)*(N_adof-2)/6);
+    Array1D<int> temp_active(2,0);
     int l=0;
     for (int i=0;i<N_adof-2;i++){
         for (int j=i+1;j<N_adof-1;j++){
@@ -246,6 +255,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
                     if (k==init_D(L))
                         PCSet_3.InitMeanStDv(sample_mstd_2D(L,0),sample_mstd_2D(L,1),3,initial_GS3(l)(L));
                 }
+                // force
                 Array2D<double> f_3(2*nStep+1,PCTerms_3,0.e0);
                 for (int it=0;it<2*nStep+1;it++){
                     f_3(it,0) = fbar(it);
@@ -257,6 +267,26 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
     		    indi_3(l)=ind(i);
 		        indj_3(l)=ind(j);
 		        indk_3(l)=ind(k);
+                // parameters
+                active_3D(l)= temp_active;
+                inpParams_3(l)=temp_coeff3;
+                inpParams_3(l)(0)=inpParams(0);
+                inpParams_3(l)(1)=inpParams(1);
+                inpParams_3(l)(2)=inpParams(2);
+                for (int L=0;L<2;L++){
+                    if (i==coeff_D(L)){
+                        inpParams_3(l)(L+3)=inpParams(L+3);
+                        active_3D(l)(L)=0; 
+                    }
+                    if (j==coeff_D(L)){
+                        inpParams_3(l)(L+3)=inpParams(L+3); 
+                        active_3D(l)(L)=1; 
+                    }
+                    if (k==coeff_D(L)){
+                        inpParams_3(l)(L+3)=inpParams(L+3);
+                        active_3D(l)(L)=2; 
+                    }
+                }
 		        l++;
                 }
             }
@@ -264,7 +294,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
     //start = clock();
     tt.tick();
     cout << "Finished generating initial conditions and excition force. Now starting parallel computing of sub-problems..."<< endl<<flush;
-    #pragma omp parallel default(none) shared(dof, l,indi_3,indj_3,indk_3,PCSet_3,order,PCTerms_3,nStep,initial_GS3,dTym,inpParams,vel_3,dis_3,force_3)
+    #pragma omp parallel default(none) shared(dof, l,indi_3,indj_3,indk_3,PCSet_3,order,PCTerms_3,nStep,initial_GS3,dTym,inpParams_3,vel_3,dis_3,force_3)
     {
     #pragma omp for
     for (int i=0;i<l;i++){
@@ -272,7 +302,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
         Array1D<int> active_3D(2,0);
         active_3D(0)=0;
         active_3D(1)=1;
-        GS(dof, PCSet_3, order, active_3D, PCTerms_3, nStep, initial_GS3(i), dTym, inpParams, force_3(i),temp);         
+        GS(dof, PCSet_3, order, active_3D, PCTerms_3, nStep, initial_GS3(i), dTym, inpParams_3(i), force_3(i),temp);         
 	    dis_3(indi_3(i),indj_3(i),indk_3(i)) = temp(1);
 	    vel_3(indi_3(i),indj_3(i),indk_3(i)) = temp(0);
     }
