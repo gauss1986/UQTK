@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
         sigma = 0.5;
         nspl = 10000;
         factor_OD = 1.0;
-        ord_GS = 2;
+        ord_GS = 3;
         ord_AAPG = 3;
         ord_AAPG_GS = 2;
         act_D = false;

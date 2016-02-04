@@ -92,8 +92,6 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
             }
         }
         Array1D<int> active_1D(2,0);
-        active_1D(0)=0;
-        active_1D(1)=0;
         GS(dof, PCSet_1, order, active_1D, PCTerms_1, nStep, initial_GS1, dTym, inpParams_1, force_1(i),temp);
         dis_1(i) = temp(1);
         vel_1(i) = temp(0);
@@ -294,15 +292,15 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
     //start = clock();
     tt.tick();
     cout << "Finished generating initial conditions and excition force. Now starting parallel computing of sub-problems..."<< endl<<flush;
-    #pragma omp parallel default(none) shared(dof, l,indi_3,indj_3,indk_3,PCSet_3,order,PCTerms_3,nStep,initial_GS3,dTym,inpParams_3,vel_3,dis_3,force_3)
+    #pragma omp parallel default(none) shared(dof, l,indi_3,indj_3,indk_3,PCSet_3,order,PCTerms_3,nStep,initial_GS3,dTym,inpParams_3,vel_3,dis_3,force_3,active_3D)
     {
     #pragma omp for
     for (int i=0;i<l;i++){
         Array1D<Array2D<double> > temp(dof);
-        Array1D<int> active_3D(2,0);
-        active_3D(0)=0;
-        active_3D(1)=1;
-        GS(dof, PCSet_3, order, active_3D, PCTerms_3, nStep, initial_GS3(i), dTym, inpParams_3(i), force_3(i),temp);         
+        //Array1D<int> active_3D(2,0);
+        //active_3D(0)=0;
+        //active_3D(1)=1;
+        GS(dof, PCSet_3, order, active_3D(i), PCTerms_3, nStep, initial_GS3(i), dTym, inpParams_3(i), force_3(i),temp);         
 	    dis_3(indi_3(i),indj_3(i),indk_3(i)) = temp(1);
 	    vel_3(indi_3(i),indj_3(i),indk_3(i)) = temp(0);
     }
