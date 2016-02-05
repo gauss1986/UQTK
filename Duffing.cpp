@@ -192,8 +192,8 @@ int main(int argc, char *argv[])
     if (CASE==5){//Stochastic zeta and epsilon and stochastic forcing
         clen = 0.05;
         pcType = "LU";
-        dim = 10;
-        nkl = 8;
+        dim = 50;
+        nkl = 48;
         cov_type = (char *)"Exp";
         sigma = 0.5;
         nspl = 10000;
@@ -615,16 +615,19 @@ int main(int argc, char *argv[])
     Array2D<double> e_AAPG(ord_AAPG,2,0.e0); 
     Array1D<Array1D<double> > e_sample_AAPG_dis(ord_AAPG); 
     Array1D<Array1D<double> > e_sample_AAPG_vel(ord_AAPG); 
-    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, myPCSet, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, stat_init, samPts_norm, e_AAPG, e_sample_AAPG_dis, e_sample_AAPG_vel, init_D, coeff_D);
+    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, myPCSet, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, stat_init, samPts_norm, e_AAPG, e_sample_AAPG_dis, e_sample_AAPG_vel, init_D, coeff_D, PDF);
     
     // output the timing
     Array1D<double> t(1+ord_GS+ord_AAPG,0.e0);
     t(0) = t_MCS;
     for (int i=0;i<ord_GS;i++)
         t(i+1)=t_GS(i);
-    for (int i=0;i<ord_AAPG;i++)
-        t(i+ord_GS+1)=t_AAPG(i);
+    t(ord_GS+1)=t_AAPG(0)+t_AAPG(1);
+    t(ord_GS+2)=t_AAPG(0)+t_AAPG(1)+t_AAPG(2);
+    if (ord_AAPG>=3)
+        t(ord_GS+3)=t_AAPG(0)+t_AAPG(1)+t_AAPG(2)+t_AAPG(3);
     // output the error info
+    printf("\n");
     cout << "Printing the error of GS in displacement..." << endl;
     for(int i=0;i<ord_GS;i++){
         cout << "GS ord " << i+1<< " is em="<<e_GS(i,0) <<", es= "<< e_GS(i,1)<< endl;
