@@ -53,6 +53,7 @@ int main(int argc, char *argv[])
     Array1D<double> inpParams(5,0.e0);//Input parameters
     Array1D<int> init_D(2,0);
     Array1D<int> coeff_D(2,0);
+    bool PDF=false;       //control coeff for outputing PDF
 
     // Time marching info
     double dTym = 0.01;
@@ -191,24 +192,24 @@ int main(int argc, char *argv[])
     if (CASE==5){//Stochastic zeta and epsilon and stochastic forcing
         clen = 0.05;
         pcType = "LU";
-        dim = 12;
-        nkl = 10;
+        dim = 10;
+        nkl = 8;
         cov_type = (char *)"Exp";
         sigma = 0.5;
         nspl = 10000;
         factor_OD = 1.0;
-        ord_GS = 3;
+        ord_GS = 2;
         ord_AAPG = 3;
         ord_AAPG_GS = 2;
         act_D = false;
         p = 0.99;
         dof = 2;
-        noutput = 10;
+        noutput = 1;
         inpParams(0) = 0.0;//Problem to solve 
         inpParams(1) = 0.1;//zeta
         inpParams(2) = 1.0;//epsilon
         inpParams(3) = 0.05;//std for zeta
-        inpParams(4) = 0.5;//std for epsilon
+        inpParams(4) = 0.35;//std for epsilon
         double t_temp = 0.0; 
         for (int i=0;i<2*nStep+1;i++){
             fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
@@ -216,8 +217,8 @@ int main(int argc, char *argv[])
         }
         init_D(0)=10000;
         init_D(1)=10001;
-        coeff_D(0)=10;
-        coeff_D(1)=11;
+        coeff_D(0)=dim-2;
+        coeff_D(1)=dim-1;
     }
 
     // Save the force
@@ -545,7 +546,7 @@ int main(int argc, char *argv[])
 
         clock_t start = clock();
     	tt.tick();
-        GS(dof, myPCSet, ord, coeff_D, nPCTerms, nStep, initial_GS, dTym, inpParams, f_GS, result);
+        GS(dof, myPCSet, coeff_D, nPCTerms, nStep, initial_GS, dTym, inpParams, f_GS, result);
         t_GS(ord-1) = tt.silent_tock();
 	    cout << "Cost time: "<<(clock()-start)/(double)(CLOCKS_PER_SEC)<<endl;
 	
@@ -568,19 +569,18 @@ int main(int argc, char *argv[])
         s4 << "GS_vel_stat_" << ord<<".dat";
         string SolvGSstat(s4.str());
         FILE *GSstat_dump_v=createfile(SolvGSstat);
-        
+       
         //assemble dis and output dis_sample
         Array2D<double> stat_GS(2,nStep+1,0.e0);
         Array2D<double> stat_GS_vel(2,nStep+1,0.e0);
         Array1D<double> e_GS_ord = postprocess_GS(noutput, nPCTerms, nStep, result(1), myPCSet, dTym,GS_dump, GSstat_dump, MCS_s_dis, stat_GS);
         Array1D<double> e_GS_ord_vel = postprocess_GS(noutput, nPCTerms, nStep, result(0), myPCSet, dTym, GS_dump_v, GSstat_dump_v, MCS_s_vel, stat_GS_vel);
         Array1D<double> normsq(nPCTerms,0.e0); 
-        myPCSet.OutputNormSquare(normsq);
-        cout << "Normsq 1=" <<normsq(1)<<endl;
-        cout << "Normsq 2=" <<normsq(2)<<endl;
+        //myPCSet.OutputNormSquare(normsq);
+        //cout << "Normsq 1=" <<normsq(1)<<endl;
+        //cout << "Normsq 2=" <<normsq(2)<<endl;
 
-        //if (ord == 1){
-        //}
+        if (PDF){ 
         cout << "Sampling dis..."<< endl;
         Array2D<double> GS_dis_sampt=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, result(1), samPts_norm, stat_GS, e_GS_sample(ord-1));
         ostringstream s2;
@@ -594,7 +594,7 @@ int main(int argc, char *argv[])
         s3 << "GS_vel_sample" << ord<<".dat";
         SoluGSsample=s3.str();
         write_datafile(GS_vel_sampt,SoluGSsample.c_str());
-
+        }
 
         fprintf(err_dump, "%lg %lg", e_GS_ord(0),e_GS_ord(1));
         fprintf(err_dump, "\n");
@@ -618,25 +618,30 @@ int main(int argc, char *argv[])
     Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, myPCSet, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, stat_init, samPts_norm, e_AAPG, e_sample_AAPG_dis, e_sample_AAPG_vel, init_D, coeff_D);
     
     // output the timing
-    Array1D<double> t(3+ord_GS+ord_AAPG,0.e0);
+    Array1D<double> t(1+ord_GS+ord_AAPG,0.e0);
     t(0) = t_MCS;
     for (int i=0;i<ord_GS;i++)
+        t(i+1)=t_GS(i);
+    for (int i=0;i<ord_AAPG;i++)
+        t(i+ord_GS+1)=t_AAPG(i);
     // output the error info
     cout << "Printing the error of GS in displacement..." << endl;
     for(int i=0;i<ord_GS;i++){
         cout << "GS ord " << i+1<< " is em="<<e_GS(i,0) <<", es= "<< e_GS(i,1)<< endl;
     }
-    cout << "Printing the error of MCS assembled GS in displacement..." << endl;
-    for(int i=0;i<ord_GS;i++){
-        cout << "GS ord " << i+1<< " is em="<<e_GS_sample(i)(0) <<", es= "<< e_GS_sample(i)(1)<< endl;
-    }
     cout << "Printing the error of AAPG in displacement..." << endl;
     for(int i=0;i<ord_AAPG;i++){
         cout << "AAPG ord " << i+1<< " is em="<<e_AAPG(i,0) <<", es= "<< e_AAPG(i,1)<<endl;
     }
+    if (PDF){
+    cout << "Printing the error of MCS assembled GS in displacement..." << endl;
+    for(int i=0;i<ord_GS;i++){
+        cout << "GS ord " << i+1<< " is em="<<e_GS_sample(i)(0) <<", es= "<< e_GS_sample(i)(1)<< endl;
+    }
     cout << "Printing the error of MCS assembled AAPG in displacement..." << endl;
     for(int i=0;i<ord_AAPG;i++){
         cout << "AAGP ord " << i+1<< " is em="<<e_sample_AAPG_dis(i)(0) <<", es= "<< e_sample_AAPG_dis(i)(1)<< endl;
+    }
     }
 
     ostringstream time_stream;

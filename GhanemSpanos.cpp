@@ -10,7 +10,7 @@
 #include "GhanemSpanos.h"
 #include "Utils.h"
 
-void GS(int dof, PCSet& myPCSet, int order, Array1D<int>& coeff_D, int nPCTerms, int nStep, Array1D<Array1D<double> >& initial, double dTym, Array1D<double>& inpParams, Array2D<double>& f_GS, Array1D<Array2D<double> >& solution){
+void GS(int dof, PCSet& myPCSet, Array1D<int>& coeff_D, int nPCTerms, int nStep, Array1D<Array1D<double> >& initial, double dTym, Array1D<double>& inpParams, Array2D<double>& f_GS, Array1D<Array2D<double> >& solution){
 
     // Initialize working variable
     Array1D<Array1D<double> > result(dof);
