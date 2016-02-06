@@ -28,4 +28,4 @@
 #===================================
 
 module load gcc
-./Duffing.x -G 3
+./Duffing.x -G 1
