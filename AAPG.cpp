@@ -3,6 +3,7 @@
 #include "Array2D.h"
 #include "Array1D.h"
 #include "PCSet.h"
+#include "PCBasis.h"
 #include "arraytools.h"
 #include "uqtktools.h"
 #include "Utils.h"
@@ -396,6 +397,7 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     // initialization
     int nAAPGTerms = 1+dim+dim*(dim-1)/2+dim*(dim-1)*(dim-2)/6;
     int nPCTerms = myPCSet.GetNumberPCTerms();
+    //int Px = computeNPCTerms(dim, order);
     Array2D<double> dis_1_assembled(nStep+1,nPCTerms,0.e0);
     Array2D<double> dis_2_assembled(nStep+1,nPCTerms,0.e0);
     Array2D<double> dis_3_assembled(nStep+1,nPCTerms,0.e0);
@@ -775,6 +777,31 @@ void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
 }
 
 void computeStd(int nStep, int nPCTerms, Array2D<double>& dis_1_assembled, Array2D<double>& dis_2_assembled, Array2D<double>& dis_3_assembled, PCSet& myPCSet, Array1D<double>& std1, Array1D<double>& std2, Array1D<double>& std3){
+    // Compute normsq
+    int dim = myPCSet.GetNDim();
+    int order = myPCSet.GetOrder();
+    Array1D<double> normsq(nPCTerms,0.e0);
+    // Initialize pcbasis
+    PCBasis p_basis(myPCSet.GetPCType(), 0, 1, order);
+    // Get the 1d norms-squared
+    Array1D<double> norms1d;
+    p_basis.Get1dNormsSq(norms1d);
+    // Compute multiindex
+    Array2D<int> Pbtot(nPCTerms,dim);
+    computeMultiIndex(dim,order,Pbtot);
+    // For each term, multiply appropriate 1d norms-squared
+    for(int ipc=0; ipc<nPCTerms; ipc++)
+        for(int id=0; id<dim; id++)
+            normsq(ipc) *= norms1d(Pbtot(ipc,id));
+    // Compare with normsq in myPCSet
+    Array1D<double> normsq2(nPCTerms,0.e0);
+    myPCSet.OutputNormSquare(normsq2);
+    bool normsqEQ = is_equal(normsq, normsq2);
+    if (normsqEQ)
+       cout << "Nomrsq from myPCSet is the SAME as computed with PCBasis." << endl << flush;
+    else
+       cout << "Nomrsq from myPCSet is the DIFFERENT as computed with PCBasis." << endl << flush;
+
     // compute std and save
     // First-order 
     for (int i=0;i<nStep+1;i++){
