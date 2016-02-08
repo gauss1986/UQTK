@@ -780,9 +780,9 @@ void computeStd(int nStep, int nPCTerms, Array2D<double>& dis_1_assembled, Array
     // Compute normsq
     int dim = myPCSet.GetNDim();
     int order = myPCSet.GetOrder();
-    Array1D<double> normsq(nPCTerms,0.e0);
+    Array1D<double> normsq(nPCTerms,1.e0);
     // Initialize pcbasis
-    PCBasis p_basis(myPCSet.GetPCType(), 0, 1, order);
+    PCBasis p_basis(myPCSet.GetPCType(), 0.0, 1.0, order);
     // Get the 1d norms-squared
     Array1D<double> norms1d;
     p_basis.Get1dNormsSq(norms1d);
@@ -793,37 +793,47 @@ void computeStd(int nStep, int nPCTerms, Array2D<double>& dis_1_assembled, Array
     for(int ipc=0; ipc<nPCTerms; ipc++)
         for(int id=0; id<dim; id++)
             normsq(ipc) *= norms1d(Pbtot(ipc,id));
-    // Compare with normsq in myPCSet
-    Array1D<double> normsq2(nPCTerms,0.e0);
-    myPCSet.OutputNormSquare(normsq2);
-    bool normsqEQ = is_equal(normsq, normsq2);
-    if (normsqEQ)
-       cout << "Nomrsq from myPCSet is the SAME as computed with PCBasis." << endl << flush;
-    else
-       cout << "Nomrsq from myPCSet is the DIFFERENT as computed with PCBasis." << endl << flush;
 
     // compute std and save
-    // First-order 
+    Array1D<double> dis_temp(nPCTerms,0.e0);
+    Array1D<double> std1_l(nStep+1,0.e0);
+    Array1D<double> std2_l(nStep+1,0.e0);
+    Array1D<double> std3_l(nStep+1,0.e0);
     for (int i=0;i<nStep+1;i++){
-        Array1D<double> dis_temp(nPCTerms,0.e0);
+        // First-order 
         getRow(dis_1_assembled,i,dis_temp);
         std1(i) = myPCSet.StDv(dis_temp);
-    }
-    //write_datafile_1d(std1,"AAPG1_std.dat");
-    // Second-order
-    for (int i=0;i<nStep+1;i++){
-        Array1D<double> dis_temp(nPCTerms,0.e0);
+        // Second-order
         getRow(dis_2_assembled,i,dis_temp);
         std2(i) = myPCSet.StDv(dis_temp);
-    }
-    //write_datafile_1d(std2,"AAPG2_std.dat");
-    // Third-order
-    for (int i=0;i<nStep+1;i++){
-        Array1D<double> dis_temp(nPCTerms,0.e0);
+        // Third-order
         getRow(dis_3_assembled,i,dis_temp);
         std3(i) = myPCSet.StDv(dis_temp);
+        double temp1 = 0.e0;
+        double temp2 = 0.e0;
+        double temp3 = 0.e0;
+        for (int j=0;j<nPCTerms;j++){
+            temp1 += dis_1_assembled(i,j)*dis_1_assembled(i,j)*normsq(j);
+            temp2 += dis_2_assembled(i,j)*dis_2_assembled(i,j)*normsq(j);
+            temp3 += dis_3_assembled(i,j)*dis_3_assembled(i,j)*normsq(j);
+        }
+        std1_l(i) = sqrt(temp1);
+        std2_l(i) = sqrt(temp2);
+        std3_l(i) = sqrt(temp3);
     }
-    //write_datafile_1d(std3,"AAPG3_std.dat");
+    bool std1_eq = is_equal(std1,std1_l);
+    bool std2_eq = is_equal(std2,std2_l);
+    bool std3_eq = is_equal(std3,std3_l);
+    if (std1_eq && std2_eq && std3_eq)
+        cout << "The std computed locally is the SAME as result computed using myPCSet native function stDv." << endl;
+    else
+        cout << "The std computed locally is DIFFERENT as result computed using myPCSet native function stDv." << endl;
+    write_datafile_1d(std2,"AAPG2_std.dat");
+    write_datafile_1d(std1,"AAPG1_std.dat");
+    write_datafile_1d(std3,"AAPG3_std.dat");
+    write_datafile_1d(std2_l,"AAPG2l_std.dat");
+    write_datafile_1d(std1_l,"AAPG1l_std.dat");
+    write_datafile_1d(std3_l,"AAPG3l_std.dat");
     return;
 }
 
