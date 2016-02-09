@@ -27,6 +27,8 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
+#define CASE 1
+
 #define DIS0 0.0
 #define VEL0 0.0
 
@@ -37,56 +39,204 @@ July 25, 2015
 
 /// Main program of uncertainty propagation of the ODE model excitation force via intrusive spectral projection (ISP)
 int main(int argc, char *argv[])
-{   int CASE = 5;
-
-    // PC type
-    string pcType="LU";
-
-    // GS/AAPG control coeffs
-    int ord_GS=2;       //GS order
-    int ord_AAPG=3;     //AAPG order
-    int ord_AAPG_GS=2;  //GS order in AAPG subproblems
-    double factor_OD=1.0;//dynamical-orthogonal info
-    double p=0.99;      //Threashold used in the adaptive AAPG
-
-    // Input parameters
-    Array1D<double> inpParams(5,0.e0);
-    inpParams(0) = 0.0;//Problem to solve 
-    inpParams(1) = 0.1;//zeta
-    inpParams(2) = 1.0;//epsilon
-
-    // Coeffs without default values
-    int dim;            //Stochastic dimensionality
-    char* cov_type = (char *)"Exp"; //Covariance type
+{   // Coeffs
+    string pcType;  //PC type
+    int dim;        //Stochastic dimensionality
+    int nkl;        //Number of terms retained in KL expansion
+    char* cov_type; //Covariance type
+    double sigma;   //Standard deviation
+    int nspl;       //MCS sample size
+    bool act_D;     //wheather doing AAPG adaptive or not
+    double dof;     //Spatial dof
+    int noutput;    //Number of output points
+    double clen;    // Correlation length of the random process
+    Array1D<double> inpParams(5,0.e0);//Input parameters
     Array1D<int> init_D(2,0);
     Array1D<int> coeff_D(2,0);
-
-    // Coeffs with default values
-    int nkl=0;          //Number of terms retained in KL expansion
-    double sigma=0.5;   //Standard deviation
-    int nspl=10000;     //MCS sample size
-    bool act_D=false;   //wheather doing AAPG adaptive or not
-    double dof=2;       //Spatial dof
-    int noutput=1;      //Number of output points
-    double clen=0.05;   // Correlation length of the random process
-    bool PDF=false;     //control coeff for outputing PDF
+    bool PDF=false;       //control coeff for outputing PDF
 
     // Time marching info
     double dTym = 0.01;
     double tf = 10;
     // Number of steps
     int nStep=(int) tf / dTym;
-    Array1D<double> fbar(2*nStep+1,0.e0);// Mean of forcing
 
+    Array1D<double> fbar(2*nStep+1,0.e0);//mean of forcing
+
+    double factor_OD;//dynamical-orthogonal info
+    double p;       //Threashold used in the adaptive AAPG
+    int ord_GS;     //GS order
+    int ord_AAPG;   //AAPG order
+    int ord_AAPG_GS;//GS order in AAPG subproblems
+    
+    if (CASE==1){//Stochastic forcing and deterministic initial conditions
+        clen = 0.05;
+        pcType = "LU";
+        dim = 10;
+        nkl = 10;
+        cov_type = (char *)"Exp";
+        sigma = 0.8;
+        nspl = 10000;
+        factor_OD = 1.0;
+        ord_GS = 2;
+        ord_AAPG = 3;
+        ord_AAPG_GS = 2;
+        act_D = false;
+        p = 0.99;
+        dof = 2;
+        noutput = 10;
+        inpParams(0) = 0.0;//Problem to solve 
+        inpParams(1) = 0.1;//zeta
+        inpParams(2) = 1.0;//epsilon
+        double t_temp = 0.0; 
+        for (int i=0;i<2*nStep+1;i++){
+            fbar(i) = 2.0*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+            t_temp +=dTym/2;
+        }
+        init_D(0)=10000;
+        init_D(1)=10001;
+        coeff_D(0)=0;
+        coeff_D(1)=1;
+    }
+    if (CASE==2){//Stochastic initial conditions and deterministic forcing
+        pcType = "HG";
+        dim = 2;
+        nkl = 2;
+        cov_type = (char *)"Exp";
+        sigma = 0.5;
+        nspl = 10000;
+        factor_OD = 1.0;
+        ord_GS = 2;
+        ord_AAPG = 2;
+        ord_AAPG_GS = 2;
+        act_D = false;
+        p = 0.99;
+        dof = 2;
+        noutput = 10;
+        inpParams(0) = 0.0;//Problem to solve 
+        inpParams(1) = 0.1;//zeta
+        inpParams(2) = 1.0;//epsilon
+        double t_temp = 0.0; 
+        for (int i=0;i<2*nStep+1;i++){
+            fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+            t_temp +=dTym/2;
+        }
+        init_D(0)=0;
+        init_D(1)=1;
+        coeff_D(0)=0;
+        coeff_D(1)=1;
+    }
+    if (CASE==3){//stochastic initial conditions and stochastic forcing
+        clen = 0.05;
+        pcType = "LU";
+        dim = 12;
+        nkl = 10;
+        dof = 2;
+        cov_type = (char *)"Exp";
+        sigma=0.5;
+        nspl = 10000;
+        factor_OD = 1.0;
+        ord_GS = 2;
+        ord_AAPG = 3;
+        ord_AAPG_GS = 2;
+        act_D = false;
+        p = 0.99;
+        noutput = 2;
+        inpParams(0) = 0.0;//Problem to solve 
+        inpParams(1) = 0.1;//zeta
+        inpParams(2) = 1.0;//epsilon
+        double t_temp = 0.0; 
+        for (int i=0;i<2*nStep+1;i++){
+            fbar(i) = 2.0*(1-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+            t_temp +=dTym/2;
+        }
+        if ((dof+nkl-dim)>10e-5){
+            cout << "This test case is configured so that total stochastic dim should equal the number of modes in KL exapansion and dof. Now this is not true!!" << endl<<flush;
+            return 1;
+        }
+        init_D(0)=10;
+        init_D(1)=11;
+        coeff_D(0)=0;
+        coeff_D(1)=1;
+    }
+    if (CASE==4){//Stochastic zeta and epsilon
+        pcType = "LU";
+        dim = 2;
+        nkl = 2;
+        cov_type = (char *)"Exp";
+        sigma = 0.5;
+        nspl = 10000;
+        factor_OD = 1.0;
+        ord_GS = 2;
+        ord_AAPG = 2;
+        ord_AAPG_GS = 2;
+        act_D = false;
+        p = 0.99;
+        dof = 2;
+        noutput = 10;
+        inpParams(0) = 0.0;//Problem to solve 
+        inpParams(1) = 0.1;//zeta
+        inpParams(2) = 1.0;//epsilon
+        inpParams(3) = 0.05;//std for zeta
+        inpParams(4) = 0.5;//std for epsilon
+        double t_temp = 0.0; 
+        for (int i=0;i<2*nStep+1;i++){
+            fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+            t_temp +=dTym/2;
+        }
+        init_D(0)=10000;
+        init_D(1)=10001;
+        coeff_D(0)=0;
+        coeff_D(1)=1;
+    }
+    if (CASE==5){//Stochastic zeta and epsilon and stochastic forcing
+        clen = 0.05;
+        pcType = "LU";
+        dim = 10;
+        nkl = 8;
+        cov_type = (char *)"Exp";
+        sigma = 0.5;
+        nspl = 10000;
+        factor_OD = 1.0;
+        ord_GS = 2;
+        ord_AAPG = 3;
+        ord_AAPG_GS = 2;
+        act_D = false;
+        p = 0.99;
+        dof = 2;
+        noutput = 1;
+        inpParams(0) = 0.0;//Problem to solve 
+        inpParams(1) = 0.1;//zeta
+        inpParams(2) = 1.0;//epsilon
+        inpParams(3) = 0.05;//std for zeta
+        inpParams(4) = 0.35;//std for epsilon
+        double t_temp = 0.0; 
+        for (int i=0;i<2*nStep+1;i++){
+            fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+            t_temp +=dTym/2;
+        }
+        init_D(0)=10000;
+        init_D(1)=10001;
+        coeff_D(0)=dim-2;
+        coeff_D(1)=dim-1;
+    }
+
+    // Save the force
+    write_datafile_1d(fbar,"fbar.dat");
+  
     /* Read the user input */
     int c;
-    while ((c=getopt(argc,(char **)argv,"h:d:n:p:s:l:t:f:e:G:A:P:D:T:C:"))!=-1){
+
+    while ((c=getopt(argc,(char **)argv,"h:c:d:n:p:s:l:t:f:e:G:A:P:D:T:"))!=-1){
         switch (c) {
+        case 'c':
+            cov_type = optarg;
+            break;
         case 'd':
             dTym = strtod(optarg, (char **)NULL);
             break;
         case 'n':
-            nkl = strtod(optarg, (char **)NULL);
+            dim = strtod(optarg, (char **)NULL);
             break;
         case 'p':
             nspl = strtod(optarg, (char **)NULL);
@@ -118,9 +268,6 @@ int main(int argc, char *argv[])
         case 'T':
             p = strtod(optarg,(char **)NULL);
             break;
-        case 'C':
-            CASE = strtod(optarg,(char **)NULL);
-            break;
         case 'D':
             int temp_D = strtod(optarg, (char **)NULL);
             if (temp_D==1)
@@ -128,86 +275,7 @@ int main(int argc, char *argv[])
             break;
         }
     }
-
-    if (CASE==1){//Stochastic forcing and deterministic initial conditions
-        // define the mean of the force
-        double t_temp = 0.0; 
-        for (int i=0;i<2*nStep+1;i++){
-            fbar(i) = 2.0*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-            t_temp +=dTym/2;
-        }
-        // corresponding dof of initial condition and coefficents zeta and epsilon
-        init_D(0)=10000; // Set to random number if initial condition is deterministic
-        init_D(1)=10001;
-        coeff_D(0)=0;
-        coeff_D(1)=1;
-    }
-    if (CASE==2){//Stochastic initial conditions and deterministic forcing
-        // define the mean of the force
-        double t_temp = 0.0; 
-        for (int i=0;i<2*nStep+1;i++){
-            fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-            t_temp +=dTym/2;
-        }
-        // corresponding dof of initial condition and coefficents zeta and epsilon
-        init_D(0)=0;
-        init_D(1)=1;
-        coeff_D(0)=0;
-        coeff_D(1)=1;
-    }
-    if (CASE==3){//stochastic initial conditions and stochastic forcing
-        // define the mean of the force
-        double t_temp = 0.0; 
-        for (int i=0;i<2*nStep+1;i++){
-            fbar(i) = 2.0*(1-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-            t_temp +=dTym/2;
-        }
-        // corresponding dof of initial condition and coefficents zeta and epsilon
-        init_D(0)=10;
-        init_D(1)=11;
-        coeff_D(0)=0;
-        coeff_D(1)=1;
-    }
-    if (CASE==4){//Stochastic zeta and epsilon
-        inpParams(3) = 0.05;//std for zeta
-        inpParams(4) = 0.5;//std for epsilon
-        // define the mean of the force
-        double t_temp = 0.0; 
-        for (int i=0;i<2*nStep+1;i++){
-            fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-            t_temp +=dTym/2;
-        }
-        // corresponding dof of initial condition and coefficents zeta and epsilon
-        init_D(0)=10000;
-        init_D(1)=10001;
-        coeff_D(0)=0;
-        coeff_D(1)=1;
-    }
-    if (CASE==5){//Stochastic zeta and epsilon and stochastic forcing
-        inpParams(3) = 0.05;//std for zeta
-        inpParams(4) = 0.35;//std for epsilon
-        // define the mean of the force
-        double t_temp = 0.0; 
-        for (int i=0;i<2*nStep+1;i++){
-            fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-            t_temp +=dTym/2;
-        }
-        // corresponding dof of initial condition and coefficents zeta and epsilon
-        init_D(0)=10000;
-        init_D(1)=10001;
-    }
-    // Save the force
-    write_datafile_1d(fbar,"fbar.dat");
-
-    dim = nkl;
-    if (CASE==2||CASE==3||CASE==4||CASE==5)
-        dim = dim+2;
-
-    if (CASE==5){
-        coeff_D(0)=dim-2;
-        coeff_D(1)=dim-1;
-    }
- 
+    
     /* Print the input information on screen */
     cout << " - Number of KL modes:              " << nkl  << endl<<flush;
     cout << " - Monte Carlo sample size:         " << nspl  << endl<<flush;
