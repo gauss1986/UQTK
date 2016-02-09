@@ -27,8 +27,6 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define CASE 1
-
 #define DIS0 0.0
 #define VEL0 0.0
 
@@ -39,7 +37,19 @@ July 25, 2015
 
 /// Main program of uncertainty propagation of the ODE model excitation force via intrusive spectral projection (ISP)
 int main(int argc, char *argv[])
-{   // Coeffs
+{   int CASE=1;
+
+    /* Read the user input */
+    int c;
+
+    while ((c=getopt(argc,(char **)argv,"C:"))!=-1){
+        switch (c) {
+        case 'C':
+            CASE = strtod(optarg, (char **)NULL);
+            break;
+        }
+    }
+
     string pcType;  //PC type
     int dim;        //Stochastic dimensionality
     int nkl;        //Number of terms retained in KL expansion
@@ -99,7 +109,7 @@ int main(int argc, char *argv[])
         coeff_D(1)=1;
     }
     if (CASE==2){//Stochastic initial conditions and deterministic forcing
-        pcType = "HG";
+        pcType = "LU";
         dim = 2;
         nkl = 2;
         cov_type = (char *)"Exp";
@@ -224,57 +234,6 @@ int main(int argc, char *argv[])
     // Save the force
     write_datafile_1d(fbar,"fbar.dat");
   
-    /* Read the user input */
-    int c;
-
-    while ((c=getopt(argc,(char **)argv,"h:c:d:n:p:s:l:t:f:e:G:A:P:D:T:"))!=-1){
-        switch (c) {
-        case 'c':
-            cov_type = optarg;
-            break;
-        case 'd':
-            dTym = strtod(optarg, (char **)NULL);
-            break;
-        case 'n':
-            dim = strtod(optarg, (char **)NULL);
-            break;
-        case 'p':
-            nspl = strtod(optarg, (char **)NULL);
-            break;
-        case 's':
-            sigma = strtod(optarg, (char **)NULL);
-            break;
-        case 'l':
-            clen = strtod(optarg, (char **)NULL);
-            break;
-        case 't':
-            tf = strtod(optarg, (char **)NULL);
-            break;
-        case 'f':
-            factor_OD = strtod(optarg, (char **)NULL);
-            break;
-        case 'e':
-            inpParams(2) = strtod(optarg, (char **)NULL);
-            break;
-        case 'G':
-            ord_GS = strtod(optarg, (char **)NULL);
-            break;
-        case 'A':
-            ord_AAPG_GS = strtod(optarg, (char **)NULL);
-            break;
-        case 'P':
-            ord_AAPG = strtod(optarg, (char **)NULL);
-            break;
-        case 'T':
-            p = strtod(optarg,(char **)NULL);
-            break;
-        case 'D':
-            int temp_D = strtod(optarg, (char **)NULL);
-            if (temp_D==1)
-                act_D=true;
-            break;
-        }
-    }
     
     /* Print the input information on screen */
     cout << " - Number of KL modes:              " << nkl  << endl<<flush;
