@@ -14,6 +14,7 @@ July 25, 2015
 #include <omp.h>
 #include "uqtktools.h"
 #include "uqtkmcmc.h"
+#include "PCBasis.h"
 #include "PCSet.h"
 #include "arraytools.h"
 #include "getopt.h"
@@ -38,11 +39,11 @@ July 25, 2015
 /// Main program of uncertainty propagation of the ODE model excitation force via intrusive spectral projection (ISP)
 int main(int argc, char *argv[])
 {   int CASE=1;
+    string pcType="LU";  //PC type
 
     /* Read the user input */
     int c;
-
-    while ((c=getopt(argc,(char **)argv,"C:"))!=-1){
+    while ((c=getopt(argc,(char **)argv,"C:p"))!=-1){
         switch (c) {
         case 'C':
             CASE = strtod(optarg, (char **)NULL);
@@ -50,7 +51,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    string pcType;  //PC type
     int dim;        //Stochastic dimensionality
     int nkl;        //Number of terms retained in KL expansion
     char* cov_type; //Covariance type
@@ -81,7 +81,6 @@ int main(int argc, char *argv[])
     
     if (CASE==1){//Stochastic forcing and deterministic initial conditions
         clen = 0.05;
-        pcType = "LU";
         dim = 10;
         nkl = 10;
         cov_type = (char *)"Exp";
@@ -109,7 +108,6 @@ int main(int argc, char *argv[])
         coeff_D(1)=1;
     }
     if (CASE==2){//Stochastic initial conditions and deterministic forcing
-        pcType = "LU";
         dim = 2;
         nkl = 2;
         cov_type = (char *)"Exp";
@@ -138,7 +136,6 @@ int main(int argc, char *argv[])
     }
     if (CASE==3){//stochastic initial conditions and stochastic forcing
         clen = 0.05;
-        pcType = "LU";
         dim = 12;
         nkl = 10;
         dof = 2;
@@ -170,7 +167,6 @@ int main(int argc, char *argv[])
         coeff_D(1)=1;
     }
     if (CASE==4){//Stochastic zeta and epsilon
-        pcType = "LU";
         dim = 2;
         nkl = 2;
         cov_type = (char *)"Exp";
@@ -201,7 +197,6 @@ int main(int argc, char *argv[])
     }
     if (CASE==5){//Stochastic zeta and epsilon and stochastic forcing
         clen = 0.05;
-        pcType = "LU";
         dim = 10;
         nkl = 8;
         cov_type = (char *)"Exp";
@@ -567,14 +562,30 @@ int main(int argc, char *argv[])
 
     // AAPG
     printf("\nAAPG...\n");
-    tt.tick();
-    PCSet myPCSet("ISP",ord_AAPG_GS,dim,pcType,0.0,1.0,false); 
-    tt.tock("Took");
+    //tt.tick();
+    //PCSet myPCSet("ISP",ord_AAPG_GS,dim,pcType,0.0,1.0,false); 
+    //tt.tock("Took");
+
+    // Compute multiindex
+    Array2D<int> Pbtot;
+    computeMultiIndex(dim,ord_AAPG_GS,Pbtot);
+    // Initialize pcbasis
+    PCBasis p_basis(pcType, 0.0, 1.0, ord_AAPG_GS);
+    // Get the 1d norms-squared
+    Array1D<double> norms1d;
+    p_basis.Get1dNormsSq(norms1d);
+    // Compute normsq
+    Array1D<double> normsq(Pbtot.XSize(),1.e0);
+    // For each term, multiply appropriate 1d norms-squared
+    for(unsigned int ipc=0; ipc<Pbtot.XSize(); ipc++)
+        for(int id=0; id<dim; id++)
+            normsq(ipc) *= norms1d(Pbtot(ipc,id));
+    write_datafile_1d(normsq,"normsq.dat");
    
     Array2D<double> e_AAPG(ord_AAPG,2,0.e0); 
     Array1D<Array1D<double> > e_sample_AAPG_dis(ord_AAPG); 
     Array1D<Array1D<double> > e_sample_AAPG_vel(ord_AAPG); 
-    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, myPCSet, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, stat_init, samPts_norm, e_AAPG, e_sample_AAPG_dis, e_sample_AAPG_vel, init_D, coeff_D, PDF);
+    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, normsq, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, stat_init, samPts_norm, e_AAPG, e_sample_AAPG_dis, e_sample_AAPG_vel, init_D, coeff_D, PDF);
     
     // output the timing
     Array1D<double> t(1+ord_GS+ord_AAPG,0.e0);
