@@ -482,20 +482,15 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     return;     
 }
 
-Array2D<int> index1(int dim, int i, int order, Array2D<int>& Pbtot, Array2D<int>& Pb1){
-    unsigned int Px1 = Pb1.XSize();
-    Array2D<int> Pb1_more(Px1,dim,0);
-    for (unsigned int ind=0;ind<Px1;ind++)
-        Pb1_more(ind,i)=Pb1(ind,0);
-
+Array1D<int> identicalrow(int PCTerms, int dim, Array2D<int>& Pbtot, Array2D<int>& Pbmore){
     // find out identical row
-    Array1D<int> index(Px1,0);
-    unsigned int ii = 0;
+    Array1D<int> index(PCTerms,0);
+    int ii = 0;
     int jj = 0;
 
-    while (ii < Px1){
+    while (ii < PCTerms){
         int kk=0;
-        while (kk<dim&&Pbtot(jj,kk)==Pb1_more(ii,kk))
+        while (kk<dim&&Pbtot(jj,kk)==Pbmore(ii,kk))
             kk++;
         if (kk>dim-2){
             index(ii) = jj;
@@ -503,8 +498,21 @@ Array2D<int> index1(int dim, int i, int order, Array2D<int>& Pbtot, Array2D<int>
         }
         jj++;
     }
+    return (index);
+}
 
-    return (index);    
+Array2D<int> index1(int dim, int PCTerms_1, int order, Array2D<int>& Pbtot, Array2D<int>& Pb1){
+    Array2D<int> ind1(PCTerms_1,dim,0);
+
+    for (int i=0;i<dim;i++){
+        Array2D<int> Pb1_more(PCTerms_1,dim,0);
+        for (int ind=0;ind<PCTerms_1;ind++)
+            Pb1_more(ind,i)=Pb1(ind,0);
+        Array1D<int> ind=identicalrow(PCTerms_1,dim,Pbtot,Pb1_more);
+        ind1.replaceCol(ind,i);
+    }
+
+    return (ind1);    
 }
 
 Array1D<int> index2(int dim, int i, int j, int order, Array2D<int>& Pbtot, Array2D<int>& Pb2){
@@ -660,11 +668,11 @@ void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
     computeMultiIndex(3,order,Pb3);
 
     printf("Computing the index...\n");
-    Array2D<int> ind1(PCTerms_1,dim,0);
-    for (int i=0;i<dim;i++){
-        Array1D<int> ind = index1(dim, i, order, Pbtot, Pb1);
-        ind1.replaceCol(ind,i);
-    }
+    //Array2D<int> ind1(PCTerms_1,dim,0);
+    //for (int i=0;i<dim;i++){
+    Array2D<int> ind1 = index1(dim, PCTerms_1, order, Pbtot, Pb1);
+    //    ind1.replaceCol(ind,i);
+    //}
     write_datafile(ind1,"ind1.dat");
     
     Array3D<int> ind2(dim,dim,PCTerms_2,0);
