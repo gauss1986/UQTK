@@ -515,31 +515,22 @@ Array2D<int> index1(int dim, int PCTerms_1, int order, Array2D<int>& Pbtot, Arra
     return (ind1);    
 }
 
-Array1D<int> index2(int dim, int i, int j, int order, Array2D<int>& Pbtot, Array2D<int>& Pb2){
-    unsigned int Px2 = Pb2.XSize();
-    Array2D<int> Pb2_more(Px2,dim,0);
-    for (unsigned int ind=0;ind<Px2;ind++){
-        Pb2_more(ind,i)=Pb2(ind,0);
-        Pb2_more(ind,j)=Pb2(ind,1);
+Array2D<Array1D<int> > index2(int dim, int PCTerms_2, int order, Array2D<int>& Pbtot, Array2D<int>& Pb2){
+    Array2D<Array1D<int> > ind2(dim,dim);
+    for (int i=0;i<dim-1;i++){
+        for (int j=i+1;j<dim;j++){
+            Array2D<int> Pb2_more(PCTerms_2,dim,0);
+            for (int ind=0;ind<PCTerms_2;ind++){
+                Pb2_more(ind,i)=Pb2(ind,0);
+                Pb2_more(ind,j)=Pb2(ind,1);
+            }
+            ind2(i,j)=identicalrow(PCTerms_2,dim,Pbtot,Pb2_more);
+            //for (int k=0;k<PCTerms_2;k++)
+            //    ind2(i,j,k) = ind(k);
+        }
     }
     
-    // find out identical row
-    Array1D<int> index(Px2,0);
-    unsigned int ii = 0;
-    int jj = 0;
-
-    while (ii < Px2){
-        int kk = 0;
-        while (kk<dim&&(Pbtot(jj,kk)==Pb2_more(ii,kk)))
-            kk++;
-        if (kk>dim-2){
-            index(ii) = jj;
-            ii++;    
-        }
-        jj++;
-    }
-
-    return (index);    
+    return (ind2);    
 }
 
 Array1D<int> index3(int dim, int i, int j, int k, int order, Array2D<int>& Pbtot, Array2D<int>& Pb3){
@@ -655,34 +646,30 @@ void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
     Array2D<int> Pbtot(Px,dim);
     computeMultiIndex(dim,order,Pbtot);
     // 1D psibasis
-    int Px1 = computeNPCTerms(1, order);
-    Array2D<int> Pb1(Px1,1);
+    //int Px1 = computeNPCTerms(1, order);
+    Array2D<int> Pb1(PCTerms_1,1);
     computeMultiIndex(1,order,Pb1);
     // 2D psibasis
-    int Px2 = computeNPCTerms(2, order);
-    Array2D<int> Pb2(Px2,2);
+    //int Px2 = computeNPCTerms(2, order);
+    Array2D<int> Pb2(PCTerms_2,2);
     computeMultiIndex(2,order,Pb2);
     // 3D psibasis
-    int Px3 = computeNPCTerms(3, order);
-    Array2D<int> Pb3(Px3,3);
+    //int Px3 = computeNPCTerms(3, order);
+    Array2D<int> Pb3(PCTerms_3,3);
     computeMultiIndex(3,order,Pb3);
 
     printf("Computing the index...\n");
-    //Array2D<int> ind1(PCTerms_1,dim,0);
-    //for (int i=0;i<dim;i++){
     Array2D<int> ind1 = index1(dim, PCTerms_1, order, Pbtot, Pb1);
-    //    ind1.replaceCol(ind,i);
-    //}
-    write_datafile(ind1,"ind1.dat");
+    //write_datafile(ind1,"ind1.dat");
     
-    Array3D<int> ind2(dim,dim,PCTerms_2,0);
-    for (int i=0;i<dim-1;i++){
-        for (int j=i+1;j<dim;j++){
-            Array1D<int> ind = index2(dim, i, j, order, Pbtot, Pb2);
-            for (int k=0;k<PCTerms_2;k++)
-                ind2(i,j,k) = ind(k);
-        }
-    }
+    //Array3D<int> ind2(dim,dim,PCTerms_2,0);
+    //for (int i=0;i<dim-1;i++){
+    //    for (int j=i+1;j<dim;j++){
+    Array2D<Array1D<int> > ind2 = index2(dim, PCTerms_2, order, Pbtot, Pb2);
+    //        for (int k=0;k<PCTerms_2;k++)
+    //            ind2(i,j,k) = ind(k);
+    //    }
+   // }
     Array3D<Array1D<int> > ind3(dim,dim,dim);
     for (int i=0;i<dim-2;i++){
         for (int j=i+1;j<dim-1;j++){
@@ -715,7 +702,7 @@ void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
                 // Add second-order AAPG terms
                 for (int p=1;p<PCTerms_2;p++){
                     // retrieve the index in the global matrix
-                    int ind = ind2(indi_2(i),indj_2(i),p);
+                    int ind = ind2(indi_2(i),indj_2(i))(p);
                     for (int it=0;it<nStep+1;it++){
                         dis_2_assembled(it,ind)=dis_2_assembled(it,ind)+coeffn(it)*dis_2(indi_2(i),indj_2(i))(it,p);
                      }
@@ -796,8 +783,8 @@ void subtractfirst(int p,int ii, Array2D<int>& ind1,Array1D<Array2D<double> >& d
     return;
 }
 
-void subtractsecond(int p,int ii,int jj, Array3D<int>& ind2, Array2D<Array2D<double> >& dis_2, int nStep, Array1D<double>& coeffn, Array2D<double>& dis_assembled){
-    int ind = ind2(ii,jj,p);
+void subtractsecond(int p,int ii,int jj, Array2D<Array1D<int> >& ind2, Array2D<Array2D<double> >& dis_2, int nStep, Array1D<double>& coeffn, Array2D<double>& dis_assembled){
+    int ind = ind2(ii,jj)(p);
     for (int it=0;it<nStep+1;it++){
         dis_assembled(it,ind) = dis_assembled(it,ind)-coeffn(it)*dis_2(ii,jj)(it,p);
     }
