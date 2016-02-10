@@ -506,8 +506,9 @@ Array2D<int> index1(int dim, int PCTerms_1, int order, Array2D<int>& Pbtot, Arra
 
     for (int i=0;i<dim;i++){
         Array2D<int> Pb1_more(PCTerms_1,dim,0);
-        for (int ind=0;ind<PCTerms_1;ind++)
+        for (int ind=0;ind<PCTerms_1;ind++){
             Pb1_more(ind,i)=Pb1(ind,0);
+        }
         Array1D<int> ind=identicalrow(PCTerms_1,dim,Pbtot,Pb1_more);
         ind1.replaceCol(ind,i);
     }
@@ -517,6 +518,7 @@ Array2D<int> index1(int dim, int PCTerms_1, int order, Array2D<int>& Pbtot, Arra
 
 Array2D<Array1D<int> > index2(int dim, int PCTerms_2, int order, Array2D<int>& Pbtot, Array2D<int>& Pb2){
     Array2D<Array1D<int> > ind2(dim,dim);
+
     for (int i=0;i<dim-1;i++){
         for (int j=i+1;j<dim;j++){
             Array2D<int> Pb2_more(PCTerms_2,dim,0);
@@ -525,40 +527,30 @@ Array2D<Array1D<int> > index2(int dim, int PCTerms_2, int order, Array2D<int>& P
                 Pb2_more(ind,j)=Pb2(ind,1);
             }
             ind2(i,j)=identicalrow(PCTerms_2,dim,Pbtot,Pb2_more);
-            //for (int k=0;k<PCTerms_2;k++)
-            //    ind2(i,j,k) = ind(k);
         }
     }
     
     return (ind2);    
 }
 
-Array1D<int> index3(int dim, int i, int j, int k, int order, Array2D<int>& Pbtot, Array2D<int>& Pb3){
-    unsigned int Px3 = Pb3.XSize();
-    Array2D<int> Pb3_more(Px3,dim,0);
-    for (unsigned int ind=0;ind<Px3;ind++){
-        Pb3_more(ind,i)=Pb3(ind,0);    
-        Pb3_more(ind,j)=Pb3(ind,1);    
-        Pb3_more(ind,k)=Pb3(ind,2);    
+Array3D<Array1D<int> > index3(int dim, int PCTerms_3, int order, Array2D<int>& Pbtot, Array2D<int>& Pb3){
+    Array3D<Array1D<int> > ind3(dim,dim,dim);
+
+    for (int i=0;i<dim-2;i++){
+        for (int j=i+1;j<dim-1;j++){
+            for (int k=j+1;k<dim;k++){
+                Array2D<int> Pb3_more(PCTerms_3,dim,0);
+                for (int ind=0;ind<PCTerms_3;ind++){
+                    Pb3_more(ind,i)=Pb3(ind,0);    
+                    Pb3_more(ind,j)=Pb3(ind,1);    
+                    Pb3_more(ind,k)=Pb3(ind,2);    
+                }
+                ind3(i,j,k)=identicalrow(PCTerms_3,dim,Pbtot,Pb3_more);
+            }
+        }
     }
     
-    // find out identical row
-    Array1D<int> index(Px3,0);
-    unsigned int ii = 0;
-    int jj = 0;
-
-    while (ii < Px3){
-        int kk = 0;
-        while (kk<dim&&(Pbtot(jj,kk)==Pb3_more(ii,kk)))
-            kk++;
-        if (kk>dim-2){
-            index(ii) = jj;
-            ii++;    
-        }
-        jj++;
-    }
-
-    return (index);    
+    return (ind3);    
 }
 
 void assemblemean(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, Array1D<double>& dis_0, Array1D<Array2D<double> >& dis_1, Array2D<Array2D<double> >& dis_2, Array3D<Array2D<double> >& dis_3, int dim, int nStep, int AAPG_ord, Array1D<double>& dis_1_mean, Array1D<double>& dis_2_mean, Array1D<double>& dis_3_mean, Array2D<double>& coeff1, Array2D<double>& coeff2, Array2D<double>& coeff3){
@@ -646,38 +638,19 @@ void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
     Array2D<int> Pbtot(Px,dim);
     computeMultiIndex(dim,order,Pbtot);
     // 1D psibasis
-    //int Px1 = computeNPCTerms(1, order);
     Array2D<int> Pb1(PCTerms_1,1);
     computeMultiIndex(1,order,Pb1);
     // 2D psibasis
-    //int Px2 = computeNPCTerms(2, order);
     Array2D<int> Pb2(PCTerms_2,2);
     computeMultiIndex(2,order,Pb2);
     // 3D psibasis
-    //int Px3 = computeNPCTerms(3, order);
     Array2D<int> Pb3(PCTerms_3,3);
     computeMultiIndex(3,order,Pb3);
 
     printf("Computing the index...\n");
     Array2D<int> ind1 = index1(dim, PCTerms_1, order, Pbtot, Pb1);
-    //write_datafile(ind1,"ind1.dat");
-    
-    //Array3D<int> ind2(dim,dim,PCTerms_2,0);
-    //for (int i=0;i<dim-1;i++){
-    //    for (int j=i+1;j<dim;j++){
     Array2D<Array1D<int> > ind2 = index2(dim, PCTerms_2, order, Pbtot, Pb2);
-    //        for (int k=0;k<PCTerms_2;k++)
-    //            ind2(i,j,k) = ind(k);
-    //    }
-   // }
-    Array3D<Array1D<int> > ind3(dim,dim,dim);
-    for (int i=0;i<dim-2;i++){
-        for (int j=i+1;j<dim-1;j++){
-            for (int k=j+1;k<dim;k++){
-                ind3(i,j,k) = index3(dim, i, j, k, order, Pbtot, Pb3);
-            }
-        }
-    }
+    Array3D<Array1D<int> > ind3 = index3(dim, PCTerms_3, order, Pbtot, Pb3);
 
     // Assemble first order AAPG solutions
     printf("Assembling the first order terms...\n");
