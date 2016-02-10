@@ -484,7 +484,7 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
 
 Array1D<int> identicalrow(int PCTerms, int dim, Array2D<int>& Pbtot, Array2D<int>& Pbmore){
     // find out identical row
-    Array1D<int> index(PCTerms,0);
+    Array1D<int> ind(PCTerms,0);
     int ii = 0;
     int jj = 0;
 
@@ -493,32 +493,40 @@ Array1D<int> identicalrow(int PCTerms, int dim, Array2D<int>& Pbtot, Array2D<int
         while (kk<dim&&Pbtot(jj,kk)==Pbmore(ii,kk))
             kk++;
         if (kk>dim-2){
-            index(ii) = jj;
-            ii++;    
+            ind(ii) = jj;
+            ii++;
         }
         jj++;
     }
-    return (index);
+    return (ind);
 }
 
-Array2D<int> index1(int dim, int PCTerms_1, int order, Array2D<int>& Pbtot, Array2D<int>& Pb1){
-    Array2D<int> ind1(PCTerms_1,dim,0);
-
+void index(int dim, int order, int PCTerms_1, int PCTerms_2, int PCTerms_3, Array2D<int>& ind1, Array2D<Array1D<int> >& ind2, Array3D<Array1D<int> >& ind3){
+    // Get corresponding row index in the global matrix for sub-problem solutions
+    int Px = computeNPCTerms(dim, order);
+    Array2D<int> Pbtot(Px,dim);
+    computeMultiIndex(dim,order,Pbtot);
+    write_datafile(Pbtot,"indexglobal.dat");
+    // 1D psibasis
+    Array2D<int> Pb1(PCTerms_1,1);
+    computeMultiIndex(1,order,Pb1);
+    // 2D psibasis
+    Array2D<int> Pb2(PCTerms_2,2);
+    computeMultiIndex(2,order,Pb2);
+    // 3D psibasis
+    Array2D<int> Pb3(PCTerms_3,3);
+    computeMultiIndex(3,order,Pb3);
+   
     for (int i=0;i<dim;i++){
         Array2D<int> Pb1_more(PCTerms_1,dim,0);
         for (int ind=0;ind<PCTerms_1;ind++){
             Pb1_more(ind,i)=Pb1(ind,0);
         }
         Array1D<int> ind=identicalrow(PCTerms_1,dim,Pbtot,Pb1_more);
+        cout << "finished dof=1 index" << endl;
         ind1.replaceCol(ind,i);
     }
-
-    return (ind1);    
-}
-
-Array2D<Array1D<int> > index2(int dim, int PCTerms_2, int order, Array2D<int>& Pbtot, Array2D<int>& Pb2){
-    Array2D<Array1D<int> > ind2(dim,dim);
-
+    
     for (int i=0;i<dim-1;i++){
         for (int j=i+1;j<dim;j++){
             Array2D<int> Pb2_more(PCTerms_2,dim,0);
@@ -529,12 +537,6 @@ Array2D<Array1D<int> > index2(int dim, int PCTerms_2, int order, Array2D<int>& P
             ind2(i,j)=identicalrow(PCTerms_2,dim,Pbtot,Pb2_more);
         }
     }
-    
-    return (ind2);    
-}
-
-Array3D<Array1D<int> > index3(int dim, int PCTerms_3, int order, Array2D<int>& Pbtot, Array2D<int>& Pb3){
-    Array3D<Array1D<int> > ind3(dim,dim,dim);
 
     for (int i=0;i<dim-2;i++){
         for (int j=i+1;j<dim-1;j++){
@@ -549,8 +551,6 @@ Array3D<Array1D<int> > index3(int dim, int PCTerms_3, int order, Array2D<int>& P
             }
         }
     }
-    
-    return (ind3);    
 }
 
 void assemblemean(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, Array1D<double>& dis_0, Array1D<Array2D<double> >& dis_1, Array2D<Array2D<double> >& dis_2, Array3D<Array2D<double> >& dis_3, int dim, int nStep, int AAPG_ord, Array1D<double>& dis_1_mean, Array1D<double>& dis_2_mean, Array1D<double>& dis_3_mean, Array2D<double>& coeff1, Array2D<double>& coeff2, Array2D<double>& coeff3){
@@ -633,24 +633,12 @@ void assemblemean(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
 }
 
 void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, Array1D<Array2D<double> >& dis_1, Array2D<Array2D<double> >& dis_2, Array3D<Array2D<double> >& dis_3, Array2D<double>& dis_1_assembled, Array2D<double>& dis_2_assembled, Array2D<double>& dis_3_assembled, int PCTerms_1, int PCTerms_2, int PCTerms_3, int dim, int order, int nStep, int AAPG_ord, Array2D<double>& coeff1, Array2D<double>& coeff2, Array2D<double>& coeff3){
-    // Get corresponding row index in the global matrix for sub-problem solutions
-    int Px = computeNPCTerms(dim, order);
-    Array2D<int> Pbtot(Px,dim);
-    computeMultiIndex(dim,order,Pbtot);
-    // 1D psibasis
-    Array2D<int> Pb1(PCTerms_1,1);
-    computeMultiIndex(1,order,Pb1);
-    // 2D psibasis
-    Array2D<int> Pb2(PCTerms_2,2);
-    computeMultiIndex(2,order,Pb2);
-    // 3D psibasis
-    Array2D<int> Pb3(PCTerms_3,3);
-    computeMultiIndex(3,order,Pb3);
 
     printf("Computing the index...\n");
-    Array2D<int> ind1 = index1(dim, PCTerms_1, order, Pbtot, Pb1);
-    Array2D<Array1D<int> > ind2 = index2(dim, PCTerms_2, order, Pbtot, Pb2);
-    Array3D<Array1D<int> > ind3 = index3(dim, PCTerms_3, order, Pbtot, Pb3);
+    Array2D<int> ind1(PCTerms_1,dim,0);
+    Array2D<Array1D<int> > ind2(dim,dim);
+    Array3D<Array1D<int> > ind3(dim,dim,dim);
+    index(dim, order, PCTerms_1, PCTerms_2, PCTerms_3, ind1, ind2, ind3);
 
     // Assemble first order AAPG solutions
     printf("Assembling the first order terms...\n");
