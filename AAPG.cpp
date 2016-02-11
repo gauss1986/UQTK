@@ -523,7 +523,6 @@ void index(int dim, int order, int PCTerms_1, int PCTerms_2, int PCTerms_3, Arra
             Pb1_more(ind,i)=Pb1(ind,0);
         }
         Array1D<int> ind=identicalrow(PCTerms_1,dim,Pbtot,Pb1_more);
-        cout << "finished dof=1 index" << endl;
         ind1.replaceCol(ind,i);
     }
     
