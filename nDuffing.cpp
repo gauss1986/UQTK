@@ -28,8 +28,6 @@ July 25, 2015
 #include "AAPG.h"
 #include "ticktock.h"
 
-#define DIS0 0.0
-#define VEL0 0.0
 
 /// \brief c++ version of the Matlab code GS_duffing_multi.m.
 /// Dynamic response of a Duffing oscillator subject to uncertain excitation force.
@@ -51,18 +49,19 @@ int main(int argc, char *argv[])
         }
     }
 
+    int dof;        //Spatial dof
     int dim;        //Stochastic dimensionality
     int nkl;        //Number of terms retained in KL expansion
     char* cov_type; //Covariance type
     double sigma;   //Standard deviation
     int nspl;       //MCS sample size
     bool act_D;     //wheather doing AAPG adaptive or not
-    double dof;     //Spatial dof
     int noutput;    //Number of output points
     double clen;    // Correlation length of the random process
-    Array1D<double> inpParams(5,0.e0);//Input parameters
-    Array1D<int> init_D(2,0);
+    Array1D<double> inpParams(2,0.e0);//Input parameters
     Array1D<int> coeff_D(2,0);
+    Array1D<double> initial(2*dof,0.e0);
+    Array1D<int> init_D(2*dof,0);
     bool PDF=false;       //control coeff for outputing PDF
 
     // Time marching info
@@ -94,160 +93,29 @@ int main(int argc, char *argv[])
         p = 0.99;
         dof = 2;
         noutput = 10;
-        inpParams(0) = 0.0;//Problem to solve 
-        inpParams(1) = 0.1;//zeta
-        inpParams(2) = 1.0;//epsilon
+        inpParams(0) = 1.0;//Mean of epsilon 
+        inpParams(1) = 0.5;//Std of epsilon
         double t_temp = 0.0; 
         for (int i=0;i<2*nStep+1;i++){
             fbar(i) = 2.0*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
             t_temp +=dTym/2;
         }
-        init_D(0)=10000;
-        init_D(1)=10001;
+        init_D.SetValue(10000);
         coeff_D(0)=0;
         coeff_D(1)=1;
-    }
-    if (CASE==2){//Stochastic initial conditions and deterministic forcing
-        dim = 2;
-        nkl = 2;
-        cov_type = (char *)"Exp";
-        sigma = 0.5;
-        nspl = 10000;
-        factor_OD = 1.0;
-        ord_GS = 2;
-        ord_AAPG = 2;
-        ord_AAPG_GS = 2;
-        act_D = false;
-        p = 0.99;
-        dof = 2;
-        noutput = 10;
-        inpParams(0) = 0.0;//Problem to solve 
-        inpParams(1) = 0.1;//zeta
-        inpParams(2) = 1.0;//epsilon
-        double t_temp = 0.0; 
-        for (int i=0;i<2*nStep+1;i++){
-            fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-            t_temp +=dTym/2;
-        }
-        init_D(0)=0;
-        init_D(1)=1;
-        coeff_D(0)=0;
-        coeff_D(1)=1;
-    }
-    if (CASE==3){//stochastic initial conditions and stochastic forcing
-        clen = 0.05;
-        dim = 12;
-        nkl = 10;
-        dof = 2;
-        cov_type = (char *)"Exp";
-        sigma=0.5;
-        nspl = 10000;
-        factor_OD = 1.0;
-        ord_GS = 2;
-        ord_AAPG = 3;
-        ord_AAPG_GS = 2;
-        act_D = false;
-        p = 0.99;
-        noutput = 2;
-        inpParams(0) = 0.0;//Problem to solve 
-        inpParams(1) = 0.1;//zeta
-        inpParams(2) = 1.0;//epsilon
-        double t_temp = 0.0; 
-        for (int i=0;i<2*nStep+1;i++){
-            fbar(i) = 2.0*(1-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-            t_temp +=dTym/2;
-        }
-        if ((dof+nkl-dim)>10e-5){
-            cout << "This test case is configured so that total stochastic dim should equal the number of modes in KL exapansion and dof. Now this is not true!!" << endl<<flush;
-            return 1;
-        }
-        init_D(0)=10;
-        init_D(1)=11;
-        coeff_D(0)=0;
-        coeff_D(1)=1;
-    }
-    if (CASE==4){//Stochastic zeta and epsilon
-        dim = 2;
-        nkl = 2;
-        cov_type = (char *)"Exp";
-        sigma = 0.5;
-        nspl = 10000;
-        factor_OD = 1.0;
-        ord_GS = 2;
-        ord_AAPG = 2;
-        ord_AAPG_GS = 2;
-        act_D = false;
-        p = 0.99;
-        dof = 2;
-        noutput = 10;
-        inpParams(0) = 0.0;//Problem to solve 
-        inpParams(1) = 0.1;//zeta
-        inpParams(2) = 1.0;//epsilon
-        inpParams(3) = 0.05;//std for zeta
-        inpParams(4) = 0.5;//std for epsilon
-        double t_temp = 0.0; 
-        for (int i=0;i<2*nStep+1;i++){
-            fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-            t_temp +=dTym/2;
-        }
-        init_D(0)=10000;
-        init_D(1)=10001;
-        coeff_D(0)=0;
-        coeff_D(1)=1;
-    }
-    if (CASE==5){//Stochastic zeta and epsilon and stochastic forcing
-        clen = 0.05;
-        dim = 150;
-        nkl = 148;
-        cov_type = (char *)"Exp";
-        sigma = 0.5;
-        nspl = 1000000;
-        factor_OD = 1.0;
-        ord_GS = 1;
-        ord_AAPG = 2;
-        ord_AAPG_GS = 2;
-        act_D = false;
-        p = 0.99;
-        dof = 2;
-        noutput = 1;
-        inpParams(0) = 0.0;//Problem to solve 
-        inpParams(1) = 0.1;//zeta
-        inpParams(2) = 1.0;//epsilon
-        inpParams(3) = 0.05;//std for zeta
-        inpParams(4) = 0.35;//std for epsilon
-        double t_temp = 0.0; 
-        for (int i=0;i<2*nStep+1;i++){
-            fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-            t_temp +=dTym/2;
-        }
-        init_D(0)=10000;
-        init_D(1)=10001;
-        coeff_D(0)=dim-2;
-        coeff_D(1)=dim-1;
     }
 
     // Save the force
     write_datafile_1d(fbar,"fbar.dat");
   
-    
     /* Print the input information on screen */
-    cout << " - Number of KL modes:              " << nkl  << endl<<flush;
-    cout << " - Monte Carlo sample size:         " << nspl  << endl<<flush;
+    cout << " - Number of spatial dof:           " << dim  << endl<<flush;
     if (CASE == 1){
-        cout << " - Case 1 with correlation length "<<clen<<", standard deviation "<<sigma<<". Random variable is of type "<<pcType<<"."<<endl<<flush;
+        //cout << " - Case 1 with correlation length "<<clen<<", standard deviation "<<sigma<<". Random variable is of type "<<pcType<<"."<<endl<<flush;
+        cout << " - Stochastic force is discretized using KL expansion."
+        cout << " - Number of KL modes:              " << nkl  << endl<<flush;
     }
-    if (CASE == 2){
-        cout << " - Case 2 Will generate random variable of type "<< pcType << ", with standard deviation " << sigma << endl<< flush;
-    }
-    if (CASE == 3){
-        cout << " - Case3 where the initial condition and the forcing are both stochastic, with standard deviation " << sigma << ". Correlation length of the process is " << clen << ". Variance type " << pcType  << endl << flush;
-    }
-    if (CASE == 4){
-        cout << " - Case4 where the damping coeff zeta and epsilon are stochastic."<< endl<< flush;
-    }
-    if (CASE == 5){
-        cout << " - Case5 where zeta and epsilon are stochastic." << endl << flush;
-    }
+    cout << " - Monte Carlo sample size:         " << nspl  << endl<<flush;
     cout << " - Time marching step:              " << dTym  << endl<<flush;
     cout << " - Process end time:                " << tf  << endl<<flush;
     cout << " - Dynamical orthogonal AAPG factor:" << factor_OD  << endl<<flush;
@@ -282,7 +150,7 @@ int main(int argc, char *argv[])
 
     // Generate the KL expansion of the excitation force, the first nkl terms are stochastic
     Array2D<double> scaledKLmodes(2*nStep+1,dim,0.e0);
-    if (CASE==1 || CASE ==3 || CASE==5){
+    if (CASE==1){
         Array2D<double> scaledKLmodes_small(2*nStep+1,nkl,0.e0);
         genKL(scaledKLmodes_small, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
         Array1D<double> KLmodes_temp(2*nStep+1,0.e0);
@@ -294,13 +162,10 @@ int main(int argc, char *argv[])
     write_datafile(scaledKLmodes,"KL.dat");
  
     // Sample initial conditions for MCS 
-    Array2D<double> initial_samples(nspl,dim,0.e0);
-    Array2D<double> stat_init(dof,2,0.e0);
-    stat_init(0,0)=VEL0;
-    stat_init(1,0)=DIS0;
+    Array2D<double> initial_samples(nspl,2*dof,0.e0);
+    Array1D<double> stat_init(initial);
     for (int i=0;i<nspl;i++){
-        initial_samples(i,0) = VEL0;
-        initial_samples(i,1) = DIS0;
+        initial_samples.replaceRow(initial,i);
     }
     if (CASE==2 || CASE == 3){
         for (int i=0;i<nspl;i++){
@@ -327,8 +192,8 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Sample epsilon and zeta for MCS
-    Array2D<double> temp_inp(nspl,2,0.e0); 
+    // Sample epsilon for MCS
+    Array2D<double> temp_inp(nspl,0.e0); 
     Array1D<Array1D<double> > inpParams_MCS(nspl);
     for (int i=0;i<nspl;i++){
         temp_inp(i,0) = inpParams(1);
