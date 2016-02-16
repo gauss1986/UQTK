@@ -10,29 +10,147 @@
 #include "GhanemSpanos.h"
 #include "Utils.h"
 
-void nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& initial,  Array1D<Array1D<double> >& epsilon, Array1D<Array1D<double> >& mck, Array1D<Array1D<double> >& f, double dTym, int nStep, Array1D<Array1D<double> >& solution){
-    // n-dimensional Duffing oscillator
+void nGS(int dof, PCSet& myPCSet, int nStep, Array1D<Array1D<double> >& initial, double dTym, Array1D<Array2D<double> >& f_GS, Array1D<Array2D<double> >& solution){
+    int nPCTerms = myPCSet.GetNumberPCTerms();
 
-    // deterministic M and C
-    Array2D<double> M(dof,dof,0.e0);
-    Array2D<double> C(dof,dof,0.e0);
+    // Initialize
+    Array1D<Array1D<double> > result(dof);
     for (int i=0;i<dof;i++){
-        M(i,i)=mck(0)(i);
-        C(i,i)=mck(1)(i);
+        // save to Solution
+        Array2D<double> temp(nStep+1,2*nPCTerms,0.e0);
+        solution(i) = temp;
+        solution(i).replaceRow(initial(i),0);
+        // result is working variable
+        Array1D<double> temp2(initial(i));
+        result(i)=temp2;
     }
-    for (int i=0;i<dof-1;i++){
-        C(i,i+1)=-mck(1)(i+1);
-        C(i+1,i)=-mck(1)(i+1);
-        C(i,i)+=mck(1)(i+1);
-    }
+    
+    // Forward run
+    Array1D<Array1D<double> > force_current(dof);
+    Array1D<Array1D<double> > force_mid(dof);
+    Array1D<Array1D<double> > force_plus(dof);
+    for (int ix=0;ix<nStep;ix++){
+        // Subtract the force at currect, mid and next step
+        for (int i=0;i<dof;i++){
+            Array1D<double> temp_force(nPCTerms,0.e0);
+            getRow(f_GS(i),2*ix,temp_force);
+            force_current(i)=temp_force;
+            Array1D<double> temp_force1(nPCTerms,0.e0);
+            getRow(f_GS(i),2*ix+1,temp_force1);
+            force_mid(i)=temp_force1;
+            Array1D<double> temp_force2(nPCTerms,0.e0);
+            getRow(f_GS(i),2*ix+2,temp_force2);
+            force_plus(i)=temp_force1;
+        }
+        // Step forward 
+        forward_duffing_GS(dof, myPCSet, epsilon, mck, force_current, force_mid, force_plus, dTym, result);
+        // Update solution
+        for (int i=0;i<dof;i++){
+            solution(i).replaceRow(result(i),ix+1);
+        }
+    }   
 
-     
+    return; 
 }
 
-void forward_duffing_GS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& u, Array1D<Array1D<double> >& epsilon, Array1D<double>& m, Array2D<double>& C){
-    int nPC = myPCSet.GetNumberPCTerms();
+void forward_duffing_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& epsilon, Array1D<Array1D<double> >& mck, Array1D<Array1D<double> >& force_current, Array1D<Array1D<double> >& force_mid, Array1D<Array1D<double> >& force_plus,  double dTym, Array1D<Array1D<double> >& x){
+        int nPCTerms = myPCSet.GetNumberPCTerms();
 
+        Array1D<Array1D<double> > u(dof);
+        Array1D<Array1D<double> > v(dof);
+        for (int i=0;i<dof;i++){
+            Array1D<double> temp_u(nPCTerms,0.e0);
+            Array1D<double> temp_v(nPCTerms,0.e0);
+            u(i) = temp_u;
+            v(i) = temp_v;
+            for (int j=0;j<nPCTerms;j++){
+                v(i)(j)=x(i)(j);
+                u(i)(j)=x(i)(j+nPCTerms);
+            }
+        }
+
+        //Save solution at current time step
+        Array1D<Array1D<double> > u0(dof);
+        Array1D<Array1D<double> > v0(dof);
+        for (int i=0;i<dof;i++){
+            Array1D<double> temp(u(i));
+            u0(i)=temp;
+            Array1D<double> temp2(v(i));
+            v0(i)=temp2;
+        }
+        
+        // Integrate with classical 4th order Runge-Kutta
+        // k1
+        Array1D<Array1D<double> > du1(dof);
+        Array1D<Array1D<double> > dv1(dof);
+        Array1D<Array1D<double> > kbar1 = kbar(dof, myPCSet, u, epsilon, mck);
+        dev_nGS(dof, myPCSet, force_current, mck, u, v, du1, dv1, kbar1);
+        for (int i=0;i<dof;i++){
+            addVecAlphaVecPow(u(i),0.5*dTym,du1(i),1);
+            addVecAlphaVecPow(v(i),0.5*dTym,dv1(i),1);
+        }
+
+        // k2
+        Array1D<Array1D<double> > du2(dof);
+        Array1D<Array1D<double> > dv2(dof);
+        Array1D<Array1D<double> > kbar2 = kbar(dof, myPCSet, u, epsilon, mck);
+        dev_nGS(dof, myPCSet, force_mid, mck, u, v, du2, dv2, kbar2);
+        for (int i=0;i<dof;i++){
+            u(i) = u0(i);
+            v(i) = v0(i);
+            addVecAlphaVecPow(u(i),0.5*dTym,du2(i),1);
+            addVecAlphaVecPow(v(i),0.5*dTym,dv2(i),1);
+        }
+
+        // k3
+        Array1D<Array1D<double> > du3(dof);
+        Array1D<Array1D<double> > dv3(dof);
+        Array1D<Array1D<double> > kbar3 = kbar(dof, myPCSet, u, epsilon, mck);
+        dev_nGS(dof, myPCSet, force_mid, mck, u, v, du3, dv3, kbar3);
+        for (int i=0;i<dof;i++){
+            u(i) = u0(i);
+            v(i) = v0(i);
+            addVecAlphaVecPow(u(i),dTym,du3(i),1);
+            addVecAlphaVecPow(v(i),dTym,dv3(i),1);
+        }
+
+        // k4
+        Array1D<Array1D<double> > du4(dof);
+        Array1D<Array1D<double> > dv4(dof);
+        Array1D<Array1D<double> > kbar4 = kbar(dof, myPCSet, u, epsilon, mck);
+        dev_nGS(dof, myPCSet, force_plus, mck, u, v, du4, dv4, kbar4);
+
+        // Advance to next time step
+        for (int i=0;i<dof;i++){
+            //u
+            u(i) = u0(i);
+            prodVal(du2(i),2);
+            prodVal(du3(i),2);
+            addVec(du3(i),du4(i));
+            addVec(du2(i),du4(i));
+            addVec(du1(i),du4(i));
+            addVecAlphaVecPow(u(i),dTym/6,du4(i),1);
+            //v
+            v(i) = v0(i);
+            prodVal(dv2(i),2);
+            prodVal(dv3(i),2);
+            addVec(dv3(i),dv4(i));
+            addVec(dv2(i),dv4(i));
+            addVec(dv1(i),dv4(i));
+            addVecAlphaVecPow(v(i),dTym/6,dv4(i),1);
+            //x
+            for (int j=0;j<nPCTerms;j++){
+                x(i)(j)=v(i)(j);
+                x(i)(j+nPCTerms)=u(i)(j);    
+            }
+        }     
+           
+        return; 
+   }
+   
+Array1D<Array1D<double> > kbar(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& u, Array1D<Array1D<double> >& epsilon, Array1D<Array1D<double> >& mck){
     // kbar 
+    int nPC = myPCSet.GetNumberPCTerms();
     Array1D<Array1D<double> > kbar(dof);
     // kbar0
     Array1D<double> temp_u(nPC,0.e0);
@@ -54,163 +172,134 @@ void forward_duffing_GS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& u, A
         kbar(i) = temp_k1;
     }
 
-    // K
-    Array2D<double> K(dof,dof);
-    Array1D<double> temp_K(nPC,0.e0);
-    for (int i=0;i<dof;i++)
-        for (int j=0;j<dof;j++)
-            K(i,j)=temp_K;
-    for int i=0;i<dof-1;i++){
-        addVec(kbar(i),K(i,i));
-        addVec(kbar(i+1),K(i,i));
-        prodVal(kbar(i+1),-1);
-        K(i,i+1)=kbar(i+1);
-        K(i+1,i)=kbar(i+1);
-    }
-    K(dof,dof)=kbar(dof);
+    return(kbar);
+}
 
-    // Compute u at next step
+void dev_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& force, Array1D<Array1D<double> >& mck, Array1D<Array1D<double> >& u, Array1D<Array1D<double> >& v, Array1D<Array1D<double> >& du, Array1D<Array1D<double> >& dv, Array1D<Array1D<double> >& kbar){
+    // du = v
+    for (int i=0;i<dof;i++){
+        Array1D<double> temp(v(i));
+        du(i) = temp;
+    }
+    //int nPCTerms = x(0).Length();
+       
+    // compute kbaru and kbaru_plus 
+    Array1D<Array1D<double> > kbaru(dof);
+    Array1D<Array1D<double> > kbaru_plus(dof-1);
+    Array1D<double> temp_k(nPCTerms,0.e0);
+    for (int i=0;i<dof-1;i++){
+        //Array1D<double> temp_k(nPCTerms,0.e0);
+        kbaru=temp_k; 
+        kbaru_plus=temp_k; 
+        myPCSet.Prod(kbar(i),x(i),kbaru(i));   
+        myPCSet.Prod(kbar(i+1),x(i),kbaru_plus(i));   
+    }
+    kbaru(dof-1) = temp_k;
+    myPCSet.Prod(kbar(dof-1),x(dof-1),kbaru(dof-1));   
+
+    // compute cu and cu_plus 
+    Array1D<Array1D<double> > cu(dof);
+    Array1D<Array1D<double> > cu_plus(dof-1);
+    for (int i=0;i<dof-1;i++){
+        cu(i) = u(i);
+        cu_plus(i) = u(i);
+        prodVal(cu(i),mck(1)(i));
+        prodVal(cu_plus(i),mck(1)(i+1));
+    }
+    cu(dof-1) = u(dof-1);
+    prodVal(cu(dof-1),c(dof-1));
+
+    // compute the acceleration
+    // dof 0
+    Array1D<double> temp_d(force(0));
+    subtractVec(kbaru(0),temp_d);
+    subtractVec(kbaru_plus(0),temp_d);
+    addVec(kbaru(1),temp_d);
+    subtractVec(cu(0),temp_d);
+    subtractVec(cu_plus(0),temp_d);
+    addVec(cu(1),temp_d);
+    prodVal(temp_d,1/m(0));
+    dv(0)=temp_d;
+    // dof dof
+    Array1D<double> temp_d1(force(dof-1));
+    subtractVec(kbaru(dof-1),temp_d1);
+    addVec(kbaru_plus(dof-2),temp_d1);
+    subtractVec(cu(dof-1),temp_d1);
+    addVec(cu_plus(dof-2),temp_d1);
+    prodVal(temp_d1,1/m(dof-1));
+    dv(dof-1)=temp_d1;
+    // dof n
     for (int i=1;i<dof-1;i++){
-        Array1D<double> temp_u2(ndof,0.e0);
-        Array1D<double> u_minus(u(i-1));
-        Array1D<double> u_current(u(i));
-        Array1D<double> u_plus(u(i+1));
-        prodVal(u_minus,m(i));
-                
+        Array1D<double> temp_d2(force(i));
+        subtractVec(kbaru(i),temp_d2);
+        subtractVec(kbaru_plus(i),temp_d2);
+        addVec(kbaru_plus(i-1),temp_d2);
+        addVec(kbaru(i+1),temp_d2);
+        subtractVec(cu(i),temp_d2);
+        subtractVec(cu_plus(i),temp_d2);
+        addVec(cu_plus(i-1),temp_d2);
+        addVec(cu(i+1),temp_d2);
+        prodVal(temp_d2,1/m(i));
+        dv(i)=temp_d2;
     }
-
+    
     return;
 }
 
-void GS(int dof, PCSet& myPCSet, Array1D<int>& coeff_D, int nPCTerms, int nStep, Array1D<Array1D<double> >& initial, double dTym, Array1D<double>& inpParams, Array2D<double>& f_GS, Array1D<Array2D<double> >& solution){
+Array2D<double> postprocess_nGS(int dof, int noutput, int nPCTerms, int nStep,  Array1D<Array2D<double> >& solution, PCSet& myPCSet, double dTym, int ord, Array1D<Array2D<double> >& mstd_MCS_u, Array1D<Array2D<double> >& mstd_MCS_v){
+    // Open files to write out solutions
+    ostringstream s1;
+    s1 << "GS_dis_m_" << ord<<".dat";
+    string dis_m(s1.str());
+    ostringstream s2;
+    s2 << "GS_dis_s_" << ord<<".dat";
+    string dis_s(s2.str());
+    ostringstream s3;
+    s3 << "GS_vel_m_" << ord<<".dat";
+    string vel_m(s3.str());
+    ostringstream s4;
+    s4 << "GS_vel_s_" << ord<<".dat";
+    string vel_s(s4.str());
 
-    // Initialize working variable
-    Array1D<Array1D<double> > result(dof);
-    for (int i=0;i<dof;i++){
-        Array2D<double> temp(nStep+1,nPCTerms,0.e0);
-        solution(i) = temp;
-        solution(i).replaceRow(initial(i),0);
-        Array1D<double> temp2(initial(i));
-        result(i)=temp2;
+    // Output solution (mean and std) 
+    Array1D<double> temp_u(nPCTerms,0.e0);
+    Array1D<double> temp_v(nPCTerms,0.e0);
+    Array2D<double> StDv_u(nStep+1,dof,0.e0);
+    Array2D<double> StDv_v(nStep+1,dof,0.e0);
+    Array2D<double> mean_u(nStep+1,dof,0.e0);
+    Array2D<double> mean_v(nStep+1,dof,0.e0);
+    for (int j=0;j<dof;j++){
+        for (int i=0;i<nStep+1;i++){
+            for (int k=0;k<nPCTerms;k++){
+                temp_v(k)=solution(j)(i,k);
+                temp_u(k)=solution(j)(i,nPCTerms+k);
+            }
+            StDv_u(i,j) = myPCSet.StDv(temp_u);
+            StDv_v(i,j) = myPCSet.StDv(temp_v);
+        }
+        Array1D<double> temp2(nStep+1,0.e0);
+        getCol(solution(j),0,temp2);
+        mean_v.replaceCol(temp2,j);
+        getCol(solution(j),nPCTerms,temp2);
+        mean_u.replaceCol(temp2,j);
+        //if (i % ((int) nStep/noutput) == 0){
+        //    WriteMeanStdDevToStdOut(i,i*dTym,temp(0),StDv(i));
+        //}
+
     }
     
-    // Forward run
-    Array1D<double> force_current(nPCTerms,0.e0);
-    Array1D<double> force_mid(nPCTerms,0.e0);
-    Array1D<double> force_plus(nPCTerms,0.e0);
-    for (int ix=0;ix<nStep;ix++){
-        // Subtract the force at currect, mid and next step
-        getRow(f_GS,2*ix,force_current);
-        getRow(f_GS,2*ix+1,force_mid);
-        getRow(f_GS,2*ix+2,force_plus);
-        // Step forward 
-        forward_duffing_GS(dof, myPCSet, inpParams, force_current, force_mid, force_plus, dTym, result, coeff_D);
-        // Update solution
-        for (int i=0;i<dof;i++){
-            solution(i).replaceRow(result(i),ix+1);
-        }
-    }    
+    write_datafile(mean_u,dis_m.c_str());
+    write_datafile(StDv_u,dis_s.c_str());
+    write_datafile(mean_v,vel_m.c_str());
+    write_datafile(StDv_v,vel_s.c_str());
+
+    Array1D<Array2D<double> > et(dof);
+    Array2D<double> e =  nerror(et,mean_u,StDv_u,mean_v,StDv_v,mstd_MCS_u,mstd_MCS_v);
+
+    return(e);
 }
+    
+//Array2D<double> e =  nerror(Array1D<Array2D<double> >& et,Array2D<double>& mean_u,Array2D<double>& StDv_u, Array2D<double>& mean_v, Array2D<double>& StDv_v, Array1D<Array2D<double> >& mstd_MCS_u, Array1D<Array2D<double> >& mstd_MCS_v){
+    
 
-void forward_duffing_GS(int dof, PCSet& myPCSet, Array1D<double>& inpParams, Array1D<double>& force_current, Array1D<double>& force_mid, Array1D<double>& force_plus,  double dTym, Array1D<Array1D<double> >& x, Array1D<int>& coeff_D){
-        //Save solution at current time step
-        Array1D<Array1D<double> > x0(x.XSize());
-        for (unsigned int i=0;i<x.XSize();i++){
-            Array1D<double> temp(x(i));
-            x0(i)=temp;
-        }
-        
-        // Integrate with classical 4th order Runge-Kutta
-        // k1
-        Array1D<Array1D<double> > dev1(dof);
-        RHS_GS(dof, myPCSet, force_current, x, inpParams, dev1, coeff_D);
-        for (unsigned int i=0;i<x.XSize();i++)
-            addVecAlphaVecPow(x(i),0.5*dTym,dev1(i),1);
-
-        // k2
-        Array1D<Array1D<double> > dev2(dof);
-        RHS_GS(dof, myPCSet, force_mid, x, inpParams,dev2, coeff_D);
-        for (unsigned int i=0;i<x.XSize();i++){
-            x(i) = x0(i);
-            addVecAlphaVecPow(x(i),0.5*dTym,dev2(i),1);
-        }
-
-        // k3
-        Array1D<Array1D<double> > dev3(dof);
-        RHS_GS(dof, myPCSet, force_mid, x, inpParams,dev3,coeff_D);
-        for (unsigned int i=0;i<x.XSize();i++){
-            x(i) = x0(i);
-            addVecAlphaVecPow(x(i),dTym,dev3(i),1);
-        }
-
-        // k4
-        Array1D<Array1D<double> > dev4(dof);
-        RHS_GS(dof, myPCSet, force_plus, x, inpParams,dev4,coeff_D);
-
-        // Advance to next time step
-        for (unsigned int i=0;i<x.XSize();i++){
-            x(i) = x0(i);
-            prodVal(dev2(i),2);
-            prodVal(dev3(i),2);
-            addVec(dev3(i),dev4(i));
-            addVec(dev2(i),dev4(i));
-            addVec(dev1(i),dev4(i));
-            addVecAlphaVecPow(x(i),dTym/6,dev4(i),1);
-        }        
-   }
-   
-void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<double> >& x, Array1D<double>& inpParams, Array1D<Array1D<double> >& dev, Array1D<int>& coeff_D){
-        for (int i=0;i<dof;i++){
-            Array1D<double> temp(x(i));
-            dev(i) = temp;
-        }
-        int nPCTerms = x(0).Length();
-        
-        if ((abs(inpParams(0))<1e-10)){ //Duffing
-            // parse input parameters
-            Array1D<double> epsilon(nPCTerms,0.e0); 
-            Array1D<double> zeta(nPCTerms,0.e0); 
-            if (coeff_D(0)+1<nPCTerms){
-                myPCSet.InitMeanStDv(inpParams(1),inpParams(3),coeff_D(0)+1,zeta);
-            }
-            if (coeff_D(1)+1<nPCTerms){
-                myPCSet.InitMeanStDv(inpParams(2),inpParams(4),coeff_D(1)+1,epsilon);
-            }
-            // buff to store temperary results 
-            Array1D<double> temp(nPCTerms,0.e0);                     
-            Array1D<double> temp2(nPCTerms,0.e0);                     
-            // nonlinear term
-            myPCSet.IPow(x(1),temp,3);
-            myPCSet.Prod(epsilon,temp,temp2);
-            myPCSet.Prod(zeta,x(0),temp);
-            for (int ind=0;ind<nPCTerms;ind++){
-                dev(1)(ind) = x(0)(ind);//velocity term
-                dev(0)(ind) = force(ind)-temp2(ind)-2*temp(ind)-x(1)(ind);
-            }
-        }
-}
-
-Array1D<double> postprocess_GS(int noutput, int nPCTerms, int nStep,  Array2D<double>& solution, PCSet& myPCSet, double dTym, FILE* GS_dump, FILE* GSstat_dump, Array2D<double>& mstd_MCS, Array2D<double>& stat){
-    // Output solution (mean and std) 
-    Array1D<double> temp(nPCTerms,0.e0);
-    Array1D<double> StDv(nStep+1,0.e0);
-    for (int i=0;i<nStep+1;i++){
-        getRow(solution,i,temp);
-        StDv(i) = myPCSet.StDv(temp);
-        // Write time and solution to file
-        WriteModesToFilePtr(i, temp.GetArrayPointer(), nPCTerms, GS_dump);
-        // Write dis (mean and std) to file and screen
-        WriteMeanStdDevToFilePtr(i,temp(0),StDv(i),GSstat_dump);
-        if (i % ((int) nStep/noutput) == 0){
-            WriteMeanStdDevToStdOut(i,i*dTym,temp(0),StDv(i));
-        }
-    }
-
-    Array1D<double> mean;
-    getCol(solution,0,mean);
-    Array1D<double> e =  error(mean, StDv, mstd_MCS);
-
-    stat.replaceRow(mean,0);
-    stat.replaceRow(StDv,1);    
-    return e;
-}
+//}

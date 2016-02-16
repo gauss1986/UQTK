@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
         nkl = 148;
         cov_type = (char *)"Exp";
         sigma = 0.5;
-        nspl = 1000000;
+        nspl = 100000;
         factor_OD = 1.0;
         ord_GS = 1;
         ord_AAPG = 2;
@@ -527,9 +527,15 @@ int main(int argc, char *argv[])
         //assemble dis and output dis_sample
         Array2D<double> stat_GS(2,nStep+1,0.e0);
         Array2D<double> stat_GS_vel(2,nStep+1,0.e0);
-        Array1D<double> e_GS_ord = postprocess_GS(noutput, nPCTerms, nStep, result(1), myPCSet, dTym,GS_dump, GSstat_dump, MCS_s_dis, stat_GS);
-        Array1D<double> e_GS_ord_vel = postprocess_GS(noutput, nPCTerms, nStep, result(0), myPCSet, dTym, GS_dump_v, GSstat_dump_v, MCS_s_vel, stat_GS_vel);
+        Array2D<double> et_dis(nStep+1,2,0.e0);
+        Array2D<double> et_vel(nStep+1,2,0.e0);
+        Array1D<double> e_GS_ord = postprocess_GS(noutput, nPCTerms, nStep, result(1), myPCSet, dTym,GS_dump, GSstat_dump, MCS_s_dis, stat_GS, et_dis);
+        Array1D<double> e_GS_ord_vel = postprocess_GS(noutput, nPCTerms, nStep, result(0), myPCSet, dTym, GS_dump_v, GSstat_dump_v, MCS_s_vel, stat_GS_vel, et_vel);
         Array1D<double> normsq(nPCTerms,0.e0); 
+        ostringstream s5;
+        s5 << "et_dis_GS" << ord<<".dat";
+        string et(s5.str());
+        write_datafile(et_dis,et.c_str()); 
         //myPCSet.OutputNormSquare(normsq);
         //cout << "Normsq 1=" <<normsq(1)<<endl;
         //cout << "Normsq 2=" <<normsq(2)<<endl;

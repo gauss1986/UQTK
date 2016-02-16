@@ -349,11 +349,13 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
             	WriteMeanStdDevToStdOut(ix,ix*dTym,dis_1_mean(ix),std1(ix));
             }
     	}
-        Array1D<double> e1 =  error(dis_1_mean, std1, mstd_MCS);    
+        Array2D<double> et1(nStep+1,2,0.e0);
+        Array1D<double> e1 =  error(et1,dis_1_mean, std1, mstd_MCS);    
     	write_datafile_1d(dis_1_mean,"dis_1_mean.dat");
     	write_datafile_1d(std1,"dis_1_std.dat");
     	write_datafile_1d(vel_1_mean,"vel_1_mean.dat");
     	write_datafile_1d(std_vel_1,"vel_1_std.dat");
+    	write_datafile(et1,"e_dis_AAPG1.dat");
         fprintf(err_dump,"%lg %lg\n",e1(0),e1(1)); 
         e_AAPG.replaceRow(e1,0);
     }
@@ -364,11 +366,13 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
             	WriteMeanStdDevToStdOut(ix,ix*dTym,dis_2_mean(ix),std2(ix));
             }
     	}
-        Array1D<double> e2 =  error(dis_2_mean, std2, mstd_MCS);    
+        Array2D<double> et2(nStep+1,2,0.e0);
+        Array1D<double> e2 =  error(et2,dis_2_mean, std2, mstd_MCS);    
     	write_datafile_1d(dis_2_mean,"dis_2_mean.dat");
     	write_datafile_1d(std2,"dis_2_std.dat");
     	write_datafile_1d(vel_2_mean,"vel_2_mean.dat");
     	write_datafile_1d(std_vel_2,"vel_2_std.dat");
+    	write_datafile(et2,"e_dis_AAPG2.dat");
         fprintf(err_dump,"%lg %lg\n",e2(0),e2(1)); 
         e_AAPG.replaceRow(e2,1);
     }
@@ -379,11 +383,13 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
             	WriteMeanStdDevToStdOut(ix,ix*dTym,dis_3_mean(ix),std3(ix));
         	}
     	}
-        Array1D<double> e3 =  error(dis_3_mean, std3, mstd_MCS);    
+        Array2D<double> et3(nStep+1,2,0.e0);
+        Array1D<double> e3 =  error(et3,dis_3_mean, std3, mstd_MCS);    
     	write_datafile_1d(dis_3_mean,"dis_3_mean.dat");
     	write_datafile_1d(std3,"dis_3_std.dat");
     	write_datafile_1d(vel_3_mean,"vel_3_mean.dat");
     	write_datafile_1d(std_vel_3,"vel_3_std.dat");
+    	write_datafile(et3,"e_dis_AAPG3.dat");
         fprintf(err_dump,"%lg %lg\n",e3(0),e3(1)); 
         e_AAPG.replaceRow(e3,2);
     }

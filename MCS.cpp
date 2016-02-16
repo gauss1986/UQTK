@@ -118,22 +118,32 @@ Array1D<double> mStd(Array1D<double>& x,int nspl){
         return(mstd);   
 }
 
-Array1D<double> error(Array1D<double>& dis, Array1D<double>& StDv, Array2D<double>& mstd_MCS){
+Array1D<double> error(Array2D<double>& et, Array1D<double>& mean, Array1D<double>& StDv, Array2D<double>& mstd_MCS){
    // Return the integrated error in mean/std
         Array1D<double> e(2,0.e0);
-        for (unsigned int i=0;i<dis.XSize();i++){
-            e(0) = e(0) + fabs(dis(i) - mstd_MCS(0,i));
-            e(1) = e(1) + fabs(StDv(i) - mstd_MCS(1,i));  
+        //Array2D<double> et(mean.XSize(),2,0.e0);
+        for (unsigned int i=0;i<mean.XSize();i++){
+            et(i,0) = fabs(mean(i) - mstd_MCS(0,i));
+            et(i,1) = fabs(StDv(i) - mstd_MCS(1,i));  
         }
         Array1D<double> temp_m;
         getRow(mstd_MCS,0,temp_m);
+        Array1D<double> temp_m2;
+        getCol(et,0,temp_m2);
         Array1D<double> temp_s;
         getRow(mstd_MCS,1,temp_s);
+        Array1D<double> temp_s2;
+        getCol(et,1,temp_s2);
 
         // normalized relative error
-        e(0) = e(0)/sum(temp_m)*100;
-        e(1) = e(1)/sum(temp_s)*100;
+        e(0) = sum(temp_m2)/sum(temp_m)*100;
+        e(1) = sum(temp_s2)/sum(temp_s)*100;
     
+        for (unsigned int i=0;i<mean.XSize();i++){
+            et(i,0) = et(i,0)/fabs(mstd_MCS(0,i))*100;
+            et(i,1) = et(i,1)/fabs(mstd_MCS(1,i))*100;  
+        }
+
         return e;
 }
 

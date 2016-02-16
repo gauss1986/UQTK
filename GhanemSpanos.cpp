@@ -177,7 +177,7 @@ void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<dou
         }
 }
 
-Array1D<double> postprocess_GS(int noutput, int nPCTerms, int nStep,  Array2D<double>& solution, PCSet& myPCSet, double dTym, FILE* GS_dump, FILE* GSstat_dump, Array2D<double>& mstd_MCS, Array2D<double>& stat){
+Array1D<double> postprocess_GS(int noutput, int nPCTerms, int nStep,  Array2D<double>& solution, PCSet& myPCSet, double dTym, FILE* GS_dump, FILE* GSstat_dump, Array2D<double>& mstd_MCS, Array2D<double>& stat, Array2D<double>& et){
     // Output solution (mean and std) 
     Array1D<double> temp(nPCTerms,0.e0);
     Array1D<double> StDv(nStep+1,0.e0);
@@ -195,7 +195,7 @@ Array1D<double> postprocess_GS(int noutput, int nPCTerms, int nStep,  Array2D<do
 
     Array1D<double> mean;
     getCol(solution,0,mean);
-    Array1D<double> e =  error(mean, StDv, mstd_MCS);
+    Array1D<double> e =  error(et,mean, StDv, mstd_MCS);
 
     stat.replaceRow(mean,0);
     stat.replaceRow(StDv,1);    
@@ -246,7 +246,8 @@ Array2D<double> sampleGS(int noutput, int dim, int nStep, int nPCTerms, PCSet& m
         mstd_GS_noutput(0,i)=stat(0,((int) nStep/noutput)*i);
         mstd_GS_noutput(1,i)=stat(1,((int) nStep/noutput)*i);
     }
-    e_GS_sample =  error(m_sample_GS, s_sample_GS, mstd_GS_noutput);
+    Array2D<double> et(nStep+1,2,0.e0);
+    e_GS_sample =  error(et,m_sample_GS, s_sample_GS, mstd_GS_noutput);
 
     return GS_sampt;
 }
