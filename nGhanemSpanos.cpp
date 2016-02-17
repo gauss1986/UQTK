@@ -7,10 +7,10 @@
 #include "arraytools.h"
 #include "uqtktools.h"
 #include "MCS.h"
-#include "GhanemSpanos.h"
+#include "nGhanemSpanos.h"
 #include "Utils.h"
 
-void nGS(int dof, PCSet& myPCSet, int nStep, Array1D<Array1D<double> >& initial, double dTym, Array1D<Array2D<double> >& f_GS, Array1D<Array2D<double> >& solution){
+void nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& epsilon, Array1D<Array1D<double> >& mck, int nStep, Array1D<Array1D<double> >& initial, double dTym, Array1D<Array2D<double> >& f_GS, Array1D<Array2D<double> >& solution){
     int nPCTerms = myPCSet.GetNumberPCTerms();
 
     // Initialize
@@ -29,6 +29,7 @@ void nGS(int dof, PCSet& myPCSet, int nStep, Array1D<Array1D<double> >& initial,
     Array1D<Array1D<double> > force_current(dof);
     Array1D<Array1D<double> > force_mid(dof);
     Array1D<Array1D<double> > force_plus(dof);
+    cout << "Starting time marching step..." << endl;
     for (int ix=0;ix<nStep;ix++){
         // Subtract the force at currect, mid and next step
         for (int i=0;i<dof;i++){
@@ -43,7 +44,7 @@ void nGS(int dof, PCSet& myPCSet, int nStep, Array1D<Array1D<double> >& initial,
             force_plus(i)=temp_force1;
         }
         // Step forward 
-        forward_duffing_GS(dof, myPCSet, epsilon, mck, force_current, force_mid, force_plus, dTym, result);
+        forward_duffing_nGS(dof, myPCSet, epsilon, mck, force_current, force_mid, force_plus, dTym, result);
         // Update solution
         for (int i=0;i<dof;i++){
             solution(i).replaceRow(result(i),ix+1);
@@ -69,6 +70,7 @@ void forward_duffing_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& eps
             }
         }
 
+        //cout << "Save solution at current time step..." << endl;
         //Save solution at current time step
         Array1D<Array1D<double> > u0(dof);
         Array1D<Array1D<double> > v0(dof);
@@ -122,6 +124,7 @@ void forward_duffing_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& eps
 
         // Advance to next time step
         for (int i=0;i<dof;i++){
+            //cout << "dof " << i << endl;
             //u
             u(i) = u0(i);
             prodVal(du2(i),2);
@@ -155,7 +158,7 @@ Array1D<Array1D<double> > kbar(int dof, PCSet& myPCSet, Array1D<Array1D<double> 
     // kbar0
     Array1D<double> temp_u(nPC,0.e0);
     Array1D<double> temp_k(nPC,0.e0);
-    myPCSet.IPow(u(0),2,temp_u);
+    myPCSet.IPow(u(0),temp_u,2);
     myPCSet.Prod(temp_u,epsilon(0),temp_k);
     temp_k(0)=temp_k(0)+1; 
     prodVal(temp_k,mck(2)(0));
@@ -165,7 +168,7 @@ Array1D<Array1D<double> > kbar(int dof, PCSet& myPCSet, Array1D<Array1D<double> 
         Array1D<double> temp_k1(nPC,0.e0);
         Array1D<double> temp_u1(u(i));
         subtractVec(u(i-1),temp_u1); 
-        myPCSet.IPow(temp_u1,2,temp_u);
+        myPCSet.IPow(temp_u1,temp_u,2);
         myPCSet.Prod(temp_u,epsilon(i),temp_k1);
         temp_k1(0)=temp_k1(0)+1; 
         prodVal(temp_k1,mck(2)(i));
@@ -176,6 +179,7 @@ Array1D<Array1D<double> > kbar(int dof, PCSet& myPCSet, Array1D<Array1D<double> 
 }
 
 void dev_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& force, Array1D<Array1D<double> >& mck, Array1D<Array1D<double> >& u, Array1D<Array1D<double> >& v, Array1D<Array1D<double> >& du, Array1D<Array1D<double> >& dv, Array1D<Array1D<double> >& kbar){
+    int nPCTerms = myPCSet.GetNumberPCTerms();
     // du = v
     for (int i=0;i<dof;i++){
         Array1D<double> temp(v(i));
@@ -189,13 +193,13 @@ void dev_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& force, Array1D<
     Array1D<double> temp_k(nPCTerms,0.e0);
     for (int i=0;i<dof-1;i++){
         //Array1D<double> temp_k(nPCTerms,0.e0);
-        kbaru=temp_k; 
-        kbaru_plus=temp_k; 
-        myPCSet.Prod(kbar(i),x(i),kbaru(i));   
-        myPCSet.Prod(kbar(i+1),x(i),kbaru_plus(i));   
+        kbaru(i)=temp_k; 
+        kbaru_plus(i)=temp_k; 
+        myPCSet.Prod(kbar(i),u(i),kbaru(i));   
+        myPCSet.Prod(kbar(i+1),u(i),kbaru_plus(i));   
     }
     kbaru(dof-1) = temp_k;
-    myPCSet.Prod(kbar(dof-1),x(dof-1),kbaru(dof-1));   
+    myPCSet.Prod(kbar(dof-1),u(dof-1),kbaru(dof-1));   
 
     // compute cu and cu_plus 
     Array1D<Array1D<double> > cu(dof);
@@ -207,7 +211,7 @@ void dev_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& force, Array1D<
         prodVal(cu_plus(i),mck(1)(i+1));
     }
     cu(dof-1) = u(dof-1);
-    prodVal(cu(dof-1),c(dof-1));
+    prodVal(cu(dof-1),mck(1)(dof-1));
 
     // compute the acceleration
     // dof 0
@@ -218,7 +222,7 @@ void dev_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& force, Array1D<
     subtractVec(cu(0),temp_d);
     subtractVec(cu_plus(0),temp_d);
     addVec(cu(1),temp_d);
-    prodVal(temp_d,1/m(0));
+    prodVal(temp_d,1/mck(0)(0));
     dv(0)=temp_d;
     // dof dof
     Array1D<double> temp_d1(force(dof-1));
@@ -226,7 +230,7 @@ void dev_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& force, Array1D<
     addVec(kbaru_plus(dof-2),temp_d1);
     subtractVec(cu(dof-1),temp_d1);
     addVec(cu_plus(dof-2),temp_d1);
-    prodVal(temp_d1,1/m(dof-1));
+    prodVal(temp_d1,1/mck(0)(dof-1));
     dv(dof-1)=temp_d1;
     // dof n
     for (int i=1;i<dof-1;i++){
@@ -239,7 +243,7 @@ void dev_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& force, Array1D<
         subtractVec(cu_plus(i),temp_d2);
         addVec(cu_plus(i-1),temp_d2);
         addVec(cu(i+1),temp_d2);
-        prodVal(temp_d2,1/m(i));
+        prodVal(temp_d2,1/mck(0)(i));
         dv(i)=temp_d2;
     }
     
@@ -293,8 +297,10 @@ Array2D<double> postprocess_nGS(int dof, int noutput, int nPCTerms, int nStep,  
     write_datafile(mean_v,vel_m.c_str());
     write_datafile(StDv_v,vel_s.c_str());
 
-    Array1D<Array2D<double> > et(dof);
-    Array2D<double> e =  nerror(et,mean_u,StDv_u,mean_v,StDv_v,mstd_MCS_u,mstd_MCS_v);
+    //Array1D<Array2D<double> > et(dof);
+    //Array2D<double> e =  nerror(et,mean_u,StDv_u,mean_v,StDv_v,mstd_MCS_u,mstd_MCS_v);
+    
+    Array2D<double> e(dof,4,0.e0);
 
     return(e);
 }

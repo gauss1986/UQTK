@@ -6,14 +6,17 @@ include $(TOPDIR)/config/config3.site
 TARGET = Duffing.x
 TARGET2 = Lorenz.x
 TARGET3 = VDP.x
+TARGET4 = nDuffing.x
 
 SRCS = ticktock.cpp KL.cpp MCS.cpp GhanemSpanos.cpp AAPG.cpp Duffing.cpp Utils.cpp Utilsave.cpp 
 SRCS2 = ticktock.cpp KL.cpp MCS.cpp GhanemSpanos.cpp Lorenz.cpp UtilsLorenz.cpp Utils.cpp Utilsave.cpp 
 SRCS3 = ticktock.cpp KL.cpp MCS.cpp GhanemSpanos.cpp AAPG.cpp VDP.cpp Utils.cpp Utilsave.cpp 
+SRCS4 = ticktock.cpp KL.cpp nGhanemSpanos.cpp nDuffing2.cpp Utils.cpp Utilsave.cpp 
 
 OBJ = $(SRCS:.cpp=.o)
 OBJ2 = $(SRCS2:.cpp=.o)
 OBJ3 = $(SRCS3:.cpp=.o)
+OBJ4 = $(SRCS4:.cpp=.o)
 
 INCS2 =  UtilsLorenz.h 
 
@@ -36,6 +39,7 @@ DEFS = -D__$(FTNNAME)
 duffing: $(TARGET)
 lorenz: $(TARGET2)
 vdp: $(TARGET3)
+nduffing: $(TARGET4)
 
 $(TARGET): $(OBJ) $(LDEP)
 	$(CXX) $(CXXFLAGS) $(DEFS) $(INCDIRS) -o $(TARGET) $(OBJ) $(LIBS)
@@ -46,8 +50,11 @@ $(TARGET2): $(OBJ2) $(INCS2) $(LDEP)
 $(TARGET3): $(OBJ3) $(LDEP)
 	$(CXX) $(CXXFLAGS) $(DEFS) $(INCDIRS) -o $(TARGET3) $(OBJ3) $(LIBS)
 
+$(TARGET4): $(OBJ4) $(LDEP)
+	$(CXX) $(CXXFLAGS) $(DEFS) $(INCDIRS) -o $(TARGET4) $(OBJ4) $(LIBS)
+
 clean:
-	rm -f $(OBJ) $(TARGET)*~ $(OBJ2) $(TARGET2) *~ $(OBJ3) $(TARGET3)
+	rm -f $(OBJ) $(TARGET)*~ $(OBJ2) $(TARGET2) *~ $(OBJ3) $(TARGET3) *~ $(OBJ4) $(TARGET4)
 	rm -f *.dat
 
 

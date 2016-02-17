@@ -24,7 +24,7 @@ July 25, 2015
 #include "Duffing.h"
 #include "KL.h"
 #include "MCS.h"
-#include "GhanemSpanos.h"
+#include "nGhanemSpanos.h"
 #include "AAPG.h"
 #include "ticktock.h"
 

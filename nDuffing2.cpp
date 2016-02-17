@@ -17,7 +17,7 @@
 #include "Duffing.h"
 #include "KL.h"
 #include "MCS.h"
-#include "GhanemSpanos.h"
+#include "nGhanemSpanos.h"
 #include "AAPG.h"
 #include "ticktock.h"
 
@@ -30,11 +30,26 @@ int main(int argc, char *argv[]){
     string pcType="LU";  //PC type
     Array1D<Array1D<double> > initial(dof); // Initial conditions
 
+    // epsilon
+    Array1D<Array1D<double> > epsilon(dof);
+
     // Time marching info
     double dTym = 0.01;
     double tf = 10;
     // Number of steps
     int nStep=(int) tf / dTym;
+
+    // MCK
+    Array1D<Array1D<double> > mck(3);
+    // m
+    Array1D<double> temp_m(dof,1.e4);
+    mck(0) = temp_m;
+    // k
+    Array1D<double> temp_k(dof,4.e7);
+    mck(2) = temp_k;
+    // c
+    Array1D<double> temp_c(dof,2*0.04*sqrt(1.e4*4.e7));
+    mck(1) = temp_c;
 
     // force
     Array1D<Array2D<double> > f_GS(dof);
@@ -53,8 +68,9 @@ int main(int argc, char *argv[]){
     //Array1D<Array2D<double> > mstd_MCS(dof);
     cout << "Starting GS..." << endl;
 
-    Array2D<double> e_GS(ord_GS,)
+    //Array2D<double> e_GS(ord_GS,)
     for (int ord=1;ord<=ord_GS;ord++){
+        TickTock tt;
         tt.tick();
 	    PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
         tt.tock("Took");
@@ -72,7 +88,7 @@ int main(int argc, char *argv[]){
         }
         // initial conditions set to zero for now
         for (int i=0;i<dof;i++){
-            Array1D<double> temp_init(nPCTerms,0.e0);
+            Array1D<double> temp_init(2*nPCTerms,0.e0);
             initial(i)= temp_init;   
         }
         Array1D<Array2D<double> > uv_solution(dof);
@@ -80,7 +96,14 @@ int main(int argc, char *argv[]){
             Array2D<double> temp_solution(nStep,2*nPCTerms,0.e0);
             uv_solution(i) = temp_solution;
         }
-        nGS(dof, myPCSet, nStep, initial, dTym, f_GS, uv_solution);
+        //epsilon
+        for (int i=0;i<dof;i++){
+            Array1D<double> temp_epsilon(nPCTerms,0.e0);
+            epsilon(i) = temp_epsilon;
+            epsilon(i)(0) = 0.1;
+        }
+        cout << "Starting GS order " << ord << endl;
+        nGS(dof, myPCSet, epsilon, mck, nStep, initial, dTym, f_GS, uv_solution);
         cout << "Order " << ord << " finished." <<endl; 
         // Post-process the solution
         //Array2D<double> e_GS = postprocess_nGS(dof,noutput,nPCTerms,nStep,uv_solution,myPCSet,dTym,ord,mstd_MCS_u,mstd_MCS_v);
