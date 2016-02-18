@@ -16,7 +16,7 @@
 #include "Utilsave.h"
 #include "Duffing.h"
 #include "KL.h"
-#include "MCS.h"
+#include "nMCS.h"
 #include "nGhanemSpanos.h"
 #include "AAPG.h"
 #include "ticktock.h"
@@ -26,12 +26,13 @@ int main(int argc, char *argv[]){
     int dof=10;
     int ord_GS=2;
     int dim=5;
-    int noutput=2;
+    int noutput=1000;
+    int nspl = 10;
     string pcType="LU";  //PC type
-    Array1D<Array1D<double> > initial(dof); // Initial conditions
+    Array1D<double> initial(2*dof,0.e0); // initial condition
 
     // epsilon
-    Array1D<Array1D<double> > epsilon(dof);
+    Array1D<double>  epsilon_mean(dof,0.e0);
 
     // Time marching info
     double dTym = 0.01;
@@ -51,6 +52,11 @@ int main(int argc, char *argv[]){
     Array1D<double> temp_c(dof,2*0.04*sqrt(1.e4*4.e7));
     mck(1) = temp_c;
 
+    // sample point
+    Array2D<double> samPts_norm(nspl,dim,0.e0);
+    PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
+    MCPCSet.DrawSampleVar(samPts_norm);
+
     // force
     Array1D<Array2D<double> > f_GS(dof);
     Array2D<double> scaledKLmodes(2*nStep+1,dim,0.e0);
@@ -64,12 +70,57 @@ int main(int argc, char *argv[]){
         fbar(i) = 2.0*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
         t_temp +=dTym/2;
     }
-    
+
+    /////////////---MCS--/////////////
+    cout << "Starting MCS..." << endl;
+    Array1D<Array2D<double> > result_MCS(2*dof);
+    for (int idof=0;idof<2*dof;idof++){
+        Array2D<double> temp_result(nStep+1,nspl);
+        result_MCS(idof)=temp_result;
+        //result_MCS(idof)(it,iq) = temp(idof)(it);
+    }
+    TickTock tt;
+    tt.tick();
+    #pragma omp parallel default(none) shared(mck,result_MCS,dof,nStep,nspl,samPts_norm,initial,dTym,fbar,dim,epsilon_mean,scaledKLmodes) 
+    {
+    #pragma omp for 
+    for (int iq=0;iq<nspl;iq++){
+        Array2D<double> force_MCS=nsample_force(dof,samPts_norm,iq,fbar,dim,scaledKLmodes); 
+        Array1D<Array1D<double> > temp=ndet(dof,nStep,dTym,force_MCS,epsilon_mean,mck,initial); 
+        for (int idof=0;idof<2*dof;idof++){
+            result_MCS(idof).replaceCol(temp(idof),iq);
+        }
+    }
+    }
+    tt.tock("Took");
+    // post-process result
+    Array2D<double> mean_MCS(nStep+1,2*dof,0.e0);
+    Array2D<double> std_MCS(nStep+1,2*dof,0.e0);
+    for (int ix=0;ix<nStep+1;ix++){
+        for (int i=0;i<2*dof;i++){
+            Array1D<double> temp_result(nspl,0.e0);
+            getRow(result_MCS(i),ix,temp_result);        
+            mstd_MCS(temp_result,mean_MCS(ix,i),std_MCS(ix,i));
+        }
+        // report to screen
+        if (ix % ((int) nStep/noutput) == 0){
+            for (int i=0;i<dof;i++){
+                cout << "dof " << i << endl;
+                WriteMeanStdDevToStdOut(ix, ix*dTym, mean_MCS(ix,i), std_MCS(ix,i));
+            }
+        }
+    }
+    write_datafile(mean_MCS,"mean_MCS_n.dat");
+    write_datafile(std_MCS,"std_MCS_n.dat");
+   
+    /////////////---GS---///////////// 
     //Array1D<Array2D<double> > mstd_MCS(dof);
     cout << "Starting GS..." << endl;
-
     //Array2D<double> e_GS(ord_GS,)
+    Array1D<Array1D<double> > initial_GS(dof); // Initial conditions
+    Array1D<Array1D<double> > epsilon_GS(dof);
     for (int ord=1;ord<=ord_GS;ord++){
+        // Generate PCSet
         TickTock tt;
         tt.tick();
 	    PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
@@ -89,8 +140,11 @@ int main(int argc, char *argv[]){
         // initial conditions set to zero for now
         for (int i=0;i<dof;i++){
             Array1D<double> temp_init(2*nPCTerms,0.e0);
-            initial(i)= temp_init;   
+            initial_GS(i)= temp_init;
+            initial_GS(i)(0)=initial(i);   
+            initial_GS(i)(nPCTerms)=initial(dof+i);   
         }
+        // initialize solution
         Array1D<Array2D<double> > uv_solution(dof);
         for (int i=0;i<dof;i++){
             Array2D<double> temp_solution(nStep,2*nPCTerms,0.e0);
@@ -99,14 +153,14 @@ int main(int argc, char *argv[]){
         //epsilon
         for (int i=0;i<dof;i++){
             Array1D<double> temp_epsilon(nPCTerms,0.e0);
-            epsilon(i) = temp_epsilon;
-            epsilon(i)(0) = 0.1;
+            epsilon_GS(i) = temp_epsilon;
+            epsilon_GS(i)(0) = epsilon_mean(i);
         }
         cout << "Starting GS order " << ord << endl;
-        nGS(dof, myPCSet, epsilon, mck, nStep, initial, dTym, f_GS, uv_solution);
+        nGS(dof, myPCSet, epsilon_GS, mck, nStep, initial_GS, dTym, f_GS, uv_solution);
         cout << "Order " << ord << " finished." <<endl; 
         // Post-process the solution
-        //Array2D<double> e_GS = postprocess_nGS(dof,noutput,nPCTerms,nStep,uv_solution,myPCSet,dTym,ord,mstd_MCS_u,mstd_MCS_v);
+        Array2D<double> e_GS = postprocess_nGS(dof,noutput,nPCTerms,nStep,uv_solution,myPCSet,dTym,mean_MCS,std_MCS);
     }
 
     return 0;

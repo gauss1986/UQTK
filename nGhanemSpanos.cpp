@@ -201,17 +201,17 @@ void dev_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& force, Array1D<
     kbaru(dof-1) = temp_k;
     myPCSet.Prod(kbar(dof-1),u(dof-1),kbaru(dof-1));   
 
-    // compute cu and cu_plus 
-    Array1D<Array1D<double> > cu(dof);
-    Array1D<Array1D<double> > cu_plus(dof-1);
+    // compute cv and cv_plus 
+    Array1D<Array1D<double> > cv(dof);
+    Array1D<Array1D<double> > cv_plus(dof-1);
     for (int i=0;i<dof-1;i++){
-        cu(i) = u(i);
-        cu_plus(i) = u(i);
-        prodVal(cu(i),mck(1)(i));
-        prodVal(cu_plus(i),mck(1)(i+1));
+        cv(i) = v(i);
+        cv_plus(i) = v(i);
+        prodVal(cv(i),mck(1)(i));
+        prodVal(cv_plus(i),mck(1)(i+1));
     }
-    cu(dof-1) = u(dof-1);
-    prodVal(cu(dof-1),mck(1)(dof-1));
+    cv(dof-1) = v(dof-1);
+    prodVal(cv(dof-1),mck(1)(dof-1));
 
     // compute the acceleration
     // dof 0
@@ -219,17 +219,17 @@ void dev_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& force, Array1D<
     subtractVec(kbaru(0),temp_d);
     subtractVec(kbaru_plus(0),temp_d);
     addVec(kbaru(1),temp_d);
-    subtractVec(cu(0),temp_d);
-    subtractVec(cu_plus(0),temp_d);
-    addVec(cu(1),temp_d);
+    subtractVec(cv(0),temp_d);
+    subtractVec(cv_plus(0),temp_d);
+    addVec(cv(1),temp_d);
     prodVal(temp_d,1/mck(0)(0));
     dv(0)=temp_d;
     // dof dof
     Array1D<double> temp_d1(force(dof-1));
     subtractVec(kbaru(dof-1),temp_d1);
     addVec(kbaru_plus(dof-2),temp_d1);
-    subtractVec(cu(dof-1),temp_d1);
-    addVec(cu_plus(dof-2),temp_d1);
+    subtractVec(cv(dof-1),temp_d1);
+    addVec(cv_plus(dof-2),temp_d1);
     prodVal(temp_d1,1/mck(0)(dof-1));
     dv(dof-1)=temp_d1;
     // dof n
@@ -239,10 +239,10 @@ void dev_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& force, Array1D<
         subtractVec(kbaru_plus(i),temp_d2);
         addVec(kbaru_plus(i-1),temp_d2);
         addVec(kbaru(i+1),temp_d2);
-        subtractVec(cu(i),temp_d2);
-        subtractVec(cu_plus(i),temp_d2);
-        addVec(cu_plus(i-1),temp_d2);
-        addVec(cu(i+1),temp_d2);
+        subtractVec(cv(i),temp_d2);
+        subtractVec(cv_plus(i),temp_d2);
+        addVec(cv_plus(i-1),temp_d2);
+        addVec(cv(i+1),temp_d2);
         prodVal(temp_d2,1/mck(0)(i));
         dv(i)=temp_d2;
     }
