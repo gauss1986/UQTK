@@ -26,8 +26,8 @@ int main(int argc, char *argv[]){
     int dof=10;
     int ord_GS=2;
     int dim=5;
-    int noutput=5;
-    int nspl = 10;
+    int noutput=2;
+    int nspl =10000;
     string pcType="LU";  //PC type
     Array1D<double> initial(2*dof,0.e0); // initial condition
 
@@ -77,7 +77,6 @@ int main(int argc, char *argv[]){
     for (int idof=0;idof<2*dof;idof++){
         Array2D<double> temp_result(nStep+1,nspl);
         result_MCS(idof)=temp_result;
-        //result_MCS(idof)(it,iq) = temp(idof)(it);
     }
     TickTock tt;
     tt.tick();
@@ -88,7 +87,10 @@ int main(int argc, char *argv[]){
         Array2D<double> force_MCS=nsample_force(dof,samPts_norm,iq,fbar,dim,scaledKLmodes); 
         Array1D<Array1D<double> > temp=ndet(dof,nStep,dTym,force_MCS,epsilon_mean,mck,initial); 
         for (int idof=0;idof<2*dof;idof++){
-            result_MCS(idof).replaceCol(temp(idof),iq);
+            for (int ix=0;ix<nStep+1;ix++){
+                //result_MCS(idof).replaceCol(temp(idof),iq);
+                result_MCS(idof)(ix,iq)=temp(idof)(ix);
+            }
         }
     }
     }
