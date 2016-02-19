@@ -160,7 +160,7 @@ int main(int argc, char *argv[]){
         nGS(dof, myPCSet, epsilon_GS, mck, nStep, initial_GS, dTym, f_GS, uv_solution);
         cout << "Order " << ord << " finished." <<endl; 
         // Post-process the solution
-        Array2D<double> e_GS = postprocess_nGS(dof,noutput,nPCTerms,nStep,uv_solution,myPCSet,dTym,mean_MCS,std_MCS);
+        Array2D<double> e_GS = postprocess_nGS(dof,nStep,uv_solution,myPCSet,dTym,ord,mean_MCS,std_MCS);
     }
 
     return 0;

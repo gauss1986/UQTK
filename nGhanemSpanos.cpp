@@ -250,19 +250,20 @@ void dev_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& force, Array1D<
     return;
 }
 
-Array2D<double> postprocess_nGS(int dof, int noutput, int nPCTerms, int nStep,  Array1D<Array2D<double> >& solution, PCSet& myPCSet, double dTym, int ord, Array1D<Array2D<double> >& mstd_MCS_u, Array1D<Array2D<double> >& mstd_MCS_v){
+Array2D<double> postprocess_nGS(int dof, int nStep,  Array1D<Array2D<double> >& solution, PCSet& myPCSet, double dTym, int ord,Array2D<double>& mean_MCS, Array2D<double>& std_MCS){
+    int nPCTerms = myPCSet.GetNumberPCTerms();
     // Open files to write out solutions
     ostringstream s1;
-    s1 << "GS_dis_m_" << ord<<".dat";
+    s1 << "nGS_dis_m_" << ord<<".dat";
     string dis_m(s1.str());
     ostringstream s2;
-    s2 << "GS_dis_s_" << ord<<".dat";
+    s2 << "nGS_dis_s_" << ord<<".dat";
     string dis_s(s2.str());
     ostringstream s3;
-    s3 << "GS_vel_m_" << ord<<".dat";
+    s3 << "nGS_vel_m_" << ord<<".dat";
     string vel_m(s3.str());
     ostringstream s4;
-    s4 << "GS_vel_s_" << ord<<".dat";
+    s4 << "nGS_vel_s_" << ord<<".dat";
     string vel_s(s4.str());
 
     // Output solution (mean and std) 
@@ -286,10 +287,6 @@ Array2D<double> postprocess_nGS(int dof, int noutput, int nPCTerms, int nStep,  
         mean_v.replaceCol(temp2,j);
         getCol(solution(j),nPCTerms,temp2);
         mean_u.replaceCol(temp2,j);
-        //if (i % ((int) nStep/noutput) == 0){
-        //    WriteMeanStdDevToStdOut(i,i*dTym,temp(0),StDv(i));
-        //}
-
     }
     
     write_datafile(mean_u,dis_m.c_str());
