@@ -42,8 +42,8 @@ Array1D<Array1D<double> > ndet(int dof, int nStep, double dTym, Array2D<double>&
 
         nforward_duffing_dt(epsilon,dof,force,mck,dTym,tempu,tempv);
         for (int i=0;i<dof;i++){
-            result(i)(ix)=tempv(i);
-            result(i+dof)(ix)=tempu(i);
+            result(i)(ix+1)=tempv(i);
+            result(i+dof)(ix+1)=tempu(i);
         }
     }
 
@@ -125,7 +125,7 @@ void nRHS(Array1D<double>& acc, int dof, Array1D<double>& epsilon, Array1D<Array
     for (int i=1;i<dof-1;i++){
         acc(i)=(force(i)+kbaru_plus(i-1)-kbaru(i)-kbaru_plus(i)+kbaru(i+1)+cv_plus(i-1)-cv(i)-cv_plus(i)+cv(i+1))/mck(0)(i);
     }
-    acc(dof)=(force(dof)-kbaru(dof)+kbaru_plus(dof-1)-cv(dof)+cv_plus(dof-1))/mck(0)(dof);
+    acc(dof-1)=(force(dof-1)-kbaru(dof-1)+kbaru_plus(dof-2)-cv(dof-1)+cv_plus(dof-2))/mck(0)(dof-1);
 
     return;
 }

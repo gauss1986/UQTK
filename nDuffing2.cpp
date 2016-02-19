@@ -26,7 +26,7 @@ int main(int argc, char *argv[]){
     int dof=10;
     int ord_GS=2;
     int dim=5;
-    int noutput=1000;
+    int noutput=5;
     int nspl = 10;
     string pcType="LU";  //PC type
     Array1D<double> initial(2*dof,0.e0); // initial condition
