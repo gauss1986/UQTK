@@ -159,15 +159,20 @@ Array1D<double> error(Array2D<double>& et, Array1D<double>& mean, Array1D<double
         return e;
 }
 
-Array2D<double>  nsample_force(int dof, Array2D<double>& samPts,int iq, Array1D<double>& fbar,int nkl,Array2D<double>& scaledKLmodes){    
+Array2D<double>  nsample_force(int dof, Array2D<double>& samPts,int iq, Array1D<double>& fbar,int nkl,Array2D<double>& scaledKLmodes, Array1D<Array1D<double> >& mck){    
+    Array1D<double> m(mck(0));
     // force is applied to dof 0 only 
     unsigned int nStep = fbar.XSize();
     Array2D<double> totalforce(nStep+1,dof,0.e0);
     for (unsigned int it=0;it<nStep;it++){
-        totalforce(it,0) = fbar(it);
+        double temp_f=fbar(it);
+        //totalforce(it,0) = fbar(it);
         for (int iy=0;iy<nkl;iy++){
-            totalforce(it,0) = totalforce(it,0)+samPts(iq,iy)*scaledKLmodes(it,iy);
+            //totalforce(it,0) = totalforce(it,0)+samPts(iq,iy)*scaledKLmodes(it,iy);
+            temp_f += samPts(iq,iy)*scaledKLmodes(it,iy);
         }
+        for (int i=0;i<dof;i++)
+            totalforce(it,i)=temp_f*m(i);
     }
     return (totalforce);
 }

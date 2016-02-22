@@ -25,14 +25,14 @@ int main(int argc, char *argv[]){
 
     int dof=10;
     int ord_GS=2;
-    int dim=5;
+    int dim=20;
     int noutput=2;
     int nspl =10000;
     string pcType="LU";  //PC type
     Array1D<double> initial(2*dof,0.e0); // initial condition
 
     // epsilon
-    Array1D<double>  epsilon_mean(dof,0.e0);
+    Array1D<double>  epsilon_mean(dof,1.0);
 
     // Time marching info
     double dTym = 0.01;
@@ -43,13 +43,21 @@ int main(int argc, char *argv[]){
     // MCK
     Array1D<Array1D<double> > mck(3);
     // m
-    Array1D<double> temp_m(dof,1.e4);
+    Array1D<double> temp_m(dof,1e4);
     mck(0) = temp_m;
     // k
-    Array1D<double> temp_k(dof,4.e7);
+    Array1D<double> temp_k(dof,4e7);
+    temp_k(4)=temp_k(4)*0.9;
+    temp_k(5)=temp_k(5)*0.9;
+    temp_k(6)=temp_k(6)*0.9;
+    temp_k(7)=temp_k(7)*0.8;
+    temp_k(8)=temp_k(8)*0.8;
+    temp_k(9)=temp_k(9)*0.8;
     mck(2) = temp_k;
     // c
-    Array1D<double> temp_c(dof,2*0.04*sqrt(1.e4*4.e7));
+    Array1D<double> temp_c(dof,0.e0);
+    for (int i=0;i<dof;i++)
+        temp_c(i)=2*0.04*sqrt(temp_m(i)*temp_k(i));
     mck(1) = temp_c;
 
     // sample point
@@ -67,9 +75,11 @@ int main(int argc, char *argv[]){
     Array1D<double> fbar(2*nStep+1,0.e0);//mean of forcing
     double t_temp = 0.0; 
     for (int i=0;i<2*nStep+1;i++){
-        fbar(i) = 2.0*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+        fbar(i) = 0.2*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
         t_temp +=dTym/2;
     }
+    write_datafile_1d(fbar,"nfbar.dat");
+    write_datafile(scaledKLmodes,"nKL.dat");
 
     /////////////---MCS--/////////////
     cout << "Starting MCS..." << endl;
@@ -84,7 +94,7 @@ int main(int argc, char *argv[]){
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
-        Array2D<double> force_MCS=nsample_force(dof,samPts_norm,iq,fbar,dim,scaledKLmodes); 
+        Array2D<double> force_MCS=nsample_force(dof,samPts_norm,iq,fbar,dim,scaledKLmodes,mck); 
         Array1D<Array1D<double> > temp=ndet(dof,nStep,dTym,force_MCS,epsilon_mean,mck,initial); 
         for (int idof=0;idof<2*dof;idof++){
             for (int ix=0;ix<nStep+1;ix++){
@@ -130,14 +140,17 @@ int main(int argc, char *argv[]){
         int nPCTerms = myPCSet.GetNumberPCTerms();
         // Prepare the force in PC format
         Array1D<Array2D<double> > f_GS(dof);
-        Array2D<double> temp_f(2*nStep+1,nPCTerms,0.e0);
-        for (int i=0;i<dof;i++)
-            f_GS(i)=temp_f;
-        f_GS(0).replaceCol(fbar,0);
-        for (int i=0;i<dim;i++){
-            Array1D<double> tempf(2*nStep+1,0.e0);
-            getCol(scaledKLmodes,i,tempf);
-            f_GS(0).replaceCol(tempf,i+1);
+        for (int idof=0;idof<dof;idof++){
+            Array2D<double> temp_f(2*nStep+1,nPCTerms,0.e0);
+            f_GS(idof)=temp_f;
+            for (int ix=0;ix<2*nStep+1;ix++){
+                f_GS(idof)(ix,0)=fbar(ix)*mck(0)(idof);
+                for (int i=0;i<dim;i++){
+                    //Array1D<double> tempf(2*nStep+1,0.e0);
+                    //getCol(scaledKLmodes,i,tempf);
+                    f_GS(idof)(ix,i+1)=scaledKLmodes(ix,i)*mck(0)(idof);
+                }
+            }
         }
         // initial conditions set to zero for now
         for (int i=0;i<dof;i++){
