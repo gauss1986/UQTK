@@ -32,7 +32,7 @@ int main(int argc, char *argv[]){
     Array1D<double> initial(2*dof,0.e0); // initial condition
 
     // epsilon
-    Array1D<double>  epsilon_mean(dof,1.0);
+    Array1D<double>  epsilon_mean(dof,1e4);
 
     // Time marching info
     double dTym = 0.01;
@@ -176,6 +176,15 @@ int main(int argc, char *argv[]){
         cout << "Order " << ord << " finished." <<endl; 
         // Post-process the solution
         Array2D<double> e_GS = postprocess_nGS(dof,nStep,uv_solution,myPCSet,dTym,ord,mean_MCS,std_MCS);
+        // print out the error
+        cout << "Error is" << endl;
+        for (int i=0;i<dof;i++){
+            cout << "Dof " << i << ", m_v:" << e_GS(i,0) << ",s_v:" << e_GS(i,1) << "," <<",m_u:" << e_GS(i,2) << ",s_u:"<<e_GS(i,3) << "." << endl;
+        }
+        ostringstream name;
+        name << "e_GS_" << ord << ".dat";
+        string name_str = name.str();
+        write_datafile(e_GS,name_str.c_str());
     }
 
     return 0;
