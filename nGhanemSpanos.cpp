@@ -302,6 +302,8 @@ Array2D<double> postprocess_nGS(int dof, int nStep,  Array1D<Array2D<double> >& 
     
 Array2D<double> nerror(int ord, int dof, int nStep, Array1D<Array2D<double> >& et,Array2D<double>& mean_u,Array2D<double>& StDv_u, Array2D<double>& mean_v, Array2D<double>& StDv_v, Array2D<double>& mean_MCS, Array2D<double>& std_MCS){
     Array2D<double> e(dof,4,0.e0);
+    Array2D<double> e2(dof,4,0.e0);
+    Array2D<double> temp(dof,4,0.e0);
 
     for (int i=0;i<dof;i++){
         Array2D<double> error(nStep+1,4,0.e0);
@@ -314,17 +316,30 @@ Array2D<double> nerror(int ord, int dof, int nStep, Array1D<Array2D<double> >& e
             e(i,1)+=error(ix,1);
             e(i,2)+=error(ix,2);
             e(i,3)+=error(ix,3);
+            e2(i,0)+=abs(mean_v(ix,i)-mean_MCS(ix,i));
+            e2(i,1)+=abs(StDv_v(ix,i)-std_MCS(ix,i));
+            e2(i,2)+=abs(mean_u(ix,i)-mean_MCS(ix,i+dof));
+            e2(i,3)+=abs(StDv_u(ix,i)-std_MCS(ix,i+dof));
+            temp(i,0)+=abs(mean_MCS(ix,i));
+            temp(i,1)+=abs(std_MCS(ix,i));
+            temp(i,2)+=abs(mean_MCS(ix,i+dof));
+            temp(i,3)+=abs(std_MCS(ix,i+dof));
         }
-        e(i,0)=e(i,0)/(nStep);
-        e(i,1)=e(i,1)/(nStep);
-        e(i,2)=e(i,2)/(nStep);
-        e(i,3)=e(i,3)/(nStep);
+        for (int id=0;id<4;id++){
+            e(i,id)=e(i,id)/(nStep);
+            e2(i,id)=e2(i,id)/temp(i,id);
+        }
         et(i)=error;
         ostringstream name;
         name << "nerror_dof" << i << "_" << ord << ".dat";
         string name_str = name.str();
         write_datafile(error,name_str.c_str());
     }
-
+    
+    ostringstream name2;
+    name2 << "e2_" << ord << ".dat";
+    string name_str2 = name2.str();
+    write_datafile(e2,name_str2.c_str());
+    
     return(e);            
 }

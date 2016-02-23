@@ -25,14 +25,16 @@ int main(int argc, char *argv[]){
 
     int dof=10;
     int ord_GS=2;
-    int dim=20;
+    int nkl=20;
+    int dim=nkl+dof;// set epsilon to be stochastic coeffs on each dof
     int noutput=2;
-    int nspl =10000;
+    int nspl =100000;
     string pcType="LU";  //PC type
     Array1D<double> initial(2*dof,0.e0); // initial condition
 
     // epsilon
     Array1D<double>  epsilon_mean(dof,1e4);
+    Array1D<double>  e_sigma(dof,5e3);
 
     // Time marching info
     double dTym = 0.01;
@@ -64,14 +66,15 @@ int main(int argc, char *argv[]){
     Array2D<double> samPts_norm(nspl,dim,0.e0);
     PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
     MCPCSet.DrawSampleVar(samPts_norm);
+    write_datafile(samPts_norm,"samPts_norm.dat");
 
     // force
     Array1D<Array2D<double> > f_GS(dof);
-    Array2D<double> scaledKLmodes(2*nStep+1,dim,0.e0);
+    Array2D<double> scaledKLmodes(2*nStep+1,nkl,0.e0);
     double clen = 0.05;
     double sigma=0.5;
     char* cov_type = (char *)"Exp";
-    genKL(scaledKLmodes, 2*nStep+1, dim, clen, sigma, tf, cov_type);
+    genKL(scaledKLmodes, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
     Array1D<double> fbar(2*nStep+1,0.e0);//mean of forcing
     double t_temp = 0.0; 
     for (int i=0;i<2*nStep+1;i++){
@@ -88,14 +91,20 @@ int main(int argc, char *argv[]){
         Array2D<double> temp_result(nStep+1,nspl);
         result_MCS(idof)=temp_result;
     }
+    Array2D<double> epsilon_MCS_samples(nspl,dof,0.e0);
     TickTock tt;
     tt.tick();
-    #pragma omp parallel default(none) shared(mck,result_MCS,dof,nStep,nspl,samPts_norm,initial,dTym,fbar,dim,epsilon_mean,scaledKLmodes) 
+    #pragma omp parallel default(none) shared(mck,result_MCS,dof,nStep,nspl,samPts_norm,initial,dTym,fbar,nkl,epsilon_mean,scaledKLmodes,e_sigma,epsilon_MCS_samples) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
-        Array2D<double> force_MCS=nsample_force(dof,samPts_norm,iq,fbar,dim,scaledKLmodes,mck); 
-        Array1D<Array1D<double> > temp=ndet(dof,nStep,dTym,force_MCS,epsilon_mean,mck,initial); 
+        Array2D<double> force_MCS=nsample_force(dof,samPts_norm,iq,fbar,nkl,scaledKLmodes,mck); 
+        Array1D<double> epsilon_MCS(epsilon_mean);
+        for (int i=0;i<dof;i++){
+            epsilon_MCS(i)+=samPts_norm(iq,nkl+i)*e_sigma(i); 
+            epsilon_MCS_samples(iq,i)=epsilon_MCS(i);
+        }
+        Array1D<Array1D<double> > temp=ndet(dof,nStep,dTym,force_MCS,epsilon_MCS,mck,initial); 
         for (int idof=0;idof<2*dof;idof++){
             for (int ix=0;ix<nStep+1;ix++){
                 //result_MCS(idof).replaceCol(temp(idof),iq);
@@ -104,7 +113,17 @@ int main(int argc, char *argv[]){
         }
     }
     }
+    write_datafile(epsilon_MCS_samples,"epsilon_samples.dat");
     tt.tock("Took");
+    // examine statistics of epsilon
+    Array2D<double> stat_e(dof,2,0.e0);
+    for (int i=0;i<dof;i++){
+        Array1D<double> epsilon_sample(nspl,0.e0);
+        getCol(epsilon_MCS_samples,i,epsilon_sample); 
+        mstd_MCS(epsilon_sample,stat_e(i,0),stat_e(i,1));
+        cout << "Mean on dof " << i << " is " << stat_e(i,0) << ". Std is " << stat_e(i,1) << "." << endl;
+    }
+
     // post-process result
     Array2D<double> mean_MCS(nStep+1,2*dof,0.e0);
     Array2D<double> std_MCS(nStep+1,2*dof,0.e0);
@@ -145,7 +164,7 @@ int main(int argc, char *argv[]){
             f_GS(idof)=temp_f;
             for (int ix=0;ix<2*nStep+1;ix++){
                 f_GS(idof)(ix,0)=fbar(ix)*mck(0)(idof);
-                for (int i=0;i<dim;i++){
+                for (int i=0;i<nkl;i++){
                     //Array1D<double> tempf(2*nStep+1,0.e0);
                     //getCol(scaledKLmodes,i,tempf);
                     f_GS(idof)(ix,i+1)=scaledKLmodes(ix,i)*mck(0)(idof);
@@ -168,8 +187,11 @@ int main(int argc, char *argv[]){
         //epsilon
         for (int i=0;i<dof;i++){
             Array1D<double> temp_epsilon(nPCTerms,0.e0);
-            epsilon_GS(i) = temp_epsilon;
-            epsilon_GS(i)(0) = epsilon_mean(i);
+            //epsilon_GS(i)(0) = epsilon_mean(i);
+            //epsilon_GS(i)(nkl+i)=e_sigma(i)*3.0;
+            myPCSet.InitMeanStDv(stat_e(i,0),stat_e(i,1),nkl+i+1,temp_epsilon);
+            epsilon_GS(i)=temp_epsilon;
+            //epsilon_GS(i) = temp_epsilon;
         }
         cout << "Starting GS order " << ord << endl;
         nGS(dof, myPCSet, epsilon_GS, mck, nStep, initial_GS, dTym, f_GS, uv_solution);
@@ -181,6 +203,12 @@ int main(int argc, char *argv[]){
         for (int i=0;i<dof;i++){
             cout << "Dof " << i << ", m_v:" << e_GS(i,0) << ",s_v:" << e_GS(i,1) << "," <<",m_u:" << e_GS(i,2) << ",s_u:"<<e_GS(i,3) << "." << endl;
         }
+        //for (int i=0;i<dof;i++){
+        //    ostringstream name2;
+        //    name2 << "sol_GS_" << ord << "dof_"<< i <<".dat";
+        //    string name2_str = name2.str();
+        //    write_datafile(uv_solution(i),name2_str.c_str());
+        //}
         ostringstream name;
         name << "e_GS_" << ord << ".dat";
         string name_str = name.str();
