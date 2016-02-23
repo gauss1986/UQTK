@@ -26,15 +26,16 @@ int main(int argc, char *argv[]){
     int dof=10;
     int ord_GS=2;
     int nkl=20;
-    int dim=nkl+dof;// set epsilon to be stochastic coeffs on each dof
+    int dim=nkl+3*dof;// set epsilon to be stochastic coeffs on each dof
     int noutput=2;
     int nspl =100000;
     string pcType="LU";  //PC type
     Array1D<double> initial(2*dof,0.e0); // initial condition
+    Array1D<double> initial_sigma(2*dof,1e0); 
 
     // epsilon
     Array1D<double>  epsilon_mean(dof,1e4);
-    Array1D<double>  e_sigma(dof,5e3);
+    Array1D<double>  e_sigma(dof,1e4);
 
     // Time marching info
     double dTym = 0.01;
@@ -92,19 +93,25 @@ int main(int argc, char *argv[]){
         result_MCS(idof)=temp_result;
     }
     Array2D<double> epsilon_MCS_samples(nspl,dof,0.e0);
+    Array2D<double> initial_MCS_samples(nspl,2*dof,0.e0);
     TickTock tt;
     tt.tick();
-    #pragma omp parallel default(none) shared(mck,result_MCS,dof,nStep,nspl,samPts_norm,initial,dTym,fbar,nkl,epsilon_mean,scaledKLmodes,e_sigma,epsilon_MCS_samples) 
+    #pragma omp parallel default(none) shared(mck,result_MCS,dof,nStep,nspl,samPts_norm,initial,initial_sigma,dTym,fbar,nkl,epsilon_mean,scaledKLmodes,e_sigma,epsilon_MCS_samples) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
         Array2D<double> force_MCS=nsample_force(dof,samPts_norm,iq,fbar,nkl,scaledKLmodes,mck); 
         Array1D<double> epsilon_MCS(epsilon_mean);
+        Array1D<double> initial_MCS(initial);
         for (int i=0;i<dof;i++){
             epsilon_MCS(i)+=samPts_norm(iq,nkl+i)*e_sigma(i); 
             epsilon_MCS_samples(iq,i)=epsilon_MCS(i);
         }
-        Array1D<Array1D<double> > temp=ndet(dof,nStep,dTym,force_MCS,epsilon_MCS,mck,initial); 
+        for (int i=0;i<2*dof;i++){
+            initial_MCS(i)+=samPts_norm(iq,nkl+dof+i)*initial_sigma(i);
+            initial_MCS_samples(iq,i)=initial_MCS(i);
+        }
+        Array1D<Array1D<double> > temp=ndet(dof,nStep,dTym,force_MCS,epsilon_MCS,mck,initial_MCS); 
         for (int idof=0;idof<2*dof;idof++){
             for (int ix=0;ix<nStep+1;ix++){
                 //result_MCS(idof).replaceCol(temp(idof),iq);
@@ -115,13 +122,17 @@ int main(int argc, char *argv[]){
     }
     write_datafile(epsilon_MCS_samples,"epsilon_samples.dat");
     tt.tock("Took");
-    // examine statistics of epsilon
+    // examine statistics of epsilon & initial conditions
     Array2D<double> stat_e(dof,2,0.e0);
     for (int i=0;i<dof;i++){
         Array1D<double> epsilon_sample(nspl,0.e0);
         getCol(epsilon_MCS_samples,i,epsilon_sample); 
         mstd_MCS(epsilon_sample,stat_e(i,0),stat_e(i,1));
-        cout << "Mean on dof " << i << " is " << stat_e(i,0) << ". Std is " << stat_e(i,1) << "." << endl;
+        cout << "Mean of epsilon on dof " << i << " is " << stat_e(i,0) << ". Std is " << stat_e(i,1) << "." << endl;
+        Array1D<double> initial_sample(nspl,0.e0);
+        getCol(initial_MCS_samples,i,initial_sample); 
+        mstd_MCS(initial_sample,stat_e(i,0),stat_e(i,1));
+        cout << "Mean on initial condition on dof " << i << " is " << stat_e(i,0) << ". Std is " << stat_e(i,1) << "." << endl;
     }
 
     // post-process result
