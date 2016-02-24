@@ -23,15 +23,17 @@
 
 int main(int argc, char *argv[]){
 
-    int dof=10;
+    int dof=5;
     int ord_GS=2;
-    int nkl=20;
+    int nkl=5;
     int dim=nkl+3*dof;// set epsilon to be stochastic coeffs on each dof
     int noutput=2;
-    int nspl =100000;
+    int nspl =1000;
     string pcType="LU";  //PC type
     Array1D<double> initial(2*dof,0.e0); // initial condition
-    Array1D<double> initial_sigma(2*dof,1e0); 
+    Array1D<double> initial_sigma(2*dof,0.e0);
+    for (int i=0;i<dof;i++)
+        initial_sigma(i)=0.1; 
 
     // epsilon
     Array1D<double>  epsilon_mean(dof,1e4);
@@ -96,7 +98,7 @@ int main(int argc, char *argv[]){
     Array2D<double> initial_MCS_samples(nspl,2*dof,0.e0);
     TickTock tt;
     tt.tick();
-    #pragma omp parallel default(none) shared(mck,result_MCS,dof,nStep,nspl,samPts_norm,initial,initial_sigma,dTym,fbar,nkl,epsilon_mean,scaledKLmodes,e_sigma,epsilon_MCS_samples) 
+    #pragma omp parallel default(none) shared(mck,result_MCS,dof,nStep,nspl,samPts_norm,initial,initial_sigma,initial_MCS_samples,dTym,fbar,nkl,epsilon_mean,scaledKLmodes,e_sigma,epsilon_MCS_samples) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
@@ -121,6 +123,7 @@ int main(int argc, char *argv[]){
     }
     }
     write_datafile(epsilon_MCS_samples,"epsilon_samples.dat");
+    write_datafile(initial_MCS_samples,"initial_samples.dat");
     tt.tock("Took");
     // examine statistics of epsilon & initial conditions
     Array2D<double> stat_e(dof,2,0.e0);
@@ -129,10 +132,13 @@ int main(int argc, char *argv[]){
         getCol(epsilon_MCS_samples,i,epsilon_sample); 
         mstd_MCS(epsilon_sample,stat_e(i,0),stat_e(i,1));
         cout << "Mean of epsilon on dof " << i << " is " << stat_e(i,0) << ". Std is " << stat_e(i,1) << "." << endl;
+    }
+    Array2D<double> stat_i(2*dof,2,0.e0);
+    for (int i=0;i<2*dof;i++){
         Array1D<double> initial_sample(nspl,0.e0);
         getCol(initial_MCS_samples,i,initial_sample); 
-        mstd_MCS(initial_sample,stat_e(i,0),stat_e(i,1));
-        cout << "Mean on initial condition on dof " << i << " is " << stat_e(i,0) << ". Std is " << stat_e(i,1) << "." << endl;
+        mstd_MCS(initial_sample,stat_i(i,0),stat_i(i,1));
+        cout << "Mean on initial condition on dof " << i << " is " << stat_i(i,0) << ". Std is " << stat_i(i,1) << "." << endl;
     }
 
     // post-process result
@@ -182,12 +188,23 @@ int main(int argc, char *argv[]){
                 }
             }
         }
+        //epsilon
+        for (int i=0;i<dof;i++){
+            Array1D<double> temp_epsilon(nPCTerms,0.e0);
+            myPCSet.InitMeanStDv(stat_e(i,0),stat_e(i,1),nkl+i+1,temp_epsilon);
+            epsilon_GS(i)=temp_epsilon;
+        }
         // initial conditions set to zero for now
         for (int i=0;i<dof;i++){
             Array1D<double> temp_init(2*nPCTerms,0.e0);
+            //initial_GS(i)(0)=initial(i);   
+            //initial_GS(i)(nPCTerms)=initial(dof+i);   
+            Array1D<double> temp_init2(nPCTerms,0.e0);
+            myPCSet.InitMeanStDv(stat_i(i,0),stat_i(i,1),nkl+dof+i,temp_init2);
+            Array1D<double> temp_init3(nPCTerms,0.e0);
+            myPCSet.InitMeanStDv(stat_i(i+dof,0),stat_i(i+dof,1),nkl+2*dof+i,temp_init3);
+            merge(temp_init2,temp_init3,temp_init); 
             initial_GS(i)= temp_init;
-            initial_GS(i)(0)=initial(i);   
-            initial_GS(i)(nPCTerms)=initial(dof+i);   
         }
         // initialize solution
         Array1D<Array2D<double> > uv_solution(dof);
@@ -195,24 +212,20 @@ int main(int argc, char *argv[]){
             Array2D<double> temp_solution(nStep,2*nPCTerms,0.e0);
             uv_solution(i) = temp_solution;
         }
-        //epsilon
-        for (int i=0;i<dof;i++){
-            Array1D<double> temp_epsilon(nPCTerms,0.e0);
-            //epsilon_GS(i)(0) = epsilon_mean(i);
-            //epsilon_GS(i)(nkl+i)=e_sigma(i)*3.0;
-            myPCSet.InitMeanStDv(stat_e(i,0),stat_e(i,1),nkl+i+1,temp_epsilon);
-            epsilon_GS(i)=temp_epsilon;
-            //epsilon_GS(i) = temp_epsilon;
-        }
         cout << "Starting GS order " << ord << endl;
         nGS(dof, myPCSet, epsilon_GS, mck, nStep, initial_GS, dTym, f_GS, uv_solution);
         cout << "Order " << ord << " finished." <<endl; 
         // Post-process the solution
-        Array2D<double> e_GS = postprocess_nGS(dof,nStep,uv_solution,myPCSet,dTym,ord,mean_MCS,std_MCS);
+        Array2D<double> e2(dof,4,0.e0);
+        Array2D<double> e_GS = postprocess_nGS(dof,nStep,uv_solution,myPCSet,dTym,ord,mean_MCS,std_MCS,e2);
         // print out the error
-        cout << "Error is" << endl;
+        cout << "Error kind 1 is" << endl;
         for (int i=0;i<dof;i++){
             cout << "Dof " << i << ", m_v:" << e_GS(i,0) << ",s_v:" << e_GS(i,1) << "," <<",m_u:" << e_GS(i,2) << ",s_u:"<<e_GS(i,3) << "." << endl;
+        }
+        cout << "Error kind 2 is" << endl;
+        for (int i=0;i<dof;i++){
+            cout << "Dof " << i << ", m_v:" << e2(i,0) << ",s_v:" << e2(i,1) << "," <<",m_u:" << e2(i,2) << ",s_u:"<<e2(i,3) << "." << endl;
         }
         //for (int i=0;i<dof;i++){
         //    ostringstream name2;

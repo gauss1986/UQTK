@@ -250,7 +250,7 @@ void dev_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& force, Array1D<
     return;
 }
 
-Array2D<double> postprocess_nGS(int dof, int nStep,  Array1D<Array2D<double> >& solution, PCSet& myPCSet, double dTym, int ord,Array2D<double>& mean_MCS, Array2D<double>& std_MCS){
+Array2D<double> postprocess_nGS(int dof, int nStep,  Array1D<Array2D<double> >& solution, PCSet& myPCSet, double dTym, int ord,Array2D<double>& mean_MCS, Array2D<double>& std_MCS, Array2D<double>& e2){
     int nPCTerms = myPCSet.GetNumberPCTerms();
     // Open files to write out solutions
     ostringstream s1;
@@ -295,14 +295,13 @@ Array2D<double> postprocess_nGS(int dof, int nStep,  Array1D<Array2D<double> >& 
     write_datafile(StDv_v,vel_s.c_str());
 
     Array1D<Array2D<double> > et(dof);
-    Array2D<double> e =  nerror(ord, dof, nStep, et,mean_u,StDv_u,mean_v,StDv_v,mean_MCS,std_MCS);
+    Array2D<double> e =  nerror(ord, dof, nStep, et,mean_u,StDv_u,mean_v,StDv_v,mean_MCS,std_MCS, e2);
 
     return(e);
 }
     
-Array2D<double> nerror(int ord, int dof, int nStep, Array1D<Array2D<double> >& et,Array2D<double>& mean_u,Array2D<double>& StDv_u, Array2D<double>& mean_v, Array2D<double>& StDv_v, Array2D<double>& mean_MCS, Array2D<double>& std_MCS){
+Array2D<double> nerror(int ord, int dof, int nStep, Array1D<Array2D<double> >& et,Array2D<double>& mean_u,Array2D<double>& StDv_u, Array2D<double>& mean_v, Array2D<double>& StDv_v, Array2D<double>& mean_MCS, Array2D<double>& std_MCS, Array2D<double>& e2){
     Array2D<double> e(dof,4,0.e0);
-    Array2D<double> e2(dof,4,0.e0);
     Array2D<double> temp(dof,4,0.e0);
 
     for (int i=0;i<dof;i++){
