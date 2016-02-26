@@ -194,11 +194,9 @@ int main(int argc, char *argv[]){
             myPCSet.InitMeanStDv(stat_e(i,0),stat_e(i,1),nkl+i+1,temp_epsilon);
             epsilon_GS(i)=temp_epsilon;
         }
-        // initial conditions set to zero for now
+        // initial conditions
         for (int i=0;i<dof;i++){
             Array1D<double> temp_init(2*nPCTerms,0.e0);
-            //initial_GS(i)(0)=initial(i);   
-            //initial_GS(i)(nPCTerms)=initial(dof+i);   
             Array1D<double> temp_init2(nPCTerms,0.e0);
             myPCSet.InitMeanStDv(stat_i(i,0),stat_i(i,1),nkl+dof+i,temp_init2);
             Array1D<double> temp_init3(nPCTerms,0.e0);

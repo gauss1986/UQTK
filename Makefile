@@ -8,7 +8,7 @@ TARGET2 = Lorenz.x
 TARGET3 = VDP.x
 TARGET4 = nDuffing.x
 
-SRCS = ticktock.cpp KL.cpp MCS.cpp GhanemSpanos.cpp AAPG.cpp Duffing.cpp Utils.cpp Utilsave.cpp 
+SRCS = ticktock.cpp KL.cpp MCS.cpp GhanemSpanos.cpp nAAPG.cpp Duffing.cpp Utils.cpp Utilsave.cpp 
 SRCS2 = ticktock.cpp KL.cpp MCS.cpp GhanemSpanos.cpp Lorenz.cpp UtilsLorenz.cpp Utils.cpp Utilsave.cpp 
 SRCS3 = ticktock.cpp KL.cpp MCS.cpp GhanemSpanos.cpp AAPG.cpp VDP.cpp Utils.cpp Utilsave.cpp 
 SRCS4 = ticktock.cpp KL.cpp nMCS.cpp nGhanemSpanos.cpp nDuffing2.cpp Utils.cpp Utilsave.cpp 

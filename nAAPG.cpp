@@ -7,13 +7,13 @@
 #include "arraytools.h"
 #include "uqtktools.h"
 #include "Utils.h"
-#include "AAPG.h"
+#include "nAAPG.h"
 #include "MCS.h"
 #include "lapack.h"
 #include "GhanemSpanos.h"
 #include "ticktock.h"
 
-Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, double dTym, int order, string pcType, int noutput, int dim, int nStep, Array2D<double>& scaledKLmodes, Array1D<double>& normsq, double factor_OD, int AAPG_ord, bool act_D, double p, Array2D<double>& mstd_MCS, FILE* err_dump, Array2D<double>& sample_mstd_2D, Array2D<double>& samPts_norm, Array2D<double>& e_AAPG, Array1D<Array1D<double> >& e_sample_dis, Array1D<Array1D<double> >& e_sample_vel, Array1D<int>& init_D, Array1D<int>& coeff_D, bool PDF){
+Array1D<double> nAAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, double dTym, int order, string pcType, int noutput, int dim, int nStep, Array2D<double>& scaledKLmodes, Array1D<double>& normsq, double factor_OD, int AAPG_ord, bool act_D, double p, Array2D<double>& mstd_MCS, FILE* err_dump, Array2D<double>& sample_mstd_2D, Array2D<double>& samPts_norm, Array2D<double>& e_AAPG, Array1D<Array1D<double> >& e_sample_dis, Array1D<Array1D<double> >& e_sample_vel, Array1D<int>& init_D, Array1D<int>& coeff_D, bool PDF){
     // timing var
     Array1D<double> t(6,0.e0);
     
