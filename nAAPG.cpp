@@ -103,7 +103,6 @@ Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutp
         }
         init_1(idim)=init_temp;
     }
-    write_datafile(stat_i,"stat_i.dat");
     cout << "Finished generating the forcing, epsilon and initial conditions on each stochastic dim." << endl;
 
     // allocate uv_1
@@ -116,7 +115,6 @@ Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutp
         }
         uv_1(id)=temp;
     }
-    Array2D<double> initial_solution(dim,2*dof,0.e0);
     tt.tick();
     #pragma omp parallel default(none) shared(dof,PCSet_1,mck,nStep,dTym,PCTerms_1,epsilon_1,init_1,force_1,dim,uv_1)
     {
@@ -127,8 +125,6 @@ Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutp
         // MCS is assumed deterministic for now
         nGS(dof, PCSet_1, epsilon_1(i), mck, nStep, init_1(i), dTym, force_1(i), uv_solution);
         for (int id=0;id<dof;id++){
-            initial_solution(i,id)=uv_solution(id)(0,0);
-            initial_solution(i,id+dof)=uv_solution(id)(0,PCTerms_1);
             for (int iPC=0;iPC<PCTerms_1;iPC++){
                 for (int ix=0;ix<nStep+1;ix++){
                     uv_1(id)(i)(ix,iPC)=uv_solution(id)(ix,iPC);
@@ -140,7 +136,6 @@ Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutp
     }
     tt.tock("Took");
     t(1)=tt.silent_tock();
-    write_datafile(initial_solution,"initial_AAPG1.dat");
 
     Array1D<int> ind(dim,0);
     if (!act_D){

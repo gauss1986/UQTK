@@ -25,13 +25,13 @@
 int main(int argc, char *argv[]){
 
     int dof=5;
-    int ord_GS=1;
+    int ord_GS=2;
     int ord_AAPG=1;
     int ord_AAPG_GS=2;
     int nkl=5;
     int dim=nkl+3*dof;// set epsilon to be stochastic coeffs on each dof
     int noutput=2;
-    int nspl =10;
+    int nspl =100000;
     int factor_OD = 0.99;
     string pcType="LU";  //PC type
     bool act_D = false;
