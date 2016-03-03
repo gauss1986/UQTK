@@ -19,17 +19,22 @@
 #include "nMCS.h"
 #include "nGhanemSpanos.h"
 #include "AAPG.h"
+#include "nAAPG.h"
 #include "ticktock.h"
 
 int main(int argc, char *argv[]){
 
     int dof=5;
-    int ord_GS=2;
+    int ord_GS=1;
+    int ord_AAPG=1;
+    int ord_AAPG_GS=2;
     int nkl=5;
     int dim=nkl+3*dof;// set epsilon to be stochastic coeffs on each dof
     int noutput=2;
-    int nspl =1000;
+    int nspl =10;
+    int factor_OD = 0.99;
     string pcType="LU";  //PC type
+    bool act_D = false;
     Array1D<double> initial(2*dof,0.e0); // initial condition
     Array1D<double> initial_sigma(2*dof,0.e0);
     for (int i=0;i<dof;i++)
@@ -236,6 +241,26 @@ int main(int argc, char *argv[]){
         string name_str = name.str();
         write_datafile(e_GS,name_str.c_str());
     }
+
+    ////////---AAPG----///////
+    // Compute multiindex
+    Array2D<int> Pbtot;
+    computeMultiIndex(dim,ord_AAPG_GS,Pbtot);
+    // Initialize pcbasis
+    PCBasis p_basis(pcType, 0.0, 1.0, ord_AAPG_GS);
+    // Get the 1d norms-squared
+    Array1D<double> norms1d;
+    p_basis.Get1dNormsSq(norms1d);
+    // Compute normsq
+    Array1D<double> normsq(Pbtot.XSize(),1.e0);
+    // For each term, multiply appropriate 1d norms-squared
+    for(unsigned int ipc=0; ipc<Pbtot.XSize(); ipc++)
+        for(int id=0; id<dim; id++)
+            normsq(ipc) *= norms1d(Pbtot(ipc,id));
+    write_datafile_1d(normsq,"normsq.dat");
+   
+    cout << "AAPG..." << endl;
+    Array1D<double> t_AAPG = nAAPG(dof,nkl,dim,nStep,ord_AAPG_GS,noutput,factor_OD,ord_AAPG,act_D,mck,fbar,dTym,epsilon_mean,pcType,scaledKLmodes,stat_e,stat_i,normsq,mean_MCS,std_MCS);
 
     return 0;
 }

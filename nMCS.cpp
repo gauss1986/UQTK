@@ -130,7 +130,7 @@ void nRHS(Array1D<double>& acc, int dof, Array1D<double>& epsilon, Array1D<Array
     return;
 }
 
-Array1D<double> error(Array2D<double>& et, Array1D<double>& mean, Array1D<double>& StDv, Array2D<double>& mstd_MCS){
+Array1D<double> nerror(Array2D<double>& et, Array1D<double>& mean, Array1D<double>& StDv, Array2D<double>& mstd_MCS){
    // Return the integrated error in mean/std
         Array1D<double> e(2,0.e0);
         //Array2D<double> et(mean.XSize(),2,0.e0);

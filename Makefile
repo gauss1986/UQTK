@@ -11,7 +11,7 @@ TARGET4 = nDuffing.x
 SRCS = ticktock.cpp KL.cpp MCS.cpp GhanemSpanos.cpp nAAPG.cpp Duffing.cpp Utils.cpp Utilsave.cpp 
 SRCS2 = ticktock.cpp KL.cpp MCS.cpp GhanemSpanos.cpp Lorenz.cpp UtilsLorenz.cpp Utils.cpp Utilsave.cpp 
 SRCS3 = ticktock.cpp KL.cpp MCS.cpp GhanemSpanos.cpp AAPG.cpp VDP.cpp Utils.cpp Utilsave.cpp 
-SRCS4 = ticktock.cpp KL.cpp nMCS.cpp nGhanemSpanos.cpp nDuffing2.cpp Utils.cpp Utilsave.cpp 
+SRCS4 = ticktock.cpp KL.cpp nMCS.cpp nGhanemSpanos.cpp GhanemSpanos.cpp MCS.cpp nAAPG.cpp AAPG.cpp nDuffing2.cpp Utils.cpp Utilsave.cpp 
 
 OBJ = $(SRCS:.cpp=.o)
 OBJ2 = $(SRCS2:.cpp=.o)
