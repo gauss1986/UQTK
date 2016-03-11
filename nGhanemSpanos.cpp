@@ -29,7 +29,6 @@ void nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& epsilon, Array1D<Ar
     Array1D<Array1D<double> > force_current(dof);
     Array1D<Array1D<double> > force_mid(dof);
     Array1D<Array1D<double> > force_plus(dof);
-    cout << "Starting time marching step..." << endl;
     for (int ix=0;ix<nStep;ix++){
         // Subtract the force at currect, mid and next step
         for (int i=0;i<dof;i++){
@@ -273,6 +272,8 @@ Array2D<double> postprocess_nGS(int dof, int nStep,  Array1D<Array2D<double> >& 
     Array2D<double> StDv_v(nStep+1,dof,0.e0);
     Array2D<double> mean_u(nStep+1,dof,0.e0);
     Array2D<double> mean_v(nStep+1,dof,0.e0);
+    Array2D<double> mean(nStep+1,2*dof,0.e0);
+    Array2D<double> StDv(nStep+1,2*dof,0.e0);
     for (int j=0;j<dof;j++){
         for (int i=0;i<nStep+1;i++){
             for (int k=0;k<nPCTerms;k++){
@@ -281,12 +282,16 @@ Array2D<double> postprocess_nGS(int dof, int nStep,  Array1D<Array2D<double> >& 
             }
             StDv_u(i,j) = myPCSet.StDv(temp_u);
             StDv_v(i,j) = myPCSet.StDv(temp_v);
+            StDv(i,j) = StDv_v(i,j);
+            StDv(i,dof+j) = StDv_u(i,j);
         }
         Array1D<double> temp2(nStep+1,0.e0);
         getCol(solution(j),0,temp2);
         mean_v.replaceCol(temp2,j);
+        mean.replaceCol(temp2,j);
         getCol(solution(j),nPCTerms,temp2);
         mean_u.replaceCol(temp2,j);
+        mean.replaceCol(temp2,dof+j);
     }
     
     write_datafile(mean_u,dis_m.c_str());
@@ -295,30 +300,34 @@ Array2D<double> postprocess_nGS(int dof, int nStep,  Array1D<Array2D<double> >& 
     write_datafile(StDv_v,vel_s.c_str());
 
     Array1D<Array2D<double> > et(dof);
-    Array2D<double> e =  nerror(ord, dof, nStep, et,mean_u,StDv_u,mean_v,StDv_v,mean_MCS,std_MCS, e2);
+    
+    ostringstream info;
+    info << "GS_"<<ord ;
+    string info_str = info.str();
+    Array2D<double> e =  nerror(info_str, dof, nStep, et,mean,StDv,mean_MCS,std_MCS, e2);
 
     return(e);
 }
     
-Array2D<double> nerror(int ord, int dof, int nStep, Array1D<Array2D<double> >& et,Array2D<double>& mean_u,Array2D<double>& StDv_u, Array2D<double>& mean_v, Array2D<double>& StDv_v, Array2D<double>& mean_MCS, Array2D<double>& std_MCS, Array2D<double>& e2){
+Array2D<double> nerror(string info, int dof, int nStep, Array1D<Array2D<double> >& et,Array2D<double>& mean,Array2D<double>& StDv, Array2D<double>& mean_MCS, Array2D<double>& std_MCS, Array2D<double>& e2){
     Array2D<double> e(dof,4,0.e0);
     Array2D<double> temp(dof,4,0.e0);
 
     for (int i=0;i<dof;i++){
         Array2D<double> error(nStep+1,4,0.e0);
         for (int ix=1;ix<nStep+1;ix++){
-            error(ix,0)=abs(mean_v(ix,i)-mean_MCS(ix,i))/abs(mean_MCS(ix,i));
-            error(ix,1)=abs(StDv_v(ix,i)-std_MCS(ix,i))/abs(std_MCS(ix,i));
-            error(ix,2)=abs(mean_u(ix,i)-mean_MCS(ix,i+dof))/abs(mean_MCS(ix,i+dof));
-            error(ix,3)=abs(StDv_u(ix,i)-std_MCS(ix,i+dof))/abs(std_MCS(ix,i+dof));
+            error(ix,0)=abs(mean(ix,i)-mean_MCS(ix,i))/abs(mean_MCS(ix,i));
+            error(ix,1)=abs(StDv(ix,i)-std_MCS(ix,i))/abs(std_MCS(ix,i));
+            error(ix,2)=abs(mean(ix,i+dof)-mean_MCS(ix,i+dof))/abs(mean_MCS(ix,i+dof));
+            error(ix,3)=abs(StDv(ix,i+dof)-std_MCS(ix,i+dof))/abs(std_MCS(ix,i+dof));
             e(i,0)+=error(ix,0);
             e(i,1)+=error(ix,1);
             e(i,2)+=error(ix,2);
             e(i,3)+=error(ix,3);
-            e2(i,0)+=abs(mean_v(ix,i)-mean_MCS(ix,i));
-            e2(i,1)+=abs(StDv_v(ix,i)-std_MCS(ix,i));
-            e2(i,2)+=abs(mean_u(ix,i)-mean_MCS(ix,i+dof));
-            e2(i,3)+=abs(StDv_u(ix,i)-std_MCS(ix,i+dof));
+            e2(i,0)+=abs(mean(ix,i)-mean_MCS(ix,i));
+            e2(i,1)+=abs(StDv(ix,i)-std_MCS(ix,i));
+            e2(i,2)+=abs(mean(ix,i+dof)-mean_MCS(ix,i+dof));
+            e2(i,3)+=abs(StDv(ix,i+dof)-std_MCS(ix,i+dof));
             temp(i,0)+=abs(mean_MCS(ix,i));
             temp(i,1)+=abs(std_MCS(ix,i));
             temp(i,2)+=abs(mean_MCS(ix,i+dof));
@@ -330,13 +339,13 @@ Array2D<double> nerror(int ord, int dof, int nStep, Array1D<Array2D<double> >& e
         }
         et(i)=error;
         ostringstream name;
-        name << "nerror_dof" << i << "_" << ord << ".dat";
+        name << "nerror_dof" << i << "_" << info << ".dat";
         string name_str = name.str();
         write_datafile(error,name_str.c_str());
     }
     
     ostringstream name2;
-    name2 << "e2_" << ord << ".dat";
+    name2 << "e2_" << info << ".dat";
     string name_str2 = name2.str();
     write_datafile(e2,name_str2.c_str());
     

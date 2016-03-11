@@ -103,7 +103,6 @@ Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutp
         }
         init_1(idim)=init_temp;
     }
-    cout << "Finished generating the forcing, epsilon and initial conditions on each stochastic dim." << endl;
 
     // allocate uv_1
     Array1D<Array1D<Array2D<double> > > uv_1(2*dof);
@@ -120,7 +119,6 @@ Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutp
     {
     #pragma omp for
     for (int i=0;i<dim;i++){
-        printf("Dim %d\n",i);
         Array1D<Array2D<double> >  uv_solution(dof);
         // MCS is assumed deterministic for now
         nGS(dof, PCSet_1, epsilon_1(i), mck, nStep, init_1(i), dTym, force_1(i), uv_solution);
@@ -145,11 +143,117 @@ Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutp
     int N_adof = ind.XSize();
 
     // Second order term
-    Array2D<Array2D<double> > uv_2(dim,dim); 
-    int PCTerms_2 = 0;
     Array1D<int> indi_2(N_adof*(N_adof-1)/2,0);
     Array1D<int> indj_2(N_adof*(N_adof-1)/2,0);
- 
+    printf("Second-order terms...");
+    // generate PCSet and the number of terms in it
+    PCSet PCSet_2("ISP",order,2,pcType,0.0,1.0); 
+    int PCTerms_2 = PCSet_2.GetNumberPCTerms();
+    int N2 = N_adof*(N_adof-1)/2;
+    Array1D<Array1D<Array2D<double> > > force_2(N2);
+    Array1D<Array1D<Array1D<double> > > epsilon_2(N2);
+    Array1D<Array1D<Array1D<double> > > init_2(N2);
+    // Generate the forcing, epsilon and initial conditions on each stochastic dim
+    int k=0;
+    for (int idim=0;idim<N_adof-1;idim++){
+        for (int idim2=idim+1;idim2<N_adof;idim2++){
+        // forcing
+        Array1D<Array2D<double> > force_temp(dof);
+        Array2D<double> f2_temp(2*nStep+1,PCTerms_2,0.e0);
+        f2_temp.replaceCol(fbar,0);
+        if (idim<nkl){
+            Array1D<double> tempKL(2*nStep+1,0.e0);
+            getCol(scaledKLmodes,idim,tempKL);
+            f2_temp.replaceCol(tempKL,1);    
+        }
+        if (idim2<nkl){
+            Array1D<double> tempKL(2*nStep+1,0.e0);
+            getCol(scaledKLmodes,idim2,tempKL);
+            f2_temp.replaceCol(tempKL,2);    
+        }
+        for (int id=0;id<dof;id++){
+            force_temp(id) = f2_temp;
+            prodVal(force_temp(id),mck(0)(id));            
+        }
+        force_2(k)=force_temp;        
+        //epsilon
+        Array1D<Array1D<double> > epsilon_temp(dof);
+        for (int i=0;i<dof;i++){
+            Array1D<double> e2_temp(PCTerms_2,0.e0);
+            e2_temp(0)=stat_e(i,0);
+            //PCSet_2.InitMeanStDv(stat_e(i,0),0,1,e2_temp);
+            if (idim==nkl+i)
+                PCSet_2.InitMeanStDv(stat_e(i,0),stat_e(i,1),1,e2_temp);
+            if(idim2==nkl+i)
+                PCSet_2.InitMeanStDv(stat_e(i,0),stat_e(i,1),2,e2_temp);
+            epsilon_temp(i)=e2_temp;
+        }
+        epsilon_2(k)=epsilon_temp;
+        // initial conditions
+        Array1D<Array1D<double> > init_temp(dof);
+        for (int i=0;i<dof;i++){
+            Array1D<double> i2_temp(2*PCTerms_2,0.e0);
+            Array1D<double> temp_init2(PCTerms_2,0.e0);
+            Array1D<double> temp_init3(PCTerms_2,0.e0);
+            PCSet_2.InitMeanStDv(stat_i(i,0),0,1,temp_init2);
+            PCSet_2.InitMeanStDv(stat_i(i+dof,0),0,1,temp_init3);
+            if (idim==nkl+dof+i){
+                PCSet_2.InitMeanStDv(stat_i(i,0),stat_i(i,1),1,temp_init2);
+            }
+            if (idim==nkl+2*dof+i){
+                PCSet_2.InitMeanStDv(stat_i(i+dof,0),stat_i(i+dof,1),1,temp_init3);
+            }
+            if (idim2==nkl+dof+i){
+                PCSet_2.InitMeanStDv(stat_i(i,0),stat_i(i,1),2,temp_init2);
+            }
+            if (idim2==nkl+2*dof+i){
+                PCSet_2.InitMeanStDv(stat_i(i+dof,0),stat_i(i+dof,1),2,temp_init3);
+            }
+            merge(temp_init2,temp_init3,i2_temp); 
+            init_temp(i)= i2_temp;
+        }
+        init_2(k) = init_temp;
+	    indi_2(k) = ind(idim);
+        indj_2(k) = ind(idim2);
+        k++;
+        }
+    }
+    cout << "Finished generating the forcing, epsilon and initial conditions on each stochastic dim." << endl;
+
+    // allocate uv_2
+    Array1D<Array2D<Array2D<double> > > uv_2(2*dof);
+    //Array2D<Array2D<double> > uv_2(dim,dim); 
+    for (int id=0;id<2*dof;id++){
+        Array2D<Array2D<double> > temp(dim,dim);
+        for (int i=0;i<dim;i++){
+            for (int j=0;j<dim;j++){
+                Array2D<double> temp2(nStep+1,PCTerms_2,0.e0);
+                temp(i,j) = temp2;
+            }
+        }
+        uv_2(id)=temp;
+    }
+    tt.tick();
+    #pragma omp parallel default(none) shared(N2,dof,PCSet_2,mck,nStep,dTym,PCTerms_2,epsilon_2,init_2,force_2,dim,uv_2,indi_2,indj_2)
+    {
+    #pragma omp for
+    for (int i=0;i<N2;i++){
+        Array1D<Array2D<double> >  uv_solution(dof);
+        // MCS is assumed deterministic for now
+        nGS(dof, PCSet_2, epsilon_2(i), mck, nStep, init_2(i), dTym, force_2(i), uv_solution);
+        for (int id=0;id<dof;id++){
+            for (int iPC=0;iPC<PCTerms_2;iPC++){
+                for (int ix=0;ix<nStep+1;ix++){
+                    uv_2(id)(indi_2(i),indj_2(i))(ix,iPC)=uv_solution(id)(ix,iPC);
+                    uv_2(dof+id)(indi_2(i),indj_2(i))(ix,iPC)=uv_solution(id)(ix,PCTerms_2+iPC);
+                }
+            }
+        }
+    }
+    }
+    tt.tock("Took");
+    t(1)=tt.silent_tock();
+
     // Third order term
     Array3D<Array2D<double> > uv_3(dim,dim,dim); 
     int PCTerms_3 = 0;
@@ -164,12 +268,12 @@ Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutp
     Array2D<double> std1(nStep+1,2*dof,0.e0);
     Array2D<double> std2(nStep+1,2*dof,0.e0);
     Array2D<double> std3(nStep+1,2*dof,0.e0);
-   
-    printf("\n");
+ 
     printf("Assemble the solutions...\n");
     string name = "disvel";
     tt.tick();
     for (int i=0;i<dof*2;i++){
+        cout << "DOF " << i << endl;
         Array1D<double> uv0_temp(nStep+1,0.e0);
         getCol(uv_0,i,uv0_temp);
         Array1D<double> m1_temp(uv0_temp);
@@ -184,7 +288,7 @@ Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutp
         mstd_MCS.replaceCol(MCS_temp,0);
         getCol(std_MCS,i,MCS_temp);
         mstd_MCS.replaceCol(MCS_temp,1);
-        PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, uv0_temp, uv_1(i), uv_2, uv_3, m1_temp, m2_temp, m3_temp, s1_temp, s2_temp, s3_temp,  normsq, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, factor_OD, mstd_MCS, samPts_norm, name, noutput, e_sample, PDF);
+        PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, uv0_temp, uv_1(i), uv_2(i), uv_3, m1_temp, m2_temp, m3_temp, s1_temp, s2_temp, s3_temp,  normsq, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, factor_OD, mstd_MCS, samPts_norm, name, noutput, e_sample, PDF);
         m1.replaceCol(m1_temp,i);
         m2.replaceCol(m2_temp,i);
         m3.replaceCol(m3_temp,i);
@@ -195,8 +299,44 @@ Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutp
     tt.tock("Took");
     t(4)=tt.silent_tock();
     
+    // Compute the error compare to MCS
+    Array2D<double> e2_AAPG1(dof,4,0.e0);
+    string info = "AAPG1";
+    Array1D<Array2D<double> > et_AAPG1(dof);
+    Array2D<double> e1_AAPG1 =  nerror(info,dof,nStep,et_AAPG1,m1,std1,mean_MCS,std_MCS,e2_AAPG1);
+    string info2 = "AAPG2";
+    Array2D<double> e2_AAPG2(dof,4,0.e0);
+    Array1D<Array2D<double> > et_AAPG2(dof);
+    Array2D<double> e1_AAPG2 =  nerror(info2,dof,nStep,et_AAPG2,m2,std2,mean_MCS,std_MCS,e2_AAPG2);
+
+    // print out the error
+    cout << "AAPG1 Error kind 1 is" << endl;
+    for (int i=0;i<dof;i++){
+        cout << "Dof " << i << ", m_v:" << e1_AAPG1(i,0) << ",s_v:" << e1_AAPG1(i,1) << "," <<",m_u:" << e1_AAPG1(i,2) << ",s_u:"<<e1_AAPG1(i,3) << "." << endl;
+    }
+    cout << "Error kind 2 is" << endl;
+    for (int i=0;i<dof;i++){
+        cout << "Dof " << i << ", m_v:" << e2_AAPG1(i,0) << ",s_v:" << e2_AAPG1(i,1) << "," <<",m_u:" << e2_AAPG1(i,2) << ",s_u:"<<e2_AAPG1(i,3) << "." << endl;
+    }
+    cout << "AAPG2 Error kind 1 is" << endl;
+    for (int i=0;i<dof;i++){
+        cout << "Dof " << i << ", m_v:" << e1_AAPG2(i,0) << ",s_v:" << e1_AAPG2(i,1) << "," <<",m_u:" << e1_AAPG2(i,2) << ",s_u:"<<e1_AAPG2(i,3) << "." << endl;
+    }
+    cout << "Error kind 2 is" << endl;
+    for (int i=0;i<dof;i++){
+        cout << "Dof " << i << ", m_v:" << e2_AAPG2(i,0) << ",s_v:" << e2_AAPG2(i,1) << "," <<",m_u:" << e2_AAPG2(i,2) << ",s_u:"<<e2_AAPG2(i,3) << "." << endl;
+    }
+
     write_datafile(m1,"m1.dat");
     write_datafile(std1,"s1.dat");
+    write_datafile(m2,"m2.dat");
+    write_datafile(std2,"s2.dat");
+    write_datafile(e1_AAPG1,"e1_AAPG1.dat");
+    write_datafile(e2_AAPG1,"e2_AAPG1.dat");
+    write_datafile(et_AAPG1(0),"etat0_AAPG1.dat");
+    write_datafile(e1_AAPG2,"e1_AAPG2.dat");
+    write_datafile(e2_AAPG2,"e2_AAPG2.dat");
+    write_datafile(et_AAPG2(0),"etat0_AAPG2.dat");
  
     return(t);
 }

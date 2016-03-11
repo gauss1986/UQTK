@@ -26,7 +26,7 @@ int main(int argc, char *argv[]){
 
     int dof=5;
     int ord_GS=2;
-    int ord_AAPG=1;
+    int ord_AAPG=2;
     int ord_AAPG_GS=2;
     int nkl=5;
     int dim=nkl+3*dof;// set epsilon to be stochastic coeffs on each dof
