@@ -253,17 +253,12 @@ Array2D<double> postprocess_nGS(int dof, int nStep,  Array1D<Array2D<double> >& 
     int nPCTerms = myPCSet.GetNumberPCTerms();
     // Open files to write out solutions
     ostringstream s1;
-    s1 << "nGS_dis_m_" << ord<<".dat";
-    string dis_m(s1.str());
+    s1 << "m_GS" << ord<<".dat";
+    string m(s1.str());
     ostringstream s2;
-    s2 << "nGS_dis_s_" << ord<<".dat";
-    string dis_s(s2.str());
+    s2 << "s_GS" << ord<<".dat";
+    string s(s2.str());
     ostringstream s3;
-    s3 << "nGS_vel_m_" << ord<<".dat";
-    string vel_m(s3.str());
-    ostringstream s4;
-    s4 << "nGS_vel_s_" << ord<<".dat";
-    string vel_s(s4.str());
 
     // Output solution (mean and std) 
     Array1D<double> temp_u(nPCTerms,0.e0);
@@ -294,10 +289,8 @@ Array2D<double> postprocess_nGS(int dof, int nStep,  Array1D<Array2D<double> >& 
         mean.replaceCol(temp2,dof+j);
     }
     
-    write_datafile(mean_u,dis_m.c_str());
-    write_datafile(StDv_u,dis_s.c_str());
-    write_datafile(mean_v,vel_m.c_str());
-    write_datafile(StDv_v,vel_s.c_str());
+    write_datafile(mean,m.c_str());
+    write_datafile(StDv,s.c_str());
 
     Array1D<Array2D<double> > et(dof);
     

@@ -38,11 +38,11 @@ int main(int argc, char *argv[]){
     Array1D<double> initial(2*dof,0.e0); // initial condition
     Array1D<double> initial_sigma(2*dof,0.e0);
     for (int i=0;i<dof;i++)
-        initial_sigma(i)=0.1; 
+        initial_sigma(i)=0.e0; 
 
     // epsilon
     Array1D<double>  epsilon_mean(dof,1e4);
-    Array1D<double>  e_sigma(dof,1e4);
+    Array1D<double>  e_sigma(dof,0.e0);
 
     // Time marching info
     double dTym = 0.01;
@@ -67,19 +67,19 @@ int main(int argc, char *argv[]){
     // c
     Array1D<double> temp_c(dof,0.e0);
     for (int i=0;i<dof;i++)
-        temp_c(i)=2*0.04*sqrt(temp_m(i)*temp_k(i));
+        temp_c(i)=2*0.2*sqrt(temp_m(i)*temp_k(i));
     mck(1) = temp_c;
 
     // sample point
     Array2D<double> samPts_norm(nspl,dim,0.e0);
     PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
     MCPCSet.DrawSampleVar(samPts_norm);
-    write_datafile(samPts_norm,"samPts_norm.dat");
+    //write_datafile(samPts_norm,"samPts_norm.dat");
 
     // force
     Array1D<Array2D<double> > f_GS(dof);
     Array2D<double> scaledKLmodes(2*nStep+1,nkl,0.e0);
-    double clen = 0.05;
+    double clen = 5;
     double sigma=0.5;
     char* cov_type = (char *)"Exp";
     genKL(scaledKLmodes, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
@@ -89,8 +89,8 @@ int main(int argc, char *argv[]){
         fbar(i) = 0.2*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
         t_temp +=dTym/2;
     }
-    write_datafile_1d(fbar,"nfbar.dat");
-    write_datafile(scaledKLmodes,"nKL.dat");
+    //write_datafile_1d(fbar,"nfbar.dat");
+    //write_datafile(scaledKLmodes,"nKL.dat");
 
     /////////////---MCS--/////////////
     cout << "Starting MCS..." << endl;
@@ -127,8 +127,8 @@ int main(int argc, char *argv[]){
         }
     }
     }
-    write_datafile(epsilon_MCS_samples,"epsilon_samples.dat");
-    write_datafile(initial_MCS_samples,"initial_samples.dat");
+    //write_datafile(epsilon_MCS_samples,"epsilon_samples.dat");
+    //write_datafile(initial_MCS_samples,"initial_samples.dat");
     tt.tock("Took");
     // examine statistics of epsilon & initial conditions
     Array2D<double> stat_e(dof,2,0.e0);
@@ -257,7 +257,7 @@ int main(int argc, char *argv[]){
     for(unsigned int ipc=0; ipc<Pbtot.XSize(); ipc++)
         for(int id=0; id<dim; id++)
             normsq(ipc) *= norms1d(Pbtot(ipc,id));
-    write_datafile_1d(normsq,"normsq.dat");
+    //write_datafile_1d(normsq,"normsq.dat");
    
     cout << "AAPG..." << endl;
     Array1D<double> t_AAPG = nAAPG(dof,nkl,dim,nStep,ord_AAPG_GS,noutput,factor_OD,ord_AAPG,act_D,mck,fbar,dTym,epsilon_mean,pcType,scaledKLmodes,stat_e,stat_i,normsq,mean_MCS,std_MCS);
