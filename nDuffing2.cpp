@@ -24,11 +24,11 @@
 
 int main(int argc, char *argv[]){
 
-    int dof=5;
+    int dof=2;
     int ord_GS=2;
     int ord_AAPG=2;
     int ord_AAPG_GS=2;
-    int nkl=5;
+    int nkl=4;
     int dim=nkl+3*dof;// set epsilon to be stochastic coeffs on each dof
     int noutput=2;
     int nspl =100000;
@@ -41,7 +41,8 @@ int main(int argc, char *argv[]){
         initial_sigma(i)=0.e0; 
 
     // epsilon
-    Array1D<double>  epsilon_mean(dof,1e4);
+    //Array1D<double>  epsilon_mean(dof,1e4);
+    Array1D<double>  epsilon_mean(dof,0.5);
     Array1D<double>  e_sigma(dof,0.e0);
 
     // Time marching info
@@ -53,10 +54,12 @@ int main(int argc, char *argv[]){
     // MCK
     Array1D<Array1D<double> > mck(3);
     // m
-    Array1D<double> temp_m(dof,1e4);
+    //Array1D<double> temp_m(dof,1e4);
+    Array1D<double> temp_m(dof,1.0);
     mck(0) = temp_m;
     // k
-    Array1D<double> temp_k(dof,4e7);
+    //Array1D<double> temp_k(dof,4e7);
+    Array1D<double> temp_k(dof,1.0);
     temp_k(4)=temp_k(4)*0.9;
     temp_k(5)=temp_k(5)*0.9;
     temp_k(6)=temp_k(6)*0.9;
@@ -67,7 +70,8 @@ int main(int argc, char *argv[]){
     // c
     Array1D<double> temp_c(dof,0.e0);
     for (int i=0;i<dof;i++)
-        temp_c(i)=2*0.2*sqrt(temp_m(i)*temp_k(i));
+        //temp_c(i)=2*0.2*sqrt(temp_m(i)*temp_k(i));
+        temp_c(i)=2*0.1*sqrt(temp_m(i)*temp_k(i));
     mck(1) = temp_c;
 
     // sample point
@@ -79,14 +83,15 @@ int main(int argc, char *argv[]){
     // force
     Array1D<Array2D<double> > f_GS(dof);
     Array2D<double> scaledKLmodes(2*nStep+1,nkl,0.e0);
-    double clen = 5;
-    double sigma=0.5;
+    double clen = 0.1;
+    double sigma=0.8;
     char* cov_type = (char *)"Exp";
     genKL(scaledKLmodes, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
     Array1D<double> fbar(2*nStep+1,0.e0);//mean of forcing
     double t_temp = 0.0; 
     for (int i=0;i<2*nStep+1;i++){
-        fbar(i) = 0.2*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+        //fbar(i) = 0.2*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+        fbar(i) = 2.0;
         t_temp +=dTym/2;
     }
     //write_datafile_1d(fbar,"nfbar.dat");
