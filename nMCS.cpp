@@ -179,13 +179,13 @@ Array2D<double>  nsample_force(int dof, Array2D<double>& samPts,int iq, Array1D<
 
 void mstd_MCS(Array1D<double>& result, double& mean, double& std){
     unsigned int nspl = result.XSize();
-    mean = 0;
-    double var =0;
+    mean = 0.0;
+    double var =0.0;
     for (unsigned int i=0;i<nspl;i++){
         mean += result(i);
         var += result(i)*result(i);
     }
     mean = mean/nspl;
     var = var/nspl-mean*mean;
-    std = sqrt(var);
+    std = sqrt(fabs(var));
 }

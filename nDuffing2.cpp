@@ -24,11 +24,11 @@
 
 int main(int argc, char *argv[]){
 
-    int dof=2;
+    int dof=5;
     int ord_GS=2;
     int ord_AAPG=2;
     int ord_AAPG_GS=2;
-    int nkl=4;
+    int nkl=5;
     int dim=nkl+3*dof;// set epsilon to be stochastic coeffs on each dof
     int noutput=2;
     int nspl =100000;
@@ -38,12 +38,12 @@ int main(int argc, char *argv[]){
     Array1D<double> initial(2*dof,0.e0); // initial condition
     Array1D<double> initial_sigma(2*dof,0.e0);
     for (int i=0;i<dof;i++)
-        initial_sigma(i)=0.e0; 
+        initial_sigma(i)=0.5; 
 
     // epsilon
     //Array1D<double>  epsilon_mean(dof,1e4);
-    Array1D<double>  epsilon_mean(dof,0.5);
-    Array1D<double>  e_sigma(dof,0.e0);
+    Array1D<double>  epsilon_mean(dof,0.1);
+    Array1D<double>  e_sigma(dof,0.0);
 
     // Time marching info
     double dTym = 0.01;
@@ -91,10 +91,11 @@ int main(int argc, char *argv[]){
     double t_temp = 0.0; 
     for (int i=0;i<2*nStep+1;i++){
         //fbar(i) = 0.2*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-        fbar(i) = 2.0;
+        //fbar(i) = 2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp);
+        fbar(i)=2.0;
         t_temp +=dTym/2;
     }
-    //write_datafile_1d(fbar,"nfbar.dat");
+    write_datafile_1d(fbar,"nfbar.dat");
     //write_datafile(scaledKLmodes,"nKL.dat");
 
     /////////////---MCS--/////////////
@@ -132,7 +133,7 @@ int main(int argc, char *argv[]){
         }
     }
     }
-    //write_datafile(epsilon_MCS_samples,"epsilon_samples.dat");
+    write_datafile(epsilon_MCS_samples,"epsilon_samples.dat");
     //write_datafile(initial_MCS_samples,"initial_samples.dat");
     tt.tock("Took");
     // examine statistics of epsilon & initial conditions
