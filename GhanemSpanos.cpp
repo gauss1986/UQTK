@@ -98,6 +98,7 @@ void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<dou
             // parse input parameters
             Array1D<double> epsilon(nPCTerms,0.e0); 
             Array1D<double> zeta(nPCTerms,0.e0); 
+            //cout << "Coeff_D="<< coeff_D(0) << "," << coeff_D(1)<<endl;
             if (coeff_D(0)+1<nPCTerms){
                 myPCSet.InitMeanStDv(inpParams(1),inpParams(3),coeff_D(0)+1,zeta);
             }

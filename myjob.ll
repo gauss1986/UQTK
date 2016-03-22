@@ -15,7 +15,7 @@
 ## Job specific
 ##===================================
 #
-# @ job_name = Duffing
+# @ job_name = nDuffing_40_005
 # @ job_type = parallel
 # @ class = verylong
 # @ output = $(jobid).out

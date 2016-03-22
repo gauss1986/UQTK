@@ -82,8 +82,8 @@ int main(int argc, char *argv[])
     
     if (CASE==1){//Stochastic forcing and deterministic initial conditions
         clen = 0.05;
-        dim = 10;
-        nkl = 10;
+        dim = 100;
+        nkl = 100;
         cov_type = (char *)"Exp";
         sigma = 0.8;
         nspl = 10000;
@@ -184,8 +184,8 @@ int main(int argc, char *argv[])
         inpParams(0) = 0.0;//Problem to solve 
         inpParams(1) = 0.1;//zeta
         inpParams(2) = 1.0;//epsilon
-        inpParams(3) = 0.05;//std for zeta
-        inpParams(4) = 0.5;//std for epsilon
+        inpParams(3) = 0.02;//std for zeta
+        inpParams(4) = 0.2;//std for epsilon
         double t_temp = 0.0; 
         for (int i=0;i<2*nStep+1;i++){
             fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
@@ -198,13 +198,13 @@ int main(int argc, char *argv[])
     }
     if (CASE==5){//Stochastic zeta and epsilon and stochastic forcing
         clen = 0.05;
-        dim = 150;
-        nkl = 148;
+        dim = 100;
+        nkl = 98;
         cov_type = (char *)"Exp";
         sigma = 0.5;
         nspl = 100000;
         factor_OD = 1.0;
-        ord_GS = 1;
+        ord_GS = 2;
         ord_AAPG = 2;
         ord_AAPG_GS = 2;
         act_D = false;
@@ -267,7 +267,7 @@ int main(int argc, char *argv[])
     // Generate random samples
     Array2D<double> samPts_ori(nspl,dim,0.e0);
     Array2D<double> samPts_norm(nspl,dim,0.e0);
-    PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
+    PCSet MCPCSet("NISPnoq",0,dim,pcType,0.0,1.0);
     MCPCSet.DrawSampleVar(samPts_ori);
     if (strcmp(pcType.c_str(),"HG")==0){
         for (int i=0;i<nspl;i++){
@@ -489,6 +489,10 @@ int main(int argc, char *argv[])
             getCol(scaledKLmodes,i,tempf);
             f_GS.replaceCol(tempf,i+1);
         }
+        ostringstream s_fGS;
+        s_fGS << "f_GS" << ord<<".dat";
+        string n_fGS(s_fGS.str());
+        write_datafile(f_GS,n_fGS.c_str());
 
        // Initial conditions
         Array1D<Array2D<double> > result(2);
@@ -568,10 +572,7 @@ int main(int argc, char *argv[])
     }
 
     // AAPG
-    printf("\nAAPG...\n");
-    //tt.tick();
-    //PCSet myPCSet("ISP",ord_AAPG_GS,dim,pcType,0.0,1.0,false); 
-    //tt.tock("Took");
+    printf("AAPG...\n");
 
     // Compute multiindex
     Array2D<int> Pbtot;
@@ -592,8 +593,7 @@ int main(int argc, char *argv[])
     Array2D<double> e_AAPG(ord_AAPG,2,0.e0); 
     Array1D<Array1D<double> > e_sample_AAPG_dis(ord_AAPG); 
     Array1D<Array1D<double> > e_sample_AAPG_vel(ord_AAPG); 
-    Array1D<double> t_AAPG = nAAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, normsq, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, stat_init, samPts_norm, e_AAPG, e_sample_AAPG_dis, e_sample_AAPG_vel, init_D, coeff_D, PDF);
-    //Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, normsq, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, stat_init, samPts_norm, e_AAPG, e_sample_AAPG_dis, e_sample_AAPG_vel, init_D, coeff_D, PDF);
+    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, normsq, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, stat_init, samPts_norm, e_AAPG, e_sample_AAPG_dis, e_sample_AAPG_vel, init_D, coeff_D, PDF);
     
     // output the timing
     Array1D<double> t(1+ord_GS+ord_AAPG,0.e0);

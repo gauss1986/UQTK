@@ -136,12 +136,12 @@ Array1D<double> error(Array2D<double>& et, Array1D<double>& mean, Array1D<double
         getCol(et,1,temp_s2);
 
         // normalized relative error
-        e(0) = sum(temp_m2)/sum(temp_m)*100;
-        e(1) = sum(temp_s2)/sum(temp_s)*100;
+        e(0) = sum(temp_m2)/sum(temp_m);
+        e(1) = sum(temp_s2)/sum(temp_s);
     
         for (unsigned int i=0;i<mean.XSize();i++){
-            et(i,0) = et(i,0)/fabs(mstd_MCS(0,i))*100;
-            et(i,1) = et(i,1)/fabs(mstd_MCS(1,i))*100;  
+            et(i,0) = et(i,0)/fabs(mstd_MCS(0,i));
+            et(i,1) = et(i,1)/fabs(mstd_MCS(1,i));  
         }
 
         return e;

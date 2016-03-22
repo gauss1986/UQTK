@@ -24,11 +24,11 @@
 
 int main(int argc, char *argv[]){
 
-    int dof=5;
+    int dof=10;
     int ord_GS=2;
     int ord_AAPG=2;
     int ord_AAPG_GS=2;
-    int nkl=5;
+    int nkl=10;
     int dim=nkl+3*dof;// set epsilon to be stochastic coeffs on each dof
     int noutput=2;
     int nspl =100000;
@@ -46,7 +46,7 @@ int main(int argc, char *argv[]){
     Array1D<double>  e_sigma(dof,0.0);
 
     // Time marching info
-    double dTym = 0.01;
+    double dTym = 0.005;
     double tf = 10;
     // Number of steps
     int nStep=(int) tf / dTym;
@@ -76,7 +76,7 @@ int main(int argc, char *argv[]){
 
     // sample point
     Array2D<double> samPts_norm(nspl,dim,0.e0);
-    PCSet MCPCSet("NISPnoq",ord_GS,dim,pcType,0.0,1.0);
+    PCSet MCPCSet("NISPnoq",0,dim,pcType,0.0,1.0);
     MCPCSet.DrawSampleVar(samPts_norm);
     //write_datafile(samPts_norm,"samPts_norm.dat");
 
