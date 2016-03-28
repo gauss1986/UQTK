@@ -1,0 +1,2 @@
+Test epsilon=0.2 and initial contions stochastic. Test wtih time marching step
+=0.1.

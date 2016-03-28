@@ -45,8 +45,8 @@ int main(int argc, char *argv[]){
 
     // epsilon
     //Array1D<double>  epsilon_mean(dof,1e4);
-    Array1D<double>  epsilon_mean(dof,1.1);
-    Array1D<double>  e_sigma(dof,0.0);
+    Array1D<double>  epsilon_mean(dof,1);
+    Array1D<double>  e_sigma(dof,0.005);
 
     // Time marching info
     double dTym = 0.01;
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]){
     Array1D<Array2D<double> > f_GS(dof);
     Array2D<double> scaledKLmodes(2*nStep+1,nkl,0.e0);
     if (nkl>0){
-        double clen = 0.05;
+        double clen = 0.1;
         double sigma=0.8;
         char* cov_type = (char *)"Exp";
         genKL(scaledKLmodes, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
@@ -96,8 +96,8 @@ int main(int argc, char *argv[]){
     double t_temp = 0.0; 
     for (int i=0;i<2*nStep+1;i++){
         //fbar(i) = 0.2*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-        fbar(i) = 2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp);
-        //fbar(i)=2.0;
+        //fbar(i) = 2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp);
+        fbar(i)=2.0;
         t_temp +=dTym/2;
     }
     write_datafile_1d(fbar,"nfbar.dat");

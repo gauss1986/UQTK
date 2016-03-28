@@ -437,13 +437,13 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     tt.tock("Compute std took");
 
     // output sol_1_assembled for debug
-    ostringstream s0;
-    s0 << name << "_1_assembled"<<".dat";
-    write_datafile(sol_1_assembled,s0.str().c_str());
+    //ostringstream s0;
+    //s0 << name << "_1_assembled"<<".dat";
+    //write_datafile(sol_1_assembled,s0.str().c_str());
     // output sol_2_assembled for debug
-    ostringstream s4;
-    s4 << name << "_2_assembled"<<".dat";
-    write_datafile(sol_2_assembled,s4.str().c_str());
+    //ostringstream s4;
+    //s4 << name << "_2_assembled"<<".dat";
+    //write_datafile(sol_2_assembled,s4.str().c_str());
 
     // sample result
     Array2D<double> stat1(2,nStep+1,0.e0);

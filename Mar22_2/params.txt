@@ -1,0 +1,1 @@
+Test stochstic initial condtion of nDuffing.

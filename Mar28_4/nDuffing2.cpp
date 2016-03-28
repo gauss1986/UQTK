@@ -45,7 +45,7 @@ int main(int argc, char *argv[]){
 
     // epsilon
     //Array1D<double>  epsilon_mean(dof,1e4);
-    Array1D<double>  epsilon_mean(dof,1.1);
+    Array1D<double>  epsilon_mean(dof,1.0);
     Array1D<double>  e_sigma(dof,0.0);
 
     // Time marching info

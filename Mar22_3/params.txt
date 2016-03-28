@@ -1,0 +1,1 @@
+Test with stochastic forcing only nduffing.
