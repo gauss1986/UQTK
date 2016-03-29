@@ -24,40 +24,33 @@
 
 int main(int argc, char *argv[]){
 
-    int dof=5;
-    int ord_GS=2;
+    int dof=10;
+    int ord_GS=1;
     int ord_AAPG=2;
     int ord_AAPG_GS=2;
     Array1D<double> time(1+ord_GS,0.e0);
-    int nkl=5;
+    int nkl=50;
     int dim=nkl+3*dof;// set epsilon to be stochastic coeffs on each dof
     int noutput=2;
     int nspl =10000;
     int factor_OD = 0.99;
     string pcType="LU";  //PC type
     bool act_D = false;
-    double dTym = 0.01;
     Array1D<double> initial(2*dof,0.e0); // initial condition
     Array1D<double> initial_sigma(2*dof,0.e0);
     for (int i=0;i<dof;i++){
-        initial_sigma(i)=0.5;
-        initial_sigma(dof+i)=0.1;
+        initial_sigma(i)=0.0;
+        initial_sigma(dof+i)=0.0;
     } 
 
     // epsilon
     //Array1D<double>  epsilon_mean(dof,1e4);
-    double e1 = 1.0;
+    double e1 = 0.1;
     double e2 = 0.0;
     /* Read the user input */
     int c;
-    while ((c=getopt(argc,(char **)argv,"G:d:e:m:N:"))!=-1){
+    while ((c=getopt(argc,(char **)argv,"e:m:N:"))!=-1){
         switch (c) {
-        case 'G':
-            ord_AAPG_GS = (strtod(optarg, (char **)NULL));
-            break;
-        case 'd':
-            dTym = 1/(strtod(optarg, (char **)NULL));
-            break;
         case 'e':
             e1 = strtod(optarg, (char **)NULL);
             break;
@@ -73,12 +66,11 @@ int main(int argc, char *argv[]){
     cout << "epsilon_mean=" << e1 << endl;
     cout << "e_sigma=" << e2 << endl;
     cout << "nspl=" << nspl << endl;
-    cout << "dTym=" << dTym << endl;
-    cout << "ord_AAPG_GS=" << ord_AAPG_GS << endl;
     Array1D<double>  epsilon_mean(dof,e1);
     Array1D<double>  e_sigma(dof,e2);
 
     // Time marching info
+    double dTym = 0.01;
     double tf = 10;
     // Number of steps
     int nStep=(int) tf / dTym;
@@ -125,8 +117,8 @@ int main(int argc, char *argv[]){
     double t_temp = 0.0; 
     for (int i=0;i<2*nStep+1;i++){
         //fbar(i) = 0.2*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-        fbar(i) = 2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp);
-        //fbar(i)=2.0;
+        //fbar(i) = 2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp);
+        fbar(i)=2.0;
         t_temp +=dTym/2;
     }
     write_datafile_1d(fbar,"nfbar.dat");
@@ -169,7 +161,7 @@ int main(int argc, char *argv[]){
     }
     time(0) = tt.silent_tock();
     tt.tock("Took");
-    //write_datafile(epsilon_MCS_samples,"epsilon_samples.dat");
+    write_datafile(epsilon_MCS_samples,"epsilon_samples.dat");
     //write_datafile(initial_MCS_samples,"initial_samples.dat");
     // examine statistics of epsilon & initial conditions
     Array2D<double> stat_e(dof,2,0.e0);
@@ -275,8 +267,14 @@ int main(int argc, char *argv[]){
         for (int i=0;i<dof;i++){
             cout << "Dof " << i << ", m_v:" << e2(i,0) << ",s_v:" << e2(i,1) << "," <<",m_u:" << e2(i,2) << ",s_u:"<<e2(i,3) << "." << endl;
         }
+        //for (int i=0;i<dof;i++){
+        //    ostringstream name2;
+        //    name2 << "sol_GS_" << ord << "dof_"<< i <<".dat";
+        //    string name2_str = name2.str();
+        //    write_datafile(uv_solution(i),name2_str.c_str());
+        //}
         ostringstream name;
-        name << "e_GS_" << ord << "_d_"<<dTym<<".dat";
+        name << "e_GS_" << ord << ".dat";
         string name_str = name.str();
         write_datafile(e_GS,name_str.c_str());
     }

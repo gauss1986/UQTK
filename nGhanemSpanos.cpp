@@ -295,7 +295,7 @@ Array2D<double> postprocess_nGS(int dof, int nStep,  Array1D<Array2D<double> >& 
     Array1D<Array2D<double> > et(dof);
     
     ostringstream info;
-    info << "GS_"<<ord ;
+    info << "GS_"<<ord << "_d"<< dTym;
     string info_str = info.str();
     Array2D<double> e =  nerror(info_str, dof, nStep, et,mean,StDv,mean_MCS,std_MCS, e2);
 

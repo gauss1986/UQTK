@@ -125,8 +125,8 @@ int main(int argc, char *argv[]){
     double t_temp = 0.0; 
     for (int i=0;i<2*nStep+1;i++){
         //fbar(i) = 0.2*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-        fbar(i) = 2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp);
-        //fbar(i)=2.0;
+        //fbar(i) = 2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp);
+        fbar(i)=2.0;
         t_temp +=dTym/2;
     }
     write_datafile_1d(fbar,"nfbar.dat");
