@@ -24,24 +24,24 @@
 
 int main(int argc, char *argv[]){
 
-    int dof=3;
+    int dof=5;
     int ord_GS=2;
     int ord_AAPG=2;
     int ord_AAPG_GS=2;
     Array1D<double> time(1+ord_GS,0.e0);
-    int nkl=0;
+    int nkl=5;
     int dim=nkl+3*dof;// set epsilon to be stochastic coeffs on each dof
     int noutput=2;
-    int nspl =100000;
+    int nspl =10000;
     int factor_OD = 0.99;
     string pcType="LU";  //PC type
     bool act_D = false;
-    double dTym = 0.01;
+    double dTym = 0.001;
     Array1D<double> initial(2*dof,0.e0); // initial condition
     Array1D<double> initial_sigma(2*dof,0.e0);
     for (int i=0;i<dof;i++){
-        initial_sigma(i)=0.5;
-        initial_sigma(dof+i)=0.1;
+        initial_sigma(i)=0.0;
+        initial_sigma(dof+i)=0.0;
     } 
 
     // epsilon
@@ -125,7 +125,7 @@ int main(int argc, char *argv[]){
     double t_temp = 0.0; 
     for (int i=0;i<2*nStep+1;i++){
         //fbar(i) = 0.2*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-        fbar(i) = 2.0-sin(40*3.1415926*t_temp)*exp(-0.3*t_temp);
+        fbar(i) = 2.0-sin(10*3.1415926*t_temp)*exp(-0.3*t_temp);
         //fbar(i)=2.0;
         t_temp +=dTym/2;
     }
