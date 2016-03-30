@@ -24,12 +24,13 @@
 
 int main(int argc, char *argv[]){
 
-    int dof=3;
+    int dof=2;
     int ord_GS=2;
     int ord_AAPG=2;
     int ord_AAPG_GS=2;
+    int refine = 10;
     Array1D<double> time(1+ord_GS,0.e0);
-    int nkl=0;
+    int nkl=2;
     int dim=nkl+3*dof;// set epsilon to be stochastic coeffs on each dof
     int noutput=2;
     int nspl =100000;
@@ -50,8 +51,11 @@ int main(int argc, char *argv[]){
     double e2 = 0.0;
     /* Read the user input */
     int c;
-    while ((c=getopt(argc,(char **)argv,"G:d:e:m:N:"))!=-1){
+    while ((c=getopt(argc,(char **)argv,"r:G:d:e:m:N:"))!=-1){
         switch (c) {
+        case 'r':
+            refine = (strtod(optarg, (char **)NULL));
+            break;
         case 'G':
             ord_AAPG_GS = (strtod(optarg, (char **)NULL));
             break;
@@ -75,6 +79,7 @@ int main(int argc, char *argv[]){
     cout << "nspl=" << nspl << endl;
     cout << "dTym=" << dTym << endl;
     cout << "ord_AAPG_GS=" << ord_AAPG_GS << endl;
+    cout << "AAPG1 is refined by "<< refine << " times" << endl;
     Array1D<double>  epsilon_mean(dof,e1);
     Array1D<double>  e_sigma(dof,e2);
 
@@ -82,6 +87,7 @@ int main(int argc, char *argv[]){
     double tf = 10;
     // Number of steps
     int nStep=(int) tf / dTym;
+    int nStep_fine=nStep*refine;
 
     // MCK
     Array1D<Array1D<double> > mck(3);
@@ -113,24 +119,38 @@ int main(int argc, char *argv[]){
     //write_datafile(samPts_norm,"samPts_norm.dat");
 
     // force
-    Array1D<Array2D<double> > f_GS(dof);
     Array2D<double> scaledKLmodes(2*nStep+1,nkl,0.e0);
+    Array2D<double> scaledKLmodes_fine(2*nStep_fine+1,nkl,0.e0);
     if (nkl>0){
+        cout << "Generating KL..." << endl;
         double clen = 0.1;
         double sigma=0.8;
         char* cov_type = (char *)"Exp";
-        genKL(scaledKLmodes, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
+        //genKL(scaledKLmodes, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
+        genKL(scaledKLmodes_fine, 2*nStep_fine+1, nkl, clen, sigma, tf, cov_type);
     }
     Array1D<double> fbar(2*nStep+1,0.e0);//mean of forcing
+    Array1D<double> fbar_fine(2*nStep_fine+1,0.e0);//mean of forcing
     double t_temp = 0.0; 
-    for (int i=0;i<2*nStep+1;i++){
+    int i_temp = 0;
+    cout << "Generating fbar..." << endl;
+    for (int i=0;i<2*nStep_fine+1;i++){
         //fbar(i) = 0.2*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-        fbar(i) = 2.0-sin(40*3.1415926*t_temp)*exp(-0.3*t_temp);
+        fbar_fine(i) = 2.0-sin(40*3.1415926*t_temp)*exp(-0.3*t_temp);
         //fbar(i)=2.0;
-        t_temp +=dTym/2;
+        if (i%refine == 0){
+            fbar(i_temp)=fbar_fine(i);
+            Array1D<double> temp(nkl,0.e0);
+            getRow(scaledKLmodes_fine,i,temp); 
+            scaledKLmodes.replaceRow(temp,i_temp);
+            i_temp++;
+        }
+        t_temp +=dTym/refine/2;
     }
-    write_datafile_1d(fbar,"nfbar.dat");
+    //write_datafile_1d(fbar,"nfbar.dat");
+    //write_datafile_1d(fbar_fine,"nfbar_fine.dat");
     //write_datafile(scaledKLmodes,"nKL.dat");
+    //write_datafile(scaledKLmodes_fine,"nKL_fine.dat");
 
     /////////////---MCS--/////////////
     cout << "Starting MCS..." << endl;

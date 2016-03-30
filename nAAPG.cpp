@@ -121,10 +121,6 @@ Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutp
         Array1D<Array2D<double> >  uv_solution(dof);
         // MCS is assumed deterministic for now
         nGS(dof, PCSet_1, epsilon_1(i), mck, nStep, init_1(i), dTym, force_1(i), uv_solution);
-        //ostringstream name_AAPG1;
-        //name_AAPG1 << "uv1_dim" << i << ".dat";
-        //string name_AAPG1str = name_AAPG1.str();
-        //write_datafile(uv_solution(0),name_AAPG1str.c_str());
         for (int id=0;id<dof;id++){
             for (int iPC=0;iPC<PCTerms_1;iPC++){
                 for (int ix=0;ix<nStep+1;ix++){
