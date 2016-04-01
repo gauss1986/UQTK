@@ -34,6 +34,8 @@
         Array1D<double> xgrid;
         Array2D<double> cov;
         genGrid(xgrid,npts,t_final);
+
+
         comcov(cov, npts, xgrid, clen, sigma, cov_type);
 
         KLDecompUni decomposer(xgrid);

@@ -15,13 +15,13 @@
 #include "nGhanemSpanos.h"
 #include "ticktock.h"
 
-Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutput, double factor_OD, int AAPG_ord, bool act_D, Array1D<Array1D<double> >& mck, Array1D<double>& fbar, double dTym, Array1D<double>& epsilon_mean, string pcType, Array2D<double>& scaledKLmodes,  Array2D<double>& stat_e,  Array2D<double>& stat_i, Array1D<double>& normsq, Array2D<double>& mean_MCS, Array2D<double>& std_MCS){
+void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, int noutput, double factor_OD, int AAPG_ord, bool act_D, Array1D<Array1D<double> >& mck, Array1D<double>& fbar, Array1D<double>& fbar_fine,double dTym, Array1D<double>& epsilon_mean, string pcType, Array2D<double>& scaledKLmodes,Array2D<double>& scaledKLmodes_fine, Array2D<double>& stat_e,  Array2D<double>& stat_i, Array1D<double>& normsq, Array2D<double>& mean_MCS, Array2D<double>& std_MCS){
     Array2D<double> samPts_norm(2,2,0.e0);
     bool PDF = false;
     Array1D<Array1D<double> > e_sample;
 
     // timing var
-    Array1D<double> t(AAPG_ord+1,0.e0);
+    Array1D<double> t(6,0.e0);
     
     // Compute zeroth-order solution
     printf("Zeroth-order term...\n");
@@ -61,11 +61,11 @@ Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutp
     for (int idim=0;idim<dim;idim++){
         // forcing
         Array1D<Array2D<double> > force_temp(dof);
-        Array2D<double> f1_temp(2*nStep+1,PCTerms_1,0.e0);
-        f1_temp.replaceCol(fbar,0);
+        Array2D<double> f1_temp(2*nStep*refine+1,PCTerms_1,0.e0);
+        f1_temp.replaceCol(fbar_fine,0);
         if (idim<nkl){
-            Array1D<double> tempKL(2*nStep+1,0.e0);
-            getCol(scaledKLmodes,idim,tempKL);
+            Array1D<double> tempKL(2*nStep*refine+1,0.e0);
+            getCol(scaledKLmodes_fine,idim,tempKL);
             f1_temp.replaceCol(tempKL,1);    
         }
         for (int id=0;id<dof;id++){
@@ -77,9 +77,10 @@ Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutp
         Array1D<Array1D<double> > epsilon_temp(dof);
         for (int i=0;i<dof;i++){
             Array1D<double> e1_temp(PCTerms_1,0.e0);
-            e1_temp(0)=stat_e(i,0);
             if (idim==nkl+i)
                 PCSet_1.InitMeanStDv(stat_e(i,0),stat_e(i,1),1,e1_temp);
+            else
+                PCSet_1.InitMeanStDv(stat_e(i,0),0,1,e1_temp);
             epsilon_temp(i)=e1_temp;
         }
         epsilon_1(idim)=epsilon_temp;
@@ -114,18 +115,18 @@ Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutp
         uv_1(id)=temp;
     }
     tt.tick();
-    #pragma omp parallel default(none) shared(dof,PCSet_1,mck,nStep,dTym,PCTerms_1,epsilon_1,init_1,force_1,dim,uv_1)
+    #pragma omp parallel default(none) shared(refine,dof,PCSet_1,mck,nStep,dTym,PCTerms_1,epsilon_1,init_1,force_1,dim,uv_1)
     {
     #pragma omp for
     for (int i=0;i<dim;i++){
         Array1D<Array2D<double> >  uv_solution(dof);
         // MCS is assumed deterministic for now
-        nGS(dof, PCSet_1, epsilon_1(i), mck, nStep, init_1(i), dTym, force_1(i), uv_solution);
+        nGS(dof, PCSet_1, epsilon_1(i), mck, nStep*refine, init_1(i), dTym/refine, force_1(i), uv_solution);
         for (int id=0;id<dof;id++){
             for (int iPC=0;iPC<PCTerms_1;iPC++){
                 for (int ix=0;ix<nStep+1;ix++){
-                    uv_1(id)(i)(ix,iPC)=uv_solution(id)(ix,iPC);
-                    uv_1(dof+id)(i)(ix,iPC)=uv_solution(id)(ix,PCTerms_1+iPC);
+                    uv_1(id)(i)(ix,iPC)=uv_solution(id)(ix*refine,iPC);
+                    uv_1(dof+id)(i)(ix,iPC)=uv_solution(id)(ix*refine,PCTerms_1+iPC);
                 }
             }
         }
@@ -240,10 +241,6 @@ Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutp
         Array1D<Array2D<double> >  uv_solution(dof);
         // MCS is assumed deterministic for now
         nGS(dof, PCSet_2, epsilon_2(i), mck, nStep, init_2(i), dTym, force_2(i), uv_solution);
-        //ostringstream name_AAPG2;
-        //name_AAPG2 << "uv2_dim" << i << ".dat";
-        //string name_AAPG2str = name_AAPG2.str();
-        //write_datafile(uv_solution(0),name_AAPG2str.c_str());
         for (int id=0;id<dof;id++){
             for (int iPC=0;iPC<PCTerms_2;iPC++){
                 for (int ix=0;ix<nStep+1;ix++){
@@ -255,7 +252,7 @@ Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutp
     }
     }
     tt.tock("Took");
-    t(2)=tt.silent_tock();
+    t(1)=tt.silent_tock();
 
     // Third order term
     Array3D<Array2D<double> > uv_3(dim,dim,dim); 
@@ -300,21 +297,17 @@ Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutp
         std3.replaceCol(s3_temp,i);
     }
     tt.tock("Took");
-    t(AAPG_ord+1)=tt.silent_tock();
+    t(4)=tt.silent_tock();
     
     // Compute the error compare to MCS
     Array2D<double> e2_AAPG1(dof,4,0.e0);
-    ostringstream info;
-    info << "AAPG1_"<< "GS_"<<order << "d"<< dTym;
-    string info_str = info.str();
+    string info = "AAPG1";
     Array1D<Array2D<double> > et_AAPG1(dof);
-    Array2D<double> e1_AAPG1 =  nerror(info_str,dof,nStep,et_AAPG1,m1,std1,mean_MCS,std_MCS,e2_AAPG1);
-    ostringstream info2;
-    info2 << "AAPG2_"<< "GS_"<<order << "_d"<< dTym;
-    string info2_str = info2.str();
+    Array2D<double> e1_AAPG1 =  nerror(info,dof,nStep,et_AAPG1,m1,std1,mean_MCS,std_MCS,e2_AAPG1);
+    string info2 = "AAPG2";
     Array2D<double> e2_AAPG2(dof,4,0.e0);
     Array1D<Array2D<double> > et_AAPG2(dof);
-    Array2D<double> e1_AAPG2 =  nerror(info2_str,dof,nStep,et_AAPG2,m2,std2,mean_MCS,std_MCS,e2_AAPG2);
+    Array2D<double> e1_AAPG2 =  nerror(info2,dof,nStep,et_AAPG2,m2,std2,mean_MCS,std_MCS,e2_AAPG2);
 
     // print out the error
     cout << "AAPG1 Error kind 1 is" << endl;
@@ -338,14 +331,25 @@ Array1D<double> nAAPG(int dof, int nkl, int dim, int nStep, int order, int noutp
     write_datafile(std1,"s1.dat");
     write_datafile(m2,"m2.dat");
     write_datafile(std2,"s2.dat");
-    write_datafile(e1_AAPG1,"e1_AAPG1.dat");
-    write_datafile(e2_AAPG1,"e2_AAPG1.dat");
+    ostringstream name1;
+    name1<< "e1_AAPG1_" << refine <<".dat";
+    string name1_str = name1.str();
+    write_datafile(e1_AAPG1,name1_str.c_str());
+    ostringstream name2;
+    name2 << "e2_AAPG1_" << refine <<".dat";
+    string name2_str = name2.str();
+    write_datafile(e2_AAPG1,name2_str.c_str());
     write_datafile(et_AAPG1(0),"etat0_AAPG1.dat");
-    write_datafile(e1_AAPG2,"e1_AAPG2.dat");
-    write_datafile(e2_AAPG2,"e2_AAPG2.dat");
+    ostringstream name3;
+    name3 << "e1_AAPG2_" << refine <<".dat";
+    string name3_str = name3.str();
+    write_datafile(e1_AAPG2,name3_str.c_str());
+    ostringstream name4;
+    name4 << "e2_AAPG2_" << refine << ".dat";
+    string name4_str = name4.str();
+    write_datafile(e2_AAPG2,name4_str.c_str());
     write_datafile(et_AAPG2(0),"etat0_AAPG2.dat");
  
-    write_datafile_1d(t,"t_nAAPG.dat");
-    return(t);
+    return;
 }
 
