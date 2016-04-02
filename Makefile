@@ -53,9 +53,12 @@ $(TARGET3): $(OBJ3) $(LDEP)
 $(TARGET4): $(OBJ4) $(LDEP)
 	$(CXX) $(CXXFLAGS) $(DEFS) $(INCDIRS) -o $(TARGET4) $(OBJ4) $(LIBS)
 
+test:
+	g++ -Wall -O2 -D__wsu -I. -I../../src_cpp/include/ -I$(SCINET_GSL_INC) -o test.x test.cpp  -L$(SCINET_GSL_LIB) -lgsl -lgslcblas 
+
 clean:
 	rm -f $(OBJ) $(TARGET)*~ $(OBJ2) $(TARGET2) *~ $(OBJ3) $(TARGET3) *~ $(OBJ4) $(TARGET4)
 	rm -f *.dat
-
+	rm -f *.o *.x
 
 

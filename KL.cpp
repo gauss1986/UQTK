@@ -35,6 +35,9 @@
         Array2D<double> cov;
         genGrid(xgrid,npts,t_final);
 
+        if (cov_type == "Exp"){
+            
+        }
 
         comcov(cov, npts, xgrid, clen, sigma, cov_type);
 
