@@ -11,7 +11,7 @@ TARGET4 = nDuffing.x
 SRCS = ticktock.cpp KL.cpp MCS.cpp GhanemSpanos.cpp AAPG.cpp Duffing.cpp Utils.cpp Utilsave.cpp 
 SRCS2 = ticktock.cpp KL.cpp MCS.cpp GhanemSpanos.cpp Lorenz.cpp UtilsLorenz.cpp Utils.cpp Utilsave.cpp 
 SRCS3 = ticktock.cpp KL.cpp MCS.cpp GhanemSpanos.cpp AAPG.cpp VDP.cpp Utils.cpp Utilsave.cpp 
-SRCS4 = ticktock.cpp KL.cpp nMCS.cpp nGhanemSpanos.cpp GhanemSpanos.cpp MCS.cpp nAAPG.cpp AAPG.cpp nDuffing2.cpp Utils.cpp Utilsave.cpp 
+SRCS4 = ticktock.cpp KL.cpp nMCS.cpp nGhanemSpanos.cpp GhanemSpanos.cpp MCS.cpp nAAPG.cpp AAPG.cpp nDuffing2.cpp Utils.cpp Utilsave.cpp KL_exp.cpp 
 
 OBJ = $(SRCS:.cpp=.o)
 OBJ2 = $(SRCS2:.cpp=.o)
@@ -22,10 +22,10 @@ INCS2 =  UtilsLorenz.h
 
 LIBINCDIR = $(TOPDIR)/src_cpp/include/
 LIBBINDIR = $(TOPDIR)/src_cpp/lib/
-INCDIRS   = -I. -I$(LIBINCDIR)
+INCDIRS   = -I. -I$(LIBINCDIR) -I$(SCINET_GSL_INC)
 
 LIBS = -L$(LIBBINDIR) -lUQTk -lquad -luqtkmcmc -luqtktools -llbfgs -lcvode-2.6.0 -ldsfmt \
-       -l$(LAPACK) -l$(SLATEC) -l$(BLAS) -lxmlutils -lexpat $(FCLIB)
+       -l$(LAPACK) -l$(SLATEC) -l$(BLAS) -lxmlutils -lexpat $(FCLIB) -L$(SCINET_GSL_LIB) -lgsl -lgslcblas
 LDEP = $(LIBBINDIR)/libUQTk.a $(LIBBINDIR)/libquad.a $(LIBBINDIR)/liblbfgs.a $(LIBBINDIR)/libbcs.a \
        $(LIBBINDIR)/libuqtktools.a $(LIBBINDIR)/libcvode-2.6.0.a \
        $(LIBBINDIR)/libdsfmt.a $(LIBBINDIR)/lib$(LAPACK).a \

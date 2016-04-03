@@ -3,6 +3,7 @@
 #include "Array2D.h"
 #include <math.h>
 #include "KL.h"
+#include "KL_exp.h"
 
     void comcov(Array2D<double> &cov, const int npts, Array1D<double> &xgrid, const double clen, const double sigma, const char* cov_type) {
         cov.Resize(npts,npts,0.e0);	
@@ -35,10 +36,14 @@
         Array2D<double> cov;
         genGrid(xgrid,npts,t_final);
 
-        if (cov_type == "Exp"){
-            
+        Array2D<double> KLmodes(npts,nkl,0.e0);
+        string cov_type_s(cov_type);
+        Array1D<double> eigs(nkl,0.e0);
+        if (cov_type_s == "Exp"){
+            eigs = KL_exp(sigma, t_final/2, clen, nkl, KLmodes, xgrid);
         }
 
+        else{
         comcov(cov, npts, xgrid, clen, sigma, cov_type);
 
         KLDecompUni decomposer(xgrid);
@@ -49,12 +54,13 @@
         //    nkl = n_eig;    
         }
 
-        const Array1D<double>& eigs = decomposer.eigenvalues();
-        const Array2D<double>& KLmodes = decomposer.KLmodes();
+        eigs = decomposer.eigenvalues();
+        KLmodes = decomposer.KLmodes();
+        }
 
         for ( int i = 0; i < npts; i++ ){
             //scaledKLmodes(i,0) = xgrid(i);
-            for ( int j = 0; j < n_eig; j++ )
+            for ( int j = 0; j < nkl; j++ )
                 scaledKLmodes(i,j) = KLmodes(i,j)*sqrt(eigs(j));
         }
     return;

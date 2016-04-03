@@ -2,11 +2,14 @@
 #include <cmath>
 #include <math.h>
 #include <iostream>
+#include "arraytools.h"
+#include "Array2D.h"
+#include "Array1D.h"
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_roots.h>
 
-#include "KL_fn.h"
+#include "KL_exp.h"
 #define PI 3.14159265
 #define D 1.e-7
 #define ERR 1.e-7
@@ -41,11 +44,8 @@ odd (double x, void *params)
   return (c-x*temp);  
 }
 
-void KL_w (double a, double clen, int N){
-  //double a=5;
-  //double clen=0.1;
-  //int N = 10;
-
+Array1D<double> KL_exp (double sigma, double a, double clen, int N, Array2D<double>& KLmodes, Array1D<double>& xgrid){
+  Array1D<double> eigs(N,0.e0);
   double c=1/clen;
 
   int status;
@@ -93,11 +93,26 @@ void KL_w (double a, double clen, int N){
       }  
     }
     while (status == GSL_CONTINUE && iter < max_iter);
+    
+    // compute the eigenvalues using the w just found
+    eigs(i)=KL_lambda(sigma,c,r);
 
+    for (unsigned int it=0;it<KLmodes.XSize();it++){
+        if (i%2 == 0){
+           KLmodes(it,i)=cos(r*(xgrid(it)-a))/sqrt(a+sin(2*r*a)/2/r); 
+        }
+        else{
+           KLmodes(it,i)=sin(r*(xgrid(it)-a))/sqrt(a-sin(2*r*a)/2/r); 
+        }
+    }
   }
 
   gsl_root_fsolver_free (s);
   
-  return ;
+  return eigs;
+}
 
+double KL_lambda(double sigma, double c, double w){
+    double lambda = 2*sigma*sigma*c/(w*w+c*c);
+    return lambda;
 }
