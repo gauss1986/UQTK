@@ -1,4 +1,5 @@
 #include "kldecompuni.h"
+#include "uqtktools.h"
 #include "Array1D.h"
 #include "Array2D.h"
 #include <math.h>
@@ -39,6 +40,9 @@
         Array2D<double> KLmodes(npts,nkl,0.e0);
         string cov_type_s(cov_type);
         Array1D<double> eigs(nkl,0.e0);
+
+        //Array1D<double> eigs_exp(nkl,0.e0);
+        //Array2D<double> KLmodes_exp(npts,nkl,0.e0);
         if (cov_type_s == "Exp"){
             eigs = KL_exp(sigma, t_final/2, clen, nkl, KLmodes, xgrid);
         }

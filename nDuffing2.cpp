@@ -24,20 +24,20 @@
 
 int main(int argc, char *argv[]){
 
-    int dof=2;
-    int ord_GS=2;
+    int dof=5;
+    int ord_GS=1;
     int ord_AAPG=2;
     int ord_AAPG_GS=2;
-    int refine = 10;
+    int refine = 1;
     Array1D<double> time(1+ord_GS,0.e0);
-    int nkl=2;
+    int nkl=0;
     int dim=nkl+3*dof;// set epsilon to be stochastic coeffs on each dof
     int noutput=2;
     int nspl =100000;
     int factor_OD = 0.99;
     string pcType="LU";  //PC type
     bool act_D = false;
-    double dTym = 0.01;
+    double dTym = 0.002;
     Array1D<double> initial(2*dof,0.e0); // initial condition
     Array1D<double> initial_sigma(2*dof,0.e0);
     for (int i=0;i<dof;i++){
@@ -210,12 +210,18 @@ int main(int argc, char *argv[]){
     // post-process result
     Array2D<double> mean_MCS(nStep+1,2*dof,0.e0);
     Array2D<double> std_MCS(nStep+1,2*dof,0.e0);
-    for (int ix=0;ix<nStep+1;ix++){
-        for (int i=0;i<2*dof;i++){
-            Array1D<double> temp_result(nspl,0.e0);
-            getRow(result_MCS(i),ix,temp_result);        
-            mstd_MCS(temp_result,mean_MCS(ix,i),std_MCS(ix,i));
+    #pragma omp parallel default(none) shared(nStep,dof,nspl,result_MCS,mean_MCS,std_MCS)
+    {
+        #pragma omp for 
+        for (int ix=0;ix<nStep+1;ix++){
+            for (int i=0;i<2*dof;i++){
+                Array1D<double> temp_result(nspl,0.e0);
+                getRow(result_MCS(i),ix,temp_result);        
+                mstd_MCS(temp_result,mean_MCS(ix,i),std_MCS(ix,i));
+            }
         }
+    }
+    for (int ix=0;ix<nStep+1;ix++){
         // report to screen
         if (ix % ((int) nStep/noutput) == 0){
             for (int i=0;i<dof;i++){
