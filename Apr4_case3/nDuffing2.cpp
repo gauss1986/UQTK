@@ -29,15 +29,15 @@ int main(int argc, char *argv[]){
     int ord_AAPG=2;
     int ord_AAPG_GS=2;
     int refine = 1;
-    bool act_D = false;
     Array1D<double> time(1+ord_GS,0.e0);
-    int nkl=10;
-    int dim=nkl+6*dof;// set epsilon to be stochastic coeffs on each dof
+    int nkl=20;
+    int dim=nkl+3*dof;// set epsilon to be stochastic coeffs on each dof
     int noutput=2;
     int nspl =10000;
     int factor_OD = 0.99;
     string pcType="LU";  //PC type
-    double dTym = 0.01;
+    bool act_D = false;
+    double dTym = 0.002;
     Array1D<double> initial(2*dof,0.e0); // initial condition
     Array1D<double> initial_sigma(2*dof,0.e0);
     for (int i=0;i<dof;i++){
@@ -48,7 +48,7 @@ int main(int argc, char *argv[]){
     // epsilon
     //Array1D<double>  epsilon_mean(dof,1e4);
     double e1 = 1.0;
-    double e2 = 0.0;
+    double e2 = 0.05;
     /* Read the user input */
     int c;
     while ((c=getopt(argc,(char **)argv,"r:G:d:e:m:N:"))!=-1){
@@ -90,34 +90,26 @@ int main(int argc, char *argv[]){
     int nStep_fine=nStep*refine;
 
     // MCK
-    Array1D<Array2D<double> > mck(3);
+    Array1D<Array1D<double> > mck(3);
     // m
     //Array1D<double> temp_m(dof,1e4);
-    Array2D<double> temp_m(dof,2,0.0);
-    for (int i=0;i<dof;i++){
-        temp_m(i,0)=1.0;
-    }
+    Array1D<double> temp_m(dof,1.0);
     mck(0) = temp_m;
     // k
     //Array1D<double> temp_k(dof,4e7);
-    Array2D<double> temp_k(dof,2,0.0);
-    for (int i=0;i<dof;i++){
-        temp_k(i,0)=1.0-(i-i%(dof/3))/(dof/3)*0.1;
-    }
-    write_datafile(temp_k,"temp_k.dat");
-    //temp_k(4)=0.9;
-    //temp_k(5)=0.9;
-    //temp_k(6)=0.9;
-    //temp_k(7)=0.8;
-    //temp_k(8)=0.8;
-    //temp_k(9)=0.8;
+    Array1D<double> temp_k(dof,1.0);
+    temp_k(4)=temp_k(4)*0.9;
+    temp_k(5)=temp_k(5)*0.9;
+    temp_k(6)=temp_k(6)*0.9;
+    temp_k(7)=temp_k(7)*0.8;
+    temp_k(8)=temp_k(8)*0.8;
+    temp_k(9)=temp_k(9)*0.8;
     mck(2) = temp_k;
     // c
-    Array2D<double> temp_c(dof,2,0.e0);
-    for (int i=0;i<dof;i++){
-        temp_c(i,0)=2*0.1*sqrt(temp_m(i,0)*temp_k(i,0));
-        temp_c(i,1)=0.5*temp_c(i,0);
-    }
+    Array1D<double> temp_c(dof,0.e0);
+    for (int i=0;i<dof;i++)
+        //temp_c(i)=2*0.2*sqrt(temp_m(i)*temp_k(i));
+        temp_c(i)=2*0.1*sqrt(temp_m(i)*temp_k(i));
     mck(1) = temp_c;
 
     // sample point
@@ -144,8 +136,8 @@ int main(int argc, char *argv[]){
     cout << "Generating fbar..." << endl;
     for (int i=0;i<2*nStep_fine+1;i++){
         //fbar(i) = 0.2*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
-        //fbar_fine(i) = 2.0-sin(40*3.1415926*t_temp)*exp(-0.3*t_temp);
-        fbar_fine(i)=2.0;
+        fbar_fine(i) = 2.0-sin(40*3.1415926*t_temp)*exp(-0.3*t_temp);
+        //fbar(i)=2.0;
         if (i%refine == 0){
             fbar(i_temp)=fbar_fine(i);
             Array1D<double> temp(nkl,0.e0);
@@ -169,48 +161,24 @@ int main(int argc, char *argv[]){
     }
     Array2D<double> epsilon_MCS_samples(nspl,dof,0.e0);
     Array2D<double> initial_MCS_samples(nspl,2*dof,0.e0);
-    Array2D<double> mck_MCS_samples(nspl,3*dof,0.e0);
     TickTock tt;
     tt.tick();
-    #pragma omp parallel default(none) shared(mck,result_MCS,dof,nStep,nspl,samPts_norm,initial,initial_sigma,initial_MCS_samples,dTym,fbar,nkl,epsilon_mean,scaledKLmodes,e_sigma,epsilon_MCS_samples,mck_MCS_samples) 
+    #pragma omp parallel default(none) shared(mck,result_MCS,dof,nStep,nspl,samPts_norm,initial,initial_sigma,initial_MCS_samples,dTym,fbar,nkl,epsilon_mean,scaledKLmodes,e_sigma,epsilon_MCS_samples) 
     {
     #pragma omp for 
     for (int iq=0;iq<nspl;iq++){
-        // initialize epsilon, initial and mck
+        Array2D<double> force_MCS=nsample_force(dof,samPts_norm,iq,fbar,nkl,scaledKLmodes,mck); 
         Array1D<double> epsilon_MCS(epsilon_mean);
         Array1D<double> initial_MCS(initial);
-        // sample epsilon
         for (int i=0;i<dof;i++){
             epsilon_MCS(i)+=samPts_norm(iq,nkl+i)*e_sigma(i); 
             epsilon_MCS_samples(iq,i)=epsilon_MCS(i);
         }
-        // sample initial conditions
         for (int i=0;i<2*dof;i++){
             initial_MCS(i)+=samPts_norm(iq,nkl+dof+i)*initial_sigma(i);
             initial_MCS_samples(iq,i)=initial_MCS(i);
         }
-        Array1D<double> m(dof,0.e0);
-        getCol(mck(0),0,m);    
-        Array1D<double> c(dof,0.e0);
-        getCol(mck(1),0,c);    
-        Array1D<double> k(dof,0.e0);
-        getCol(mck(2),0,k);    
-        // sample force using the mean of the mass
-        Array2D<double> force_MCS=nsample_force(dof,samPts_norm,iq,fbar,nkl,scaledKLmodes,m); 
-        // sample mck
-        Array1D<Array1D<double> > mck_MCS(3);
-        for (int i=0;i<dof;i++){
-            m(i)+=samPts_norm(iq,nkl+3*dof+i)*mck(0)(i,1);
-            c(i)+=samPts_norm(iq,nkl+4*dof+i)*mck(1)(i,1);
-            k(i)+=samPts_norm(iq,nkl+5*dof+i)*mck(2)(i,1);
-            mck_MCS_samples(iq,i)=m(i);
-            mck_MCS_samples(iq,i+dof)=c(i);
-            mck_MCS_samples(iq,i+2*dof)=k(i);
-        }
-        mck_MCS(0)=m;
-        mck_MCS(1)=c;
-        mck_MCS(2)=k;
-        Array1D<Array1D<double> > temp=ndet(dof,nStep,dTym,force_MCS,epsilon_MCS,mck_MCS,initial_MCS); 
+        Array1D<Array1D<double> > temp=ndet(dof,nStep,dTym,force_MCS,epsilon_MCS,mck,initial_MCS); 
         for (int idof=0;idof<2*dof;idof++){
             for (int ix=0;ix<nStep+1;ix++){
                 //result_MCS(idof).replaceCol(temp(idof),iq);
@@ -225,26 +193,11 @@ int main(int argc, char *argv[]){
     //write_datafile(initial_MCS_samples,"initial_samples.dat");
     // examine statistics of epsilon & initial conditions
     Array2D<double> stat_e(dof,2,0.e0);
-    Array2D<double> stat_m(dof,2,0.e0);
-    Array2D<double> stat_c(dof,2,0.e0);
-    Array2D<double> stat_k(dof,2,0.e0);
     for (int i=0;i<dof;i++){
         Array1D<double> epsilon_sample(nspl,0.e0);
         getCol(epsilon_MCS_samples,i,epsilon_sample); 
         mstd_MCS(epsilon_sample,stat_e(i,0),stat_e(i,1));
         cout << "Mean of epsilon on dof " << i << " is " << stat_e(i,0) << ". Std is " << stat_e(i,1) << "." << endl;
-        Array1D<double> m_sample(nspl,0.e0);
-        getCol(mck_MCS_samples,i,m_sample); 
-        mstd_MCS(m_sample,stat_m(i,0),stat_m(i,1));
-        cout << "Mean of m on dof " << i << " is " << stat_m(i,0) << ". Std is " << stat_m(i,1) << "." << endl;
-        Array1D<double> c_sample(nspl,0.e0);
-        getCol(mck_MCS_samples,i+dof,c_sample); 
-        mstd_MCS(c_sample,stat_c(i,0),stat_c(i,1));
-        cout << "Mean of c on dof " << i << " is " << stat_c(i,0) << ". Std is " << stat_c(i,1) << "." << endl;
-        Array1D<double> k_sample(nspl,0.e0);
-        getCol(mck_MCS_samples,i+dof*2,k_sample); 
-        mstd_MCS(k_sample,stat_k(i,0),stat_k(i,1));
-        cout << "Mean of k on dof " << i << " is " << stat_k(i,0) << ". Std is " << stat_k(i,1) << "." << endl;
     }
     Array2D<double> stat_i(2*dof,2,0.e0);
     for (int i=0;i<2*dof;i++){
@@ -290,7 +243,6 @@ int main(int argc, char *argv[]){
     //Array2D<double> e_GS(ord_GS,)
     Array1D<Array1D<double> > initial_GS(dof); // Initial conditions
     Array1D<Array1D<double> > epsilon_GS(dof);
-    Array1D<Array1D<Array1D<double> > > mck_GS(3);
     for (int ord=1;ord<=ord_GS;ord++){
         // Generate PCSet
         TickTock tt;
@@ -304,9 +256,9 @@ int main(int argc, char *argv[]){
             Array2D<double> temp_f(2*nStep+1,nPCTerms,0.e0);
             f_GS(idof)=temp_f;
             for (int ix=0;ix<2*nStep+1;ix++){
-                f_GS(idof)(ix,0)=fbar(ix)*mck(0)(idof,0);
+                f_GS(idof)(ix,0)=fbar(ix)*mck(0)(idof);
                 for (int i=0;i<nkl;i++){
-                    f_GS(idof)(ix,i+1)=scaledKLmodes(ix,i)*mck(0)(idof,0);
+                    f_GS(idof)(ix,i+1)=scaledKLmodes(ix,i)*mck(0)(idof);
                 }
             }
         }
@@ -320,30 +272,12 @@ int main(int argc, char *argv[]){
         for (int i=0;i<dof;i++){
             Array1D<double> temp_init(2*nPCTerms,0.e0);
             Array1D<double> temp_init2(nPCTerms,0.e0);
-            myPCSet.InitMeanStDv(stat_i(i,0),stat_i(i,1),1+nkl+dof+i,temp_init2);
+            myPCSet.InitMeanStDv(stat_i(i,0),stat_i(i,1),nkl+dof+i,temp_init2);
             Array1D<double> temp_init3(nPCTerms,0.e0);
-            myPCSet.InitMeanStDv(stat_i(i+dof,0),stat_i(i+dof,1),1+nkl+2*dof+i,temp_init3);
+            myPCSet.InitMeanStDv(stat_i(i+dof,0),stat_i(i+dof,1),nkl+2*dof+i,temp_init3);
             merge(temp_init2,temp_init3,temp_init); 
             initial_GS(i)= temp_init;
         }
-        // mck
-        Array1D<Array1D<double> > m_GS(dof);
-        Array1D<Array1D<double> > c_GS(dof);
-        Array1D<Array1D<double> > k_GS(dof);
-        for (int i=0;i<dof;i++){
-            Array1D<double> temp_m(nPCTerms,0.e0);
-            Array1D<double> temp_c(nPCTerms,0.e0);
-            Array1D<double> temp_k(nPCTerms,0.e0);
-            myPCSet.InitMeanStDv(stat_m(i,0),stat_m(i,1),1+nkl+3*dof+i,temp_m);
-            myPCSet.InitMeanStDv(stat_c(i,0),stat_c(i,1),1+nkl+4*dof+i,temp_c);
-            myPCSet.InitMeanStDv(stat_k(i,0),stat_k(i,1),1+nkl+5*dof+i,temp_k);
-            m_GS(i)=temp_m;
-            c_GS(i)=temp_c;
-            k_GS(i)=temp_k;
-        }
-        mck_GS(0)=m_GS;
-        mck_GS(1)=c_GS;
-        mck_GS(2)=k_GS;
         // initialize solution
         Array1D<Array2D<double> > uv_solution(dof);
         for (int i=0;i<dof;i++){
@@ -352,7 +286,7 @@ int main(int argc, char *argv[]){
         }
         cout << "Starting GS order " << ord << endl;
         tt.tick();
-        nGS(dof, myPCSet, epsilon_GS, mck_GS, nStep, initial_GS, dTym, f_GS, uv_solution);
+        nGS(dof, myPCSet, epsilon_GS, mck, nStep, initial_GS, dTym, f_GS, uv_solution);
         time(ord)=tt.silent_tock();
         cout << "Order " << ord << " finished." <<endl; 
         // Post-process the solution
@@ -392,7 +326,7 @@ int main(int argc, char *argv[]){
             normsq(ipc) *= norms1d(Pbtot(ipc,id));
    
     cout << "AAPG..." << endl;
-    nAAPG(refine,dof,nkl,dim,nStep,ord_AAPG_GS,noutput,factor_OD,ord_AAPG,act_D,fbar,fbar_fine,dTym,epsilon_mean,pcType,scaledKLmodes,scaledKLmodes_fine,stat_e,stat_i,stat_m,stat_c,stat_k,normsq,mean_MCS,std_MCS,mck);
+    nAAPG(refine,dof,nkl,dim,nStep,ord_AAPG_GS,noutput,factor_OD,ord_AAPG,act_D,mck,fbar,fbar_fine,dTym,epsilon_mean,pcType,scaledKLmodes,scaledKLmodes_fine,stat_e,stat_i,normsq,mean_MCS,std_MCS);
 
     return 0;
 }

@@ -15,7 +15,7 @@
 #include "nGhanemSpanos.h"
 #include "ticktock.h"
 
-void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, int noutput, double factor_OD, int AAPG_ord, bool act_D, Array1D<Array1D<double> >& mck, Array1D<double>& fbar, Array1D<double>& fbar_fine,double dTym, Array1D<double>& epsilon_mean, string pcType, Array2D<double>& scaledKLmodes,Array2D<double>& scaledKLmodes_fine, Array2D<double>& stat_e,  Array2D<double>& stat_i, Array1D<double>& normsq, Array2D<double>& mean_MCS, Array2D<double>& std_MCS){
+void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, int noutput, double factor_OD, int AAPG_ord, bool act_D, Array1D<double>& fbar, Array1D<double>& fbar_fine,double dTym, Array1D<double>& epsilon_mean, string pcType, Array2D<double>& scaledKLmodes,Array2D<double>& scaledKLmodes_fine, Array2D<double>& stat_e,  Array2D<double>& stat_i, Array2D<double>& stat_m, Array2D<double>& stat_c, Array2D<double>& stat_k, Array1D<double>& normsq, Array2D<double>& mean_MCS, Array2D<double>& std_MCS, Array1D<Array2D<double> >& mck){
     Array2D<double> samPts_norm(2,2,0.e0);
     bool PDF = false;
     Array1D<Array1D<double> > e_sample;
@@ -31,16 +31,30 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, int nout
     Array2D<double> f0(2*nStep+1,dof,0.e0);
     for (int i=0;i<dof;i++){
         for (int ix=0;ix<2*nStep+1;ix++){
-            f0(ix,i)=fbar(ix)*mck(0)(i);    
+            f0(ix,i)=fbar(ix)*mck(0)(i,0);    
         }
     }
     // Define deterministic initial condition
     Array1D<double> initial(2*dof,0.e0);
     getCol(stat_i,0,initial);
+    // Define deterministic epsilon
+    Array1D<double> epsilon(dof,0.e0);
+    getCol(stat_e,0,epsilon);
+    // Define deterministic mck
+    Array1D<Array1D<double> > mck_det(3);
+    Array1D<double> m_det(dof,0.e0);
+    getCol(stat_m,0,m_det); 
+    Array1D<double> c_det(dof,0.e0);
+    getCol(stat_c,0,c_det); 
+    Array1D<double> k_det(dof,0.e0);
+    getCol(stat_k,0,k_det);
+    mck_det(0)=m_det;
+    mck_det(1)=c_det;
+    mck_det(2)=k_det; 
     // Deterministic solution
     TickTock tt;
     tt.tick();
-    Array1D<Array1D<double> > temp=ndet(dof,nStep,dTym,f0,epsilon_mean,mck,initial); 
+    Array1D<Array1D<double> > temp=ndet(dof,nStep,dTym,f0,epsilon,mck_det,initial); 
     tt.tock("Took");
     t(0) = tt.silent_tock();
     // Reform the result to uv_0
@@ -57,6 +71,7 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, int nout
     Array1D<Array1D<Array2D<double> > > force_1(dim);
     Array1D<Array1D<Array1D<double> > > epsilon_1(dim);
     Array1D<Array1D<Array1D<double> > > init_1(dim);
+    Array1D<Array1D<Array1D<Array1D<double> > > > mck_1(dim);
     // Generate the forcing, epsilon and initial conditions on each stochastic dim
     for (int idim=0;idim<dim;idim++){
         // forcing
@@ -70,7 +85,7 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, int nout
         }
         for (int id=0;id<dof;id++){
             force_temp(id) = f1_temp;
-            prodVal(force_temp(id),mck(0)(id));            
+            prodVal(force_temp(id),mck(0)(id,0));            
         }
         force_1(idim)=force_temp;
         //epsilon
@@ -102,6 +117,35 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, int nout
             init_temp(i)= i1_temp;
         }
         init_1(idim)=init_temp;
+        // mck
+        Array1D<Array1D<Array1D<double> > > mck_1_dof(3);
+        Array1D<Array1D<double> > m_GS(dof);
+        Array1D<Array1D<double> > c_GS(dof);
+        Array1D<Array1D<double> > k_GS(dof);
+        for (int i=0;i<dof;i++){
+            Array1D<double> temp_m(PCTerms_1,0.e0);
+            Array1D<double> temp_c(PCTerms_1,0.e0);
+            Array1D<double> temp_k(PCTerms_1,0.e0);
+            PCSet_1.InitMeanStDv(stat_m(i,0),0,1,temp_m);
+            PCSet_1.InitMeanStDv(stat_c(i,0),0,1,temp_c);
+            PCSet_1.InitMeanStDv(stat_k(i,0),0,1,temp_k);
+            if (idim==nkl+3*dof+i){
+                PCSet_1.InitMeanStDv(stat_m(i,0),stat_m(i,1),1,temp_m);
+            }
+            else if (idim==nkl+4*dof+i){
+                PCSet_1.InitMeanStDv(stat_c(i,0),stat_c(i,1),1,temp_c);
+            }
+            else if (idim==nkl+5*dof+i){
+                PCSet_1.InitMeanStDv(stat_k(i,0),stat_k(i,1),1,temp_k);
+            }
+            m_GS(i)=temp_m;
+            c_GS(i)=temp_c;
+            k_GS(i)=temp_k;
+        }
+        mck_1_dof(0)=m_GS;
+        mck_1_dof(1)=c_GS;
+        mck_1_dof(2)=k_GS;
+        mck_1(idim)=mck_1_dof;
     }
 
     // allocate uv_1
@@ -115,13 +159,13 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, int nout
         uv_1(id)=temp;
     }
     tt.tick();
-    #pragma omp parallel default(none) shared(refine,dof,PCSet_1,mck,nStep,dTym,PCTerms_1,epsilon_1,init_1,force_1,dim,uv_1)
+    #pragma omp parallel default(none) shared(refine,dof,PCSet_1,mck_1,nStep,dTym,PCTerms_1,epsilon_1,init_1,force_1,dim,uv_1)
     {
     #pragma omp for
     for (int i=0;i<dim;i++){
         Array1D<Array2D<double> >  uv_solution(dof);
         // MCS is assumed deterministic for now
-        nGS(dof, PCSet_1, epsilon_1(i), mck, nStep*refine, init_1(i), dTym/refine, force_1(i), uv_solution);
+        nGS(dof, PCSet_1, epsilon_1(i), mck_1(i), nStep*refine, init_1(i), dTym/refine, force_1(i), uv_solution);
         for (int id=0;id<dof;id++){
             for (int iPC=0;iPC<PCTerms_1;iPC++){
                 for (int ix=0;ix<nStep+1;ix++){
@@ -153,6 +197,7 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, int nout
     Array1D<Array1D<Array2D<double> > > force_2(N2);
     Array1D<Array1D<Array1D<double> > > epsilon_2(N2);
     Array1D<Array1D<Array1D<double> > > init_2(N2);
+    Array1D<Array1D<Array1D<Array1D<double> > > > mck_2(N2);
     // Generate the forcing, epsilon and initial conditions on each stochastic dim
     int k=0;
     for (int idim=0;idim<N_adof-1;idim++){
@@ -173,7 +218,7 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, int nout
         }
         for (int id=0;id<dof;id++){
             force_temp(id) = f2_temp;
-            prodVal(force_temp(id),mck(0)(id));            
+            prodVal(force_temp(id),mck(0)(id,0));            
         }
         force_2(k)=force_temp;        
         //epsilon
@@ -215,6 +260,44 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, int nout
         init_2(k) = init_temp;
 	    indi_2(k) = ind(idim);
         indj_2(k) = ind(idim2);
+        // mck
+        Array1D<Array1D<Array1D<double> > > mck_2_dof(3);
+        Array1D<Array1D<double> > m_GS(dof);
+        Array1D<Array1D<double> > c_GS(dof);
+        Array1D<Array1D<double> > k_GS(dof);
+        for (int i=0;i<dof;i++){
+            Array1D<double> temp_m(PCTerms_2,0.e0);
+            Array1D<double> temp_c(PCTerms_2,0.e0);
+            Array1D<double> temp_k(PCTerms_2,0.e0);
+            PCSet_2.InitMeanStDv(stat_m(i,0),0,1,temp_m);
+            PCSet_2.InitMeanStDv(stat_c(i,0),0,1,temp_c);
+            PCSet_2.InitMeanStDv(stat_k(i,0),0,1,temp_k);
+            if (idim==nkl+3*dof+i){
+                PCSet_2.InitMeanStDv(stat_m(i,0),stat_m(i,1),1,temp_m);
+            }
+            if (idim==nkl+4*dof+i){
+                PCSet_2.InitMeanStDv(stat_c(i,0),stat_c(i,1),1,temp_c);
+            }
+            if (idim==nkl+5*dof+i){
+                PCSet_2.InitMeanStDv(stat_k(i,0),stat_k(i,1),1,temp_k);
+            }
+            if (idim2==nkl+3*dof+i){
+                PCSet_2.InitMeanStDv(stat_m(i,0),stat_m(i,1),2,temp_m);
+            }
+            if (idim2==nkl+4*dof+i){
+                PCSet_2.InitMeanStDv(stat_c(i,0),stat_c(i,1),2,temp_c);
+            }
+            if (idim2==nkl+5*dof+i){
+                PCSet_2.InitMeanStDv(stat_k(i,0),stat_k(i,1),2,temp_k);
+            }
+            m_GS(i)=temp_m;
+            c_GS(i)=temp_c;
+            k_GS(i)=temp_k;
+        }
+        mck_2_dof(0)=m_GS;
+        mck_2_dof(1)=c_GS;
+        mck_2_dof(2)=k_GS;
+        mck_2(k)=mck_2_dof;
         k++;
         }
     }
@@ -234,13 +317,13 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, int nout
         uv_2(id)=temp;
     }
     tt.tick();
-    #pragma omp parallel default(none) shared(N2,dof,PCSet_2,mck,nStep,dTym,PCTerms_2,epsilon_2,init_2,force_2,dim,uv_2,indi_2,indj_2)
+    #pragma omp parallel default(none) shared(N2,dof,PCSet_2,mck_2,nStep,dTym,PCTerms_2,epsilon_2,init_2,force_2,dim,uv_2,indi_2,indj_2)
     {
     #pragma omp for
     for (int i=0;i<N2;i++){
         Array1D<Array2D<double> >  uv_solution(dof);
         // MCS is assumed deterministic for now
-        nGS(dof, PCSet_2, epsilon_2(i), mck, nStep, init_2(i), dTym, force_2(i), uv_solution);
+        nGS(dof, PCSet_2, epsilon_2(i), mck_2(i), nStep, init_2(i), dTym, force_2(i), uv_solution);
         for (int id=0;id<dof;id++){
             for (int iPC=0;iPC<PCTerms_2;iPC++){
                 for (int ix=0;ix<nStep+1;ix++){

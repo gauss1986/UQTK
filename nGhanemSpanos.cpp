@@ -10,7 +10,7 @@
 #include "nGhanemSpanos.h"
 #include "Utils.h"
 
-void nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& epsilon, Array1D<Array1D<double> >& mck, int nStep, Array1D<Array1D<double> >& initial, double dTym, Array1D<Array2D<double> >& f_GS, Array1D<Array2D<double> >& solution){
+void nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& epsilon, Array1D<Array1D<Array1D<double> > >& mck, int nStep, Array1D<Array1D<double> >& initial, double dTym, Array1D<Array2D<double> >& f_GS, Array1D<Array2D<double> >& solution){
     int nPCTerms = myPCSet.GetNumberPCTerms();
 
     // Initialize
@@ -53,7 +53,7 @@ void nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& epsilon, Array1D<Ar
     return; 
 }
 
-void forward_duffing_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& epsilon, Array1D<Array1D<double> >& mck, Array1D<Array1D<double> >& force_current, Array1D<Array1D<double> >& force_mid, Array1D<Array1D<double> >& force_plus,  double dTym, Array1D<Array1D<double> >& x){
+void forward_duffing_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& epsilon, Array1D<Array1D<Array1D<double> > >& mck, Array1D<Array1D<double> >& force_current, Array1D<Array1D<double> >& force_mid, Array1D<Array1D<double> >& force_plus,  double dTym, Array1D<Array1D<double> >& x){
         int nPCTerms = myPCSet.GetNumberPCTerms();
 
         Array1D<Array1D<double> > u(dof);
@@ -150,7 +150,7 @@ void forward_duffing_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& eps
         return; 
    }
    
-Array1D<Array1D<double> > kbar(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& u, Array1D<Array1D<double> >& epsilon, Array1D<Array1D<double> >& mck){
+Array1D<Array1D<double> > kbar(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& u, Array1D<Array1D<double> >& epsilon, Array1D<Array1D<Array1D<double> > >& mck){
     // kbar 
     int nPC = myPCSet.GetNumberPCTerms();
     Array1D<Array1D<double> > kbar(dof);
@@ -160,8 +160,10 @@ Array1D<Array1D<double> > kbar(int dof, PCSet& myPCSet, Array1D<Array1D<double> 
     myPCSet.IPow(u(0),temp_u,2);
     myPCSet.Prod(temp_u,epsilon(0),temp_k);
     temp_k(0)=temp_k(0)+1; 
-    prodVal(temp_k,mck(2)(0));
-    kbar(0) = temp_k;
+    //prodVal(temp_k,mck(2)(0));
+    Array1D<double> temp_k2(nPC,0.e0);
+    myPCSet.Prod(temp_k,mck(2)(0),temp_k2);
+    kbar(0) = temp_k2;
     // kbar rest 
     for (int i=1;i<dof;i++){
         Array1D<double> temp_k1(nPC,0.e0);
@@ -170,14 +172,16 @@ Array1D<Array1D<double> > kbar(int dof, PCSet& myPCSet, Array1D<Array1D<double> 
         myPCSet.IPow(temp_u1,temp_u,2);
         myPCSet.Prod(temp_u,epsilon(i),temp_k1);
         temp_k1(0)=temp_k1(0)+1; 
-        prodVal(temp_k1,mck(2)(i));
-        kbar(i) = temp_k1;
+        Array1D<double> temp_k3(nPC,0.e0);
+        //prodVal(temp_k1,mck(2)(i));
+        myPCSet.Prod(temp_k1,mck(2)(i),temp_k3);
+        kbar(i) = temp_k3;
     }
 
     return(kbar);
 }
 
-void dev_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& force, Array1D<Array1D<double> >& mck, Array1D<Array1D<double> >& u, Array1D<Array1D<double> >& v, Array1D<Array1D<double> >& du, Array1D<Array1D<double> >& dv, Array1D<Array1D<double> >& kbar){
+void dev_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& force, Array1D<Array1D<Array1D<double> > >& mck, Array1D<Array1D<double> >& u, Array1D<Array1D<double> >& v, Array1D<Array1D<double> >& du, Array1D<Array1D<double> >& dv, Array1D<Array1D<double> >& kbar){
     int nPCTerms = myPCSet.GetNumberPCTerms();
     // du = v
     for (int i=0;i<dof;i++){
@@ -204,13 +208,22 @@ void dev_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& force, Array1D<
     Array1D<Array1D<double> > cv(dof);
     Array1D<Array1D<double> > cv_plus(dof-1);
     for (int i=0;i<dof-1;i++){
-        cv(i) = v(i);
-        cv_plus(i) = v(i);
-        prodVal(cv(i),mck(1)(i));
-        prodVal(cv_plus(i),mck(1)(i+1));
+        //cv(i) = v(i);
+        //cv_plus(i) = v(i);
+        //prodVal(cv(i),mck(1)(i));
+        //prodVal(cv_plus(i),mck(1)(i+1));
+        Array1D<double> cv_temp(nPCTerms,0.e0);
+        cv(i) = cv_temp;
+        myPCSet.Prod(v(i),mck(1)(i),cv(i));
+        Array1D<double> cv_temp2(nPCTerms,0.e0);
+        cv_plus(i) = cv_temp2;
+        myPCSet.Prod(v(i),mck(1)(i+1),cv_plus(i));
     }
-    cv(dof-1) = v(dof-1);
-    prodVal(cv(dof-1),mck(1)(dof-1));
+    //cv(dof-1) = v(dof-1);
+    //prodVal(cv(dof-1),mck(1)(dof-1));
+    Array1D<double> cv_temp3(nPCTerms,0.e0);
+    cv(dof-1) = cv_temp3;
+    myPCSet.Prod(v(dof-1),mck(1)(dof-1),cv(dof-1));
 
     // compute the acceleration
     // dof 0
@@ -221,16 +234,22 @@ void dev_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& force, Array1D<
     subtractVec(cv(0),temp_d);
     subtractVec(cv_plus(0),temp_d);
     addVec(cv(1),temp_d);
-    prodVal(temp_d,1/mck(0)(0));
-    dv(0)=temp_d;
+    //prodVal(temp_d,1/mck(0)(0));
+    Array1D<double> temp_d3(nPCTerms,0.e0); 
+    myPCSet.Inv(mck(0)(0),temp_d3);
+    Array1D<double> temp_d4(nPCTerms,0.e0); 
+    myPCSet.Prod(temp_d,temp_d3,temp_d4);
+    dv(0)=temp_d4;
     // dof dof
     Array1D<double> temp_d1(force(dof-1));
     subtractVec(kbaru(dof-1),temp_d1);
     addVec(kbaru_plus(dof-2),temp_d1);
     subtractVec(cv(dof-1),temp_d1);
     addVec(cv_plus(dof-2),temp_d1);
-    prodVal(temp_d1,1/mck(0)(dof-1));
-    dv(dof-1)=temp_d1;
+    //prodVal(temp_d1,1/mck(0)(dof-1));
+    myPCSet.Inv(mck(0)(dof-1),temp_d3);
+    myPCSet.Prod(temp_d1,temp_d3,temp_d4);
+    dv(dof-1)=temp_d4;
     // dof n
     for (int i=1;i<dof-1;i++){
         Array1D<double> temp_d2(force(i));
@@ -242,8 +261,12 @@ void dev_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& force, Array1D<
         subtractVec(cv_plus(i),temp_d2);
         addVec(cv_plus(i-1),temp_d2);
         addVec(cv(i+1),temp_d2);
-        prodVal(temp_d2,1/mck(0)(i));
-        dv(i)=temp_d2;
+        //prodVal(temp_d2,1/mck(0)(i));
+        Array1D<double> temp_d5(nPCTerms,0.e0); 
+        myPCSet.Inv(mck(0)(i),temp_d5);
+        Array1D<double> temp_d6(nPCTerms,0.e0); 
+        myPCSet.Prod(temp_d2,temp_d5,temp_d6);
+        dv(i)=temp_d6;
     }
     
     return;

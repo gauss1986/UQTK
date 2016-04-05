@@ -159,8 +159,8 @@ Array1D<double> nerror(Array2D<double>& et, Array1D<double>& mean, Array1D<doubl
         return e;
 }
 
-Array2D<double>  nsample_force(int dof, Array2D<double>& samPts,int iq, Array1D<double>& fbar,int nkl,Array2D<double>& scaledKLmodes, Array1D<Array1D<double> >& mck){    
-    Array1D<double> m(mck(0));
+Array2D<double>  nsample_force(int dof, Array2D<double>& samPts,int iq, Array1D<double>& fbar,int nkl,Array2D<double>& scaledKLmodes, Array1D<double>& m){    
+
     // force is applied to dof 0 only 
     unsigned int nStep = fbar.XSize();
     Array2D<double> totalforce(nStep+1,dof,0.e0);
