@@ -48,7 +48,7 @@ int main(int argc, char *argv[]){
     // epsilon
     //Array1D<double>  epsilon_mean(dof,1e4);
     double e1 = 1.0;
-    double e2 = 0.0;
+    double e2 = 0.5;
     /* Read the user input */
     int c;
     while ((c=getopt(argc,(char **)argv,"r:G:d:e:m:N:"))!=-1){
@@ -96,7 +96,7 @@ int main(int argc, char *argv[]){
     Array2D<double> temp_m(dof,2,0.0);
     for (int i=0;i<dof;i++){
         temp_m(i,0)=1.0;
-        //temp_m(i,1)=0.1;
+        temp_m(i,1)=0.1;
     }
     mck(0) = temp_m;
     // k
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]){
     for (int i=0;i<dof;i++){
         //temp_k(i,0)=1.0-(i-i%(dof/3))/(dof/3)*0.1;
         temp_k(i,0)=1.0;
-        //temp_k(i,1)=0.1;
+        temp_k(i,1)=0.1;
     }
     write_datafile(temp_k,"temp_k.dat");
     //temp_k(4)=0.9;
@@ -119,7 +119,7 @@ int main(int argc, char *argv[]){
     Array2D<double> temp_c(dof,2,0.e0);
     for (int i=0;i<dof;i++){
         temp_c(i,0)=2*0.1*sqrt(temp_m(i,0)*temp_k(i,0));
-        //temp_c(i,1)=0.1*temp_c(i,0);
+        temp_c(i,1)=0.1*temp_c(i,0);
     }
     mck(1) = temp_c;
 
