@@ -40,7 +40,7 @@ void nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& epsilon, Array1D<Ar
             force_mid(i)=temp_force1;
             Array1D<double> temp_force2(nPCTerms,0.e0);
             getRow(f_GS(i),2*ix+2,temp_force2);
-            force_plus(i)=temp_force1;
+            force_plus(i)=temp_force2;
         }
         // Step forward 
         forward_duffing_nGS(dof, myPCSet, epsilon, mck, force_current, force_mid, force_plus, dTym, result);
