@@ -24,14 +24,14 @@
 
 int main(int argc, char *argv[]){
 
-    int dof=15;
+    int dof=30;
     int ord_GS=1;
     int ord_AAPG=2;
     int ord_AAPG_GS=2;
     int refine = 1;
     bool act_D = false;
     Array1D<double> time(1+ord_GS,0.e0);
-    int nkl=10;
+    int nkl=20;
     int dim=nkl+6*dof;// set epsilon to be stochastic coeffs on each dof
     int noutput=2;
     int nspl =100000;
@@ -146,8 +146,8 @@ int main(int argc, char *argv[]){
     int i_temp = 0;
     cout << "Generating fbar..." << endl;
     for (int i=0;i<2*nStep_fine+1;i++){
-        //fbar_fine(i) = 2.0-2.0*sin(2*3.1415926*t_temp)*exp(-0.3*t_temp);
-        fbar_fine(i) = 2.0-2.0*sin(2*3.1415926*t_temp)*exp(-0.1*t_temp);
+        fbar_fine(i) = 2.0-2.0*sin(2*3.1415926*t_temp)*exp(-0.3*t_temp);
+        //fbar_fine(i) = 2.0-sin(40*3.1415926*t_temp)*exp(-0.3*t_temp);
         //fbar_fine(i)=2.0;
         if (i%refine == 0){
             fbar(i_temp)=fbar_fine(i);

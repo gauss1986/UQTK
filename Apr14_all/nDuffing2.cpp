@@ -24,14 +24,14 @@
 
 int main(int argc, char *argv[]){
 
-    int dof=15;
-    int ord_GS=1;
+    int dof=5;
+    int ord_GS=2;
     int ord_AAPG=2;
     int ord_AAPG_GS=2;
     int refine = 1;
     bool act_D = false;
     Array1D<double> time(1+ord_GS,0.e0);
-    int nkl=10;
+    int nkl=0;
     int dim=nkl+6*dof;// set epsilon to be stochastic coeffs on each dof
     int noutput=2;
     int nspl =100000;
@@ -41,14 +41,14 @@ int main(int argc, char *argv[]){
     Array1D<double> initial(2*dof,0.e0); // initial condition
     Array1D<double> initial_sigma(2*dof,0.e0);
     for (int i=0;i<dof;i++){
-        initial_sigma(i)=0.5;
-        initial_sigma(dof+i)=0.1;
+        initial_sigma(i)=0.0;
+        initial_sigma(dof+i)=0.0;
     } 
 
     // epsilon
     //Array1D<double>  epsilon_mean(dof,1e4);
     double e1 = 1.0;
-    double e2 = 0.1;
+    double e2 = 0.5;
     /* Read the user input */
     int c;
     while ((c=getopt(argc,(char **)argv,"r:G:d:e:m:N:"))!=-1){
@@ -96,7 +96,7 @@ int main(int argc, char *argv[]){
     Array2D<double> temp_m(dof,2,0.0);
     for (int i=0;i<dof;i++){
         temp_m(i,0)=1.0;
-        temp_m(i,1)=0.1;
+        //temp_m(i,1)=0.1;
     }
     mck(0) = temp_m;
     // k
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]){
     for (int i=0;i<dof;i++){
         //temp_k(i,0)=1.0-(i-i%(dof/3))/(dof/3)*0.1;
         temp_k(i,0)=1.0;
-        temp_k(i,1)=0.1;
+        //temp_k(i,1)=0.1;
     }
     write_datafile(temp_k,"temp_k.dat");
     //temp_k(4)=0.9;
@@ -119,7 +119,7 @@ int main(int argc, char *argv[]){
     Array2D<double> temp_c(dof,2,0.e0);
     for (int i=0;i<dof;i++){
         temp_c(i,0)=2*0.1*sqrt(temp_m(i,0)*temp_k(i,0));
-        temp_c(i,1)=0.1*temp_c(i,0);
+        //temp_c(i,1)=0.1*temp_c(i,0);
     }
     mck(1) = temp_c;
 
@@ -146,8 +146,8 @@ int main(int argc, char *argv[]){
     int i_temp = 0;
     cout << "Generating fbar..." << endl;
     for (int i=0;i<2*nStep_fine+1;i++){
-        //fbar_fine(i) = 2.0-2.0*sin(2*3.1415926*t_temp)*exp(-0.3*t_temp);
-        fbar_fine(i) = 2.0-2.0*sin(2*3.1415926*t_temp)*exp(-0.1*t_temp);
+        fbar_fine(i) = 2.0-2.0*sin(2*3.1415926*t_temp)*exp(-0.3*t_temp);
+        //fbar_fine(i) = 2.0-sin(40*3.1415926*t_temp)*exp(-0.3*t_temp);
         //fbar_fine(i)=2.0;
         if (i%refine == 0){
             fbar(i_temp)=fbar_fine(i);

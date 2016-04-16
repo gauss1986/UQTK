@@ -84,7 +84,7 @@ int main(int argc, char *argv[]){
     Array1D<double>  e_sigma(dof,e2);
 
     // Time marching info
-    double tf = 10;
+    double tf = 20;
     // Number of steps
     int nStep=(int) tf / dTym;
     int nStep_fine=nStep*refine;
