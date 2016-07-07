@@ -41,7 +41,7 @@ July 25, 2015
 int main(int argc, char *argv[])
 {   int CASE=1;
     int nspl=1000000;       //MCS sample size
-    string pcType="LU";  //PC type
+    string pcType;  //PC type
     double epsilon = 1.0;
     double sigma = 2.5;   //Standard deviation
     double dTym = 0.01;
@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
     Array1D<double> inpParams(5,0.e0);//Input parameters
     Array1D<int> init_D(2,0);
     Array1D<int> coeff_D(2,0);
-    bool PDF=false;       //control coeff for outputing PDF
+    bool PDF=true;       //control coeff for outputing PDF
 
     // Time marching info
     double tf = 10;
@@ -97,6 +97,7 @@ int main(int argc, char *argv[])
     int ord_AAPG;   //AAPG order
     
     if (CASE==1){//Stochastic forcing and deterministic initial conditions
+        pcType = "LU";
         clen = 0.05;
         dim = 50;
         nkl = 50;
@@ -124,6 +125,7 @@ int main(int argc, char *argv[])
         coeff_D(1)=1;
     }
     if (CASE==2){//Stochastic initial conditions and deterministic forcing
+        pcType = "HG";
         dim = 2;
         nkl = 2;
         cov_type = (char *)"Exp";
@@ -586,6 +588,7 @@ int main(int argc, char *argv[])
     // AAPG
     printf("AAPG...\n");
 
+   
     // Compute multiindex
     Array2D<int> Pbtot;
     computeMultiIndex(dim,ord_AAPG_GS,Pbtot);
@@ -601,18 +604,10 @@ int main(int argc, char *argv[])
         for(int id=0; id<dim; id++)
             normsq(ipc) *= norms1d(Pbtot(ipc,id));
     write_datafile_1d(normsq,"normsq.dat");
-   
     Array2D<double> e_AAPG(ord_AAPG,2,0.e0); 
     Array1D<Array1D<double> > e_sample_AAPG_dis(ord_AAPG); 
     Array1D<Array1D<double> > e_sample_AAPG_vel(ord_AAPG); 
 
-    //PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
-    //Array1D<Array2D<double> > result(2);
-    //Array1D<Array1D<double> > initial_GS(2);
-    //Array1D<double> temp(nPCTerms,0.e0);
-    //initial_GS(0)=temp;
-    //initial_GS(1) = temp;
-    //myPCSet.InitMeanStDv(stat_init(0,0),stat_init(0,1),1,initial_GS(0));
     Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, normsq, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, stat_init, samPts_norm, e_AAPG, e_sample_AAPG_dis, e_sample_AAPG_vel, init_D, coeff_D, PDF);
     
     // output the timing

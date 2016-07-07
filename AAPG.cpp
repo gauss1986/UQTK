@@ -324,7 +324,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
     string name = "dis";
     printf("Dis...\n");
     tt.tick();
-    PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, dis_0, dis_1, dis_2, dis_3, dis_1_mean, dis_2_mean, dis_3_mean, std1, std2, std3,  normsq, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, factor_OD, mstd_MCS, samPts_norm, name, noutput, e_sample_dis, PDF);
+    PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, dis_0, dis_1, dis_2, dis_3, dis_1_mean, dis_2_mean, dis_3_mean, std1, std2, std3,  normsq, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, factor_OD, mstd_MCS, samPts_norm, name, noutput, e_sample_dis, PDF, pcType, sample_mstd_2D);
     tt.tock("Took");
     t(4)=tt.silent_tock();
     printf("Vel...\n");
@@ -336,7 +336,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
     Array1D<double> std_vel_2(nStep+1,0.e0);
     Array1D<double> std_vel_3(nStep+1,0.e0);
     tt.tick();
-    PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, vel_0, vel_1, vel_2, vel_3, vel_1_mean, vel_2_mean, vel_3_mean, std_vel_1, std_vel_2, std_vel_3,  normsq, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, factor_OD, mstd_MCS, samPts_norm, name2, noutput, e_sample_vel, PDF);
+    PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, vel_0, vel_1, vel_2, vel_3, vel_1_mean, vel_2_mean, vel_3_mean, std_vel_1, std_vel_2, std_vel_3,  normsq, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, factor_OD, mstd_MCS, samPts_norm, name2, noutput, e_sample_vel, PDF, pcType, sample_mstd_2D);
     tt.tock("Took");
     t(5)=tt.silent_tock();
    
@@ -396,7 +396,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
     return(t);
 }
 
-void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, int AAPG_ord, Array1D<double>& sol_0, Array1D<Array2D<double> >& sol_1, Array2D<Array2D<double> >& sol_2, Array3D<Array2D<double> >& sol_3, Array1D<double>& sol_1_mean, Array1D<double>& sol_2_mean, Array1D<double>& sol_3_mean, Array1D<double>& std1, Array1D<double>& std2, Array1D<double>& std3, Array1D<double>& normsq, int dim, int nStep, int PCTerms_1, int PCTerms_2, int PCTerms_3, int order, double dTym, double factor_OD, Array2D<double>& mstd_MCS, Array2D<double>& samPts_norm, string name,int noutput, Array1D<Array1D<double> >& e_sample, bool PDF){
+void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, int AAPG_ord, Array1D<double>& sol_0, Array1D<Array2D<double> >& sol_1, Array2D<Array2D<double> >& sol_2, Array3D<Array2D<double> >& sol_3, Array1D<double>& sol_1_mean, Array1D<double>& sol_2_mean, Array1D<double>& sol_3_mean, Array1D<double>& std1, Array1D<double>& std2, Array1D<double>& std3, Array1D<double>& normsq, int dim, int nStep, int PCTerms_1, int PCTerms_2, int PCTerms_3, int order, double dTym, double factor_OD, Array2D<double>& mstd_MCS, Array2D<double>& samPts_norm, string name,int noutput, Array1D<Array1D<double> >& e_sample, bool PDF, string pcType, Array2D<double>& sample_mstd_2D){
     TickTock tt;
     tt.tick();
     // Post-process the AAPG solutions
@@ -466,24 +466,32 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     s5 << name << "stat2"<<".dat";
     write_datafile(stat2,s5.str().c_str());
 
-    //if (PDF){
-    //Array2D<double> AAPG_sol_sample_1=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, sol_1_assembled, samPts_norm, stat1, e_sample(0));
-    //ostringstream s;
-    //s << "AAPG" << name << "sample_1"<<".dat";
-    //write_datafile(AAPG_sol_sample_1,s.str().c_str());
-    //if (AAPG_ord >= 2){
-    //    Array2D<double> AAPG_sol_sample_2=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, sol_2_assembled, samPts_norm, stat2, e_sample(1));
-    //    ostringstream s2;
-    //    s2 << "AAPG" << name << "sample_2"<<".dat";
-    //    write_datafile(AAPG_sol_sample_2,s2.str().c_str());
-    //    }
-    //if (AAPG_ord >= 3){
-    //    Array2D<double> AAPG_sol_sample_3=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, sol_3_assembled, samPts_norm, stat3, e_sample(2));
-    //    ostringstream s3;
-    //    s3 << "AAPG" << name << "sample_3"<<".dat";
-    //    write_datafile(AAPG_sol_sample_3,s3.str().c_str());
-    //}
-    //}
+    if (PDF){
+        PCSet myPCSet("ISP",order,dim,pcType,0.0,1.0); 
+        const int nPCTerms = myPCSet.GetNumberPCTerms();
+        Array1D<Array1D<double> > initial_GS(2);
+        Array1D<double> temp(nPCTerms,0.e0);
+        initial_GS(0)=temp;
+        initial_GS(1) = temp;
+        myPCSet.InitMeanStDv(sample_mstd_2D(0,0),sample_mstd_2D(0,1),1,initial_GS(0));
+        myPCSet.InitMeanStDv(sample_mstd_2D(1,0),sample_mstd_2D(1,1),2,initial_GS(1));
+        Array2D<double> AAPG_sol_sample_1=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, sol_1_assembled, samPts_norm, stat1, e_sample(0));
+        ostringstream s;
+        s << "AAPG" << name << "sample_1"<<".dat";
+        write_datafile(AAPG_sol_sample_1,s.str().c_str());
+        if (AAPG_ord >= 2){
+            Array2D<double> AAPG_sol_sample_2=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, sol_2_assembled, samPts_norm, stat2, e_sample(1));
+            ostringstream s2;
+            s2 << "AAPG" << name << "sample_2"<<".dat";
+            write_datafile(AAPG_sol_sample_2,s2.str().c_str());
+        }
+        if (AAPG_ord >= 3){
+            Array2D<double> AAPG_sol_sample_3=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, sol_3_assembled, samPts_norm, stat3, e_sample(2));
+            ostringstream s3;
+            s3 << "AAPG" << name << "sample_3"<<".dat";
+            write_datafile(AAPG_sol_sample_3,s3.str().c_str());
+        }
+    }
 
     return;     
 }
