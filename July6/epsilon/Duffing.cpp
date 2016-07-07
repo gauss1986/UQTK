@@ -44,12 +44,10 @@ int main(int argc, char *argv[])
     string pcType="LU";  //PC type
     double epsilon = 1.0;
     double sigma = 2.5;   //Standard deviation
-    double dTym = 0.01;
-    int ord_AAPG_GS = 3;//GS order in AAPG subproblems
 
     /* Read the user input */
     int c;
-    while ((c=getopt(argc,(char **)argv,"C:N:s:e:n:g:p"))!=-1){
+    while ((c=getopt(argc,(char **)argv,"C:N:s:e:p"))!=-1){
         switch (c) {
         case 'C':
             CASE = strtod(optarg, (char **)NULL);
@@ -62,12 +60,6 @@ int main(int argc, char *argv[])
             break;
         case 'e':
              epsilon= strtod(optarg, (char **)NULL);
-            break;
-        case 'n':
-            dTym = strtod(optarg, (char **)NULL);
-            break;
-        case 'g':
-            ord_AAPG_GS = strtod(optarg, (char **)NULL);
             break;
         }
     }
@@ -85,6 +77,7 @@ int main(int argc, char *argv[])
     bool PDF=false;       //control coeff for outputing PDF
 
     // Time marching info
+    double dTym = 0.01;
     double tf = 10;
     // Number of steps
     int nStep=(int) tf / dTym;
@@ -95,6 +88,7 @@ int main(int argc, char *argv[])
     double p;       //Threashold used in the adaptive AAPG
     int ord_GS;     //GS order
     int ord_AAPG;   //AAPG order
+    int ord_AAPG_GS;//GS order in AAPG subproblems
     
     if (CASE==1){//Stochastic forcing and deterministic initial conditions
         clen = 0.05;
@@ -105,7 +99,7 @@ int main(int argc, char *argv[])
         factor_OD = 1.0;
         ord_GS = 2;
         ord_AAPG = 3;
-        //ord_AAPG_GS = 3;
+        ord_AAPG_GS = 4;
         act_D = false;
         p = 0.99;
         dof = 2;
@@ -131,7 +125,7 @@ int main(int argc, char *argv[])
         factor_OD = 1.0;
         ord_GS = 2;
         ord_AAPG = 2;
-        //ord_AAPG_GS = 2;
+        ord_AAPG_GS = 2;
         act_D = false;
         p = 0.99;
         dof = 2;
@@ -159,7 +153,7 @@ int main(int argc, char *argv[])
         factor_OD = 1.0;
         ord_GS = 2;
         ord_AAPG = 3;
-        //ord_AAPG_GS = 2;
+        ord_AAPG_GS = 2;
         act_D = false;
         p = 0.99;
         noutput = 2;
@@ -188,7 +182,7 @@ int main(int argc, char *argv[])
         factor_OD = 1.0;
         ord_GS = 2;
         ord_AAPG = 2;
-        //ord_AAPG_GS = 2;
+        ord_AAPG_GS = 2;
         act_D = false;
         p = 0.99;
         dof = 2;
@@ -217,7 +211,7 @@ int main(int argc, char *argv[])
         factor_OD = 1.0;
         ord_GS = 1;
         ord_AAPG = 2;
-        //ord_AAPG_GS = 2;
+        ord_AAPG_GS = 2;
         act_D = false;
         p = 0.99;
         dof = 2;
@@ -465,7 +459,7 @@ int main(int argc, char *argv[])
     Array1D<double> t_GS(ord_GS,0.e0);
     
     ostringstream err_stream;
-    err_stream << "error_s" << sigma << "e"<< epsilon<< "dt"<<dTym << ".dat";
+    err_stream << "error_e" << epsilon << ".dat";
     //if (act_D){
         //err_stream << "error_n" << dim << "_e"<<inpParams(2)<<"_s"<<sigma<<"_actD.dat";
     //}
@@ -484,7 +478,7 @@ int main(int argc, char *argv[])
     for(int ord=1;ord<ord_GS+1;ord++){
     	tt.tick();
 	    PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
-        tt.tock("Took");
+            tt.tock("Took");
 	    cout << "Order "<< ord << endl;
 
 	    // The number of PC terms
@@ -605,14 +599,6 @@ int main(int argc, char *argv[])
     Array2D<double> e_AAPG(ord_AAPG,2,0.e0); 
     Array1D<Array1D<double> > e_sample_AAPG_dis(ord_AAPG); 
     Array1D<Array1D<double> > e_sample_AAPG_vel(ord_AAPG); 
-
-    //PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
-    //Array1D<Array2D<double> > result(2);
-    //Array1D<Array1D<double> > initial_GS(2);
-    //Array1D<double> temp(nPCTerms,0.e0);
-    //initial_GS(0)=temp;
-    //initial_GS(1) = temp;
-    //myPCSet.InitMeanStDv(stat_init(0,0),stat_init(0,1),1,initial_GS(0));
     Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, normsq, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, stat_init, samPts_norm, e_AAPG, e_sample_AAPG_dis, e_sample_AAPG_vel, init_D, coeff_D, PDF);
     
     // output the timing

@@ -28,4 +28,4 @@
 #===================================
 
 module load gcc gsl/1.15-gcc
-./nDuffing.x -d 400
+./Duffing.x

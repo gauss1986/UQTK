@@ -465,7 +465,7 @@ int main(int argc, char *argv[])
     Array1D<double> t_GS(ord_GS,0.e0);
     
     ostringstream err_stream;
-    err_stream << "error_s" << sigma << "e"<< epsilon<< "dt"<<dTym << ".dat";
+    err_stream << "error_s" << sigma <<"dt"<<dTym << ".dat";
     //if (act_D){
         //err_stream << "error_n" << dim << "_e"<<inpParams(2)<<"_s"<<sigma<<"_actD.dat";
     //}
@@ -484,7 +484,7 @@ int main(int argc, char *argv[])
     for(int ord=1;ord<ord_GS+1;ord++){
     	tt.tick();
 	    PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
-        tt.tock("Took");
+            tt.tock("Took");
 	    cout << "Order "<< ord << endl;
 
 	    // The number of PC terms
@@ -605,14 +605,6 @@ int main(int argc, char *argv[])
     Array2D<double> e_AAPG(ord_AAPG,2,0.e0); 
     Array1D<Array1D<double> > e_sample_AAPG_dis(ord_AAPG); 
     Array1D<Array1D<double> > e_sample_AAPG_vel(ord_AAPG); 
-
-    //PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
-    //Array1D<Array2D<double> > result(2);
-    //Array1D<Array1D<double> > initial_GS(2);
-    //Array1D<double> temp(nPCTerms,0.e0);
-    //initial_GS(0)=temp;
-    //initial_GS(1) = temp;
-    //myPCSet.InitMeanStDv(stat_init(0,0),stat_init(0,1),1,initial_GS(0));
     Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, normsq, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, stat_init, samPts_norm, e_AAPG, e_sample_AAPG_dis, e_sample_AAPG_vel, init_D, coeff_D, PDF);
     
     // output the timing
