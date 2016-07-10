@@ -447,7 +447,7 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     // Compute normsq
     Array1D<double> normsq(Pbtot.XSize(),1.e0);
     if (PDF){
-        PCSet myPCSet("ISP",order,dim,pcType,0.0,1.0); 
+        PCSet myPCSet("ISP",order,dim,pcType,0.0,1.0,"false"); 
         const int nPCTerms = myPCSet.GetNumberPCTerms();
         Array1D<Array1D<double> > initial_GS(2);
         Array1D<double> temp(nPCTerms,0.e0);
@@ -499,7 +499,7 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
         ostringstream s5;
         s5 << name << "stat2"<<".dat";
         write_datafile(stat2,s5.str().c_str());
-        PCSet myPCSet("ISP",order,dim,pcType,0.0,1.0); 
+        PCSet myPCSet("ISP",order,dim,pcType,0.0,1.0,"false"); 
         const int nPCTerms = myPCSet.GetNumberPCTerms();
         Array1D<Array1D<double> > initial_GS(2);
         Array1D<double> temp(nPCTerms,0.e0);

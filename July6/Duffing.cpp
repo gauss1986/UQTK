@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
     bool PDF=false;       //control coeff for outputing PDF
 
     // Time marching info
-    double dTym = 0.1;
+    double dTym = 0.01;
     double tf = 10;
     // Number of steps
     int nStep=(int) tf / dTym;

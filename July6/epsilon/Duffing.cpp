@@ -40,14 +40,16 @@ July 25, 2015
 /// Main program of uncertainty propagation of the ODE model excitation force via intrusive spectral projection (ISP)
 int main(int argc, char *argv[])
 {   int CASE=1;
-    int nspl=1000000;       //MCS sample size
-    string pcType="LU";  //PC type
+    int nspl=1000;       //MCS sample size
+    string pcType;  //PC type
     double epsilon = 1.0;
     double sigma = 2.5;   //Standard deviation
+    double dTym = 0.01;
+    int ord_AAPG_GS = 3;//GS order in AAPG subproblems
 
     /* Read the user input */
     int c;
-    while ((c=getopt(argc,(char **)argv,"C:N:s:e:p"))!=-1){
+    while ((c=getopt(argc,(char **)argv,"C:N:s:e:n:g:p"))!=-1){
         switch (c) {
         case 'C':
             CASE = strtod(optarg, (char **)NULL);
@@ -60,6 +62,12 @@ int main(int argc, char *argv[])
             break;
         case 'e':
              epsilon= strtod(optarg, (char **)NULL);
+            break;
+        case 'n':
+            dTym = strtod(optarg, (char **)NULL);
+            break;
+        case 'g':
+            ord_AAPG_GS = strtod(optarg, (char **)NULL);
             break;
         }
     }
@@ -77,7 +85,6 @@ int main(int argc, char *argv[])
     bool PDF=false;       //control coeff for outputing PDF
 
     // Time marching info
-    double dTym = 0.01;
     double tf = 10;
     // Number of steps
     int nStep=(int) tf / dTym;
@@ -88,9 +95,9 @@ int main(int argc, char *argv[])
     double p;       //Threashold used in the adaptive AAPG
     int ord_GS;     //GS order
     int ord_AAPG;   //AAPG order
-    int ord_AAPG_GS;//GS order in AAPG subproblems
     
     if (CASE==1){//Stochastic forcing and deterministic initial conditions
+        pcType = "LU";
         clen = 0.05;
         dim = 50;
         nkl = 50;
@@ -99,7 +106,7 @@ int main(int argc, char *argv[])
         factor_OD = 1.0;
         ord_GS = 2;
         ord_AAPG = 3;
-        ord_AAPG_GS = 4;
+        //ord_AAPG_GS = 3;
         act_D = false;
         p = 0.99;
         dof = 2;
@@ -118,6 +125,7 @@ int main(int argc, char *argv[])
         coeff_D(1)=1;
     }
     if (CASE==2){//Stochastic initial conditions and deterministic forcing
+        pcType = "HG";
         dim = 2;
         nkl = 2;
         cov_type = (char *)"Exp";
@@ -125,7 +133,7 @@ int main(int argc, char *argv[])
         factor_OD = 1.0;
         ord_GS = 2;
         ord_AAPG = 2;
-        ord_AAPG_GS = 2;
+        //ord_AAPG_GS = 2;
         act_D = false;
         p = 0.99;
         dof = 2;
@@ -153,7 +161,7 @@ int main(int argc, char *argv[])
         factor_OD = 1.0;
         ord_GS = 2;
         ord_AAPG = 3;
-        ord_AAPG_GS = 2;
+        //ord_AAPG_GS = 2;
         act_D = false;
         p = 0.99;
         noutput = 2;
@@ -182,7 +190,7 @@ int main(int argc, char *argv[])
         factor_OD = 1.0;
         ord_GS = 2;
         ord_AAPG = 2;
-        ord_AAPG_GS = 2;
+        //ord_AAPG_GS = 2;
         act_D = false;
         p = 0.99;
         dof = 2;
@@ -211,7 +219,7 @@ int main(int argc, char *argv[])
         factor_OD = 1.0;
         ord_GS = 1;
         ord_AAPG = 2;
-        ord_AAPG_GS = 2;
+        //ord_AAPG_GS = 2;
         act_D = false;
         p = 0.99;
         dof = 2;
@@ -459,7 +467,7 @@ int main(int argc, char *argv[])
     Array1D<double> t_GS(ord_GS,0.e0);
     
     ostringstream err_stream;
-    err_stream << "error_e" << epsilon << ".dat";
+    err_stream << "error_s" << sigma << "e"<< epsilon<< "dt"<<dTym << ".dat";
     //if (act_D){
         //err_stream << "error_n" << dim << "_e"<<inpParams(2)<<"_s"<<sigma<<"_actD.dat";
     //}
@@ -478,7 +486,7 @@ int main(int argc, char *argv[])
     for(int ord=1;ord<ord_GS+1;ord++){
     	tt.tick();
 	    PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
-            tt.tock("Took");
+        tt.tock("Took");
 	    cout << "Order "<< ord << endl;
 
 	    // The number of PC terms
@@ -580,26 +588,12 @@ int main(int argc, char *argv[])
     // AAPG
     printf("AAPG...\n");
 
-    // Compute multiindex
-    Array2D<int> Pbtot;
-    computeMultiIndex(dim,ord_AAPG_GS,Pbtot);
-    // Initialize pcbasis
-    PCBasis p_basis(pcType, 0.0, 1.0, ord_AAPG_GS);
-    // Get the 1d norms-squared
-    Array1D<double> norms1d;
-    p_basis.Get1dNormsSq(norms1d);
-    // Compute normsq
-    Array1D<double> normsq(Pbtot.XSize(),1.e0);
-    // For each term, multiply appropriate 1d norms-squared
-    for(unsigned int ipc=0; ipc<Pbtot.XSize(); ipc++)
-        for(int id=0; id<dim; id++)
-            normsq(ipc) *= norms1d(Pbtot(ipc,id));
-    write_datafile_1d(normsq,"normsq.dat");
    
     Array2D<double> e_AAPG(ord_AAPG,2,0.e0); 
     Array1D<Array1D<double> > e_sample_AAPG_dis(ord_AAPG); 
     Array1D<Array1D<double> > e_sample_AAPG_vel(ord_AAPG); 
-    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, normsq, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, stat_init, samPts_norm, e_AAPG, e_sample_AAPG_dis, e_sample_AAPG_vel, init_D, coeff_D, PDF);
+
+    Array1D<double> t_AAPG = AAPG(dof, inpParams, fbar, dTym, ord_AAPG_GS, pcType, noutput, dim, nStep, scaledKLmodes, factor_OD, ord_AAPG, act_D, p, MCS_s_dis, err_dump, stat_init, samPts_norm, e_AAPG, e_sample_AAPG_dis, e_sample_AAPG_vel, init_D, coeff_D, PDF);
     
     // output the timing
     Array1D<double> t(1+ord_GS+ord_AAPG,0.e0);
