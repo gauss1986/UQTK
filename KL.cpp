@@ -61,6 +61,11 @@
         eigs = decomposer.eigenvalues();
         KLmodes = decomposer.KLmodes();
         }
+        
+        ostringstream s_eigs;
+        s_eigs << "eigs.dat";
+        string n_eigs(s_eigs.str());
+        write_datafile_1d(eigs,n_eigs.c_str());
 
         for ( int i = 0; i < npts; i++ ){
             //scaledKLmodes(i,0) = xgrid(i);

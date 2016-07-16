@@ -39,13 +39,13 @@ July 25, 2015
 
 /// Main program of uncertainty propagation of the ODE model excitation force via intrusive spectral projection (ISP)
 int main(int argc, char *argv[])
-{   int CASE=2;
-    int nspl=100000;       //MCS sample size
+{   int CASE=5;
+    int nspl=1000000;       //MCS sample size
     string pcType;  //PC type
     double epsilon = 1;
     double sigma = 2.5;   //Standard deviation
     double dTym = 0.01;
-    int ord_AAPG_GS = 3;//GS order in AAPG subproblems
+    int ord_AAPG_GS = 2;//GS order in AAPG subproblems
     int dim;        //Stochastic dimensionality
     int nkl;        //Number of terms retained in KL expansion
     char* cov_type; //Covariance type
@@ -132,8 +132,8 @@ int main(int argc, char *argv[])
     if (CASE==2){//Stochastic forcing and deterministic initial conditions
         pcType = "LU";
         clen = 0.05;
-        dim = 50;
-        nkl = 50;
+        dim = 15;
+        nkl = 15;
         cov_type = (char *)"Exp";
         //sigma = 2.5;
         factor_OD = 1.0;
@@ -217,6 +217,7 @@ int main(int argc, char *argv[])
         coeff_D(1)=1;
     }
     if (CASE==5){//Stochastic zeta and epsilon and stochastic forcing
+        pcType = "LU";
         clen = 0.05;
         dim = 100;
         nkl = 98;
@@ -229,7 +230,7 @@ int main(int argc, char *argv[])
         act_D = false;
         p = 0.99;
         dof = 2;
-        noutput = 1;
+        noutput = 10;
         inpParams(0) = 0.0;//Problem to solve 
         inpParams(1) = 0.1;//zeta
         inpParams(2) = epsilon;//epsilon

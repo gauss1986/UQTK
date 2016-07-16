@@ -1,1 +1,0 @@
-Test epsilon=0.2 and stochastic forcing. Test wtih time marching step=0.05. AAPG_GS=3.

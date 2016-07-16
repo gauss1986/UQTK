@@ -371,7 +371,7 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, int nout
         mstd_MCS.replaceCol(MCS_temp,0);
         getCol(std_MCS,i,MCS_temp);
         mstd_MCS.replaceCol(MCS_temp,1);
-        PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, uv0_temp, uv_1(i), uv_2(i), uv_3, m1_temp, m2_temp, m3_temp, s1_temp, s2_temp, s3_temp,  normsq, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, factor_OD, mstd_MCS, samPts_norm, name, noutput, e_sample, PDF);
+        PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, uv0_temp, uv_1(i), uv_2(i), uv_3, m1_temp, m2_temp, m3_temp, s1_temp, s2_temp, s3_temp, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, factor_OD, mstd_MCS, samPts_norm, name, noutput, e_sample, PDF, pcType,stat_i);
         m1.replaceCol(m1_temp,i);
         m2.replaceCol(m2_temp,i);
         m3.replaceCol(m3_temp,i);
