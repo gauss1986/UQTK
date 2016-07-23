@@ -31,7 +31,7 @@ int main(int argc, char *argv[]){
     int refine = 1;
     bool act_D = false;
     Array1D<double> time(1+ord_GS,0.e0);
-    int nkl=10;
+    int nkl=15;
     int dim=nkl+6*dof;// set epsilon to be stochastic coeffs on each dof
     int noutput=2;
     int nspl =100000;
@@ -41,8 +41,8 @@ int main(int argc, char *argv[]){
     Array1D<double> initial(2*dof,0.e0); // initial condition
     Array1D<double> initial_sigma(2*dof,0.e0);
     for (int i=0;i<dof;i++){
-        initial_sigma(i)=0.5;
-        initial_sigma(dof+i)=0.1;
+        initial_sigma(i)=0.1;
+        initial_sigma(dof+i)=0.5;
     } 
 
     // epsilon
@@ -51,12 +51,12 @@ int main(int argc, char *argv[]){
     double e2 = 0.1;
     /* Read the user input */
     int c;
-    while ((c=getopt(argc,(char **)argv,"r:G:d:e:m:N:"))!=-1){
+    while ((c=getopt(argc,(char **)argv,"r:g:d:e:m:N:"))!=-1){
         switch (c) {
         case 'r':
             refine = (strtod(optarg, (char **)NULL));
             break;
-        case 'G':
+        case 'g':
             ord_AAPG_GS = (strtod(optarg, (char **)NULL));
             break;
         case 'd':

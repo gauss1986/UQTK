@@ -114,7 +114,8 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
         ind(i) = i;
         for (int it=0;it<nStep+1;it++){
             getRow(dis_1(i),it,dis_temp);
-            var(i)=var(i)+PCSet_1.StDv(dis_temp);  
+            double temp =PCSet_1.StDv(dis_temp);  
+            var(i)=var(i)+temp*temp*dTym;  
         }
         cout << "Sum of var on dim No." <<i <<" is "<< var(i) << endl;
     }

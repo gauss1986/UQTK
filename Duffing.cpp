@@ -39,7 +39,7 @@ July 25, 2015
 
 /// Main program of uncertainty propagation of the ODE model excitation force via intrusive spectral projection (ISP)
 int main(int argc, char *argv[])
-{   int CASE=5;
+{   int CASE=2;
     int nspl=1000000;       //MCS sample size
     string pcType;  //PC type
     double epsilon = 1;
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     int dim;        //Stochastic dimensionality
     int nkl;        //Number of terms retained in KL expansion
     char* cov_type; //Covariance type
-    bool act_D;     //wheather doing AAPG adaptive or not
+    bool act_D=true;     //wheather doing AAPG adaptive or not
     double dof;     //Spatial dof
     int noutput;    //Number of output points
     double clen;    // Correlation length of the random process
@@ -85,7 +85,7 @@ int main(int argc, char *argv[])
             if (temp_PDF == 0)
                 PDF = false;
             else
-                PDF = true;
+                PDF = true;           
             break;
         }
     }
@@ -112,7 +112,7 @@ int main(int argc, char *argv[])
         ord_GS = 2;
         ord_AAPG = 2;
         //ord_AAPG_GS = 2;
-        act_D = false;
+        //act_D = false;
         p = 0.99;
         dof = 2;
         noutput = 10;
@@ -132,15 +132,15 @@ int main(int argc, char *argv[])
     if (CASE==2){//Stochastic forcing and deterministic initial conditions
         pcType = "LU";
         clen = 0.05;
-        dim = 15;
-        nkl = 15;
+        dim = 100;
+        nkl = 100;
         cov_type = (char *)"Exp";
         //sigma = 2.5;
         factor_OD = 1.0;
-        ord_GS = 2;
-        ord_AAPG = 3;
+        ord_GS = 1;
+        ord_AAPG = 2;
         //ord_AAPG_GS = 3;
-        act_D = false;
+        //act_D = false;
         p = 0.99;
         dof = 2;
         noutput = 10;
@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
         ord_GS = 2;
         ord_AAPG = 3;
         //ord_AAPG_GS = 2;
-        act_D = false;
+        //act_D = false;
         p = 0.99;
         noutput = 2;
         inpParams(0) = 0.0;//Problem to solve 
@@ -197,7 +197,7 @@ int main(int argc, char *argv[])
         ord_GS = 2;
         ord_AAPG = 2;
         //ord_AAPG_GS = 2;
-        act_D = false;
+        //act_D = false;
         p = 0.99;
         dof = 2;
         noutput = 10;
@@ -227,7 +227,7 @@ int main(int argc, char *argv[])
         ord_GS = 1;
         ord_AAPG = 2;
         //ord_AAPG_GS = 2;
-        act_D = false;
+        //act_D = false;
         p = 0.99;
         dof = 2;
         noutput = 10;
