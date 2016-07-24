@@ -35,7 +35,7 @@ int main(int argc, char *argv[]){
     int nkl=15;
     int dim=nkl+6*dof;// set epsilon to be stochastic coeffs on each dof
     int noutput=2;
-    int nspl =100000;
+    int nspl =100;
     int factor_OD = 0.99;
     string pcType="LU";  //PC type
     double dTym = 0.01;
@@ -428,8 +428,12 @@ int main(int argc, char *argv[]){
                 getCol(uv_solution_temp,k+nPCTerms,temp);
                 dis.replaceCol(temp,k);
             }
-            Array2D<double> GS_dis_sampt=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, dis, samPts_norm, mstd_dis(j), e_GS_sample_dis(ord-1));
-            Array2D<double> GS_vel_sampt=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, vel, samPts_norm, mstd_vel(j), e_GS_sample_vel(ord-1));
+            Array1D<double> e_GS_sample_dis_temp(2,0.e0);
+            Array1D<double> e_GS_sample_vel_temp(2,0.e0);
+            Array2D<double> GS_dis_sampt=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, dis, samPts_norm, mstd_dis(j), e_GS_sample_dis_temp);
+            Array2D<double> GS_vel_sampt=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, vel, samPts_norm, mstd_vel(j), e_GS_sample_vel_temp);
+            e_GS_sample_dis(ord-1)=e_GS_sample_dis_temp;
+            e_GS_sample_vel(ord-1)=e_GS_sample_vel_temp;
             ostringstream s2;
             s2 << "GS_sample_error_dis" << ord<< "dof"<<j<<".dat";
             string SoluGSsample(s2.str());
@@ -438,8 +442,8 @@ int main(int argc, char *argv[]){
             s3 << "GS_sample_error_vel" << ord<<"dof"<<j<<".dat";
             string SoluGSsample_vel(s3.str());
             write_datafile(GS_vel_sampt,SoluGSsample_vel.c_str());
-            cout << "GS dis sample error for ord " << ord << " on dof " << j << " is em="<<e_GS_sample_dis(ord)(0) <<", es= "<< e_GS_sample_dis(ord)(1)<< endl;
-            cout << "GS vel sample error for ord " << ord << " on dof " << j << " is em="<<e_GS_sample_vel(ord)(0) <<", es= "<< e_GS_sample_vel(ord)(1)<< endl;
+            cout << "GS dis sample error for ord " << ord << " on dof " << j << " is em="<<e_GS_sample_dis(ord-1)(0) <<", es= "<< e_GS_sample_dis(ord-1)(1)<< endl;
+            cout << "GS vel sample error for ord " << ord << " on dof " << j << " is em="<<e_GS_sample_vel(ord-1)(0) <<", es= "<< e_GS_sample_vel(ord-1)(1)<< endl;
             }
         }
     }
