@@ -298,15 +298,33 @@ int main(int argc, char *argv[]){
             }
         }
     }
-    for (int ix=0;ix<nStep+1;ix++){
-        // report to screen
-        if (ix % ((int) nStep/noutput) == 0){
-            for (int i=0;i<dof;i++){
+    for (int i=0;i<dof;i++){
+        ostringstream name1_sample;
+        name1_sample << "MCS_sample_veldof" << i <<".dat";
+        string name_str1_sample = name1_sample.str();
+        ostringstream name2_sample;
+        name2_sample << "MCS_sample_disdof" << i <<".dat";
+        string name_str2_sample = name2_sample.str();
+        Array2D<double> MCS_samples_dis(nspl,noutput+1,0.e0);
+        Array2D<double> MCS_samples_vel(nspl,noutput+1,0.e0);
+        int j=0;
+        for (int ix=0;ix<nStep+1;ix++){
+            // report to screen
+            if (ix % ((int) nStep/noutput) == 0){
                 cout << "dof " << i << endl;
                 WriteMeanStdDevToStdOut(ix, ix*dTym, mean_MCS(ix,i), std_MCS(ix,i));
+                Array1D<double> temp(nspl,0.e0);
+                getRow(result_MCS(i),ix,temp);
+                MCS_samples_vel.replaceCol(temp,j);
+                getRow(result_MCS(dof+i),ix,temp);
+                MCS_samples_dis.replaceCol(temp,j);
+                j++;
             }
         }
+        write_datafile(MCS_samples_vel,name_str1_sample.c_str());
+        write_datafile(MCS_samples_dis,name_str2_sample.c_str());
     }
+            
     write_datafile(mean_MCS,"m_MCS.dat");
     write_datafile(std_MCS,"s_MCS.dat");
    
@@ -435,11 +453,11 @@ int main(int argc, char *argv[]){
             e_GS_sample_dis(ord-1)=e_GS_sample_dis_temp;
             e_GS_sample_vel(ord-1)=e_GS_sample_vel_temp;
             ostringstream s2;
-            s2 << "GS_sample_error_dis" << ord<< "dof"<<j<<".dat";
+            s2 << "GS_sample_dis" << ord<< "dof"<<j<<".dat";
             string SoluGSsample(s2.str());
             write_datafile(GS_dis_sampt,SoluGSsample.c_str());
             ostringstream s3;
-            s3 << "GS_sample_error_vel" << ord<<"dof"<<j<<".dat";
+            s3 << "GS_sample_vel" << ord<<"dof"<<j<<".dat";
             string SoluGSsample_vel(s3.str());
             write_datafile(GS_vel_sampt,SoluGSsample_vel.c_str());
             cout << "GS dis sample error for ord " << ord << " on dof " << j << " is em="<<e_GS_sample_dis(ord-1)(0) <<", es= "<< e_GS_sample_dis(ord-1)(1)<< endl;
