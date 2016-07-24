@@ -570,15 +570,23 @@ int main(int argc, char *argv[])
         //cout << "Normsq 2=" <<normsq(2)<<endl;
 
         if (PDF){ 
+        Array1D<int> lout(noutput+1,0);
+        int j=0;
+        for (int l=0;l<nStep+1;l++){
+            if ((l% (int) nStep/noutput) == 0){
+                lout(j) = l;
+                j++;
+            }
+        }
         cout << "Sampling dis..."<< endl;
-        Array2D<double> GS_dis_sampt=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, result(1), samPts_norm, stat_GS, e_GS_sample(ord-1));
+        Array2D<double> GS_dis_sampt=sampleGS(lout,dim, nStep, nPCTerms, myPCSet, result(1), samPts_norm, stat_GS, e_GS_sample(ord-1));
         ostringstream s2;
         s2 << "GS_dis_sample" << ord<<".dat";
         string SoluGSsample(s2.str());
         write_datafile(GS_dis_sampt,SoluGSsample.c_str());
         //ouput vel_sample
         cout << "Sampling vel..."<< endl;
-        Array2D<double> GS_vel_sampt=sampleGS(noutput, dim, nStep, nPCTerms, myPCSet, result(0), samPts_norm, stat_GS_vel, e_GS_sample_vel(ord-1));
+        Array2D<double> GS_vel_sampt=sampleGS(lout, dim, nStep, nPCTerms, myPCSet, result(0), samPts_norm, stat_GS_vel, e_GS_sample_vel(ord-1));
         ostringstream s3;
         s3 << "GS_vel_sample" << ord<<".dat";
         SoluGSsample=s3.str();

@@ -34,7 +34,6 @@ int main(int argc, char *argv[]){
     Array1D<double> time(1+ord_GS,0.e0);
     int nkl=15;
     int dim=nkl+6*dof;// set epsilon to be stochastic coeffs on each dof
-    int noutput=2;
     int nspl =100;
     int factor_OD = 0.99;
     string pcType="LU";  //PC type
@@ -45,6 +44,10 @@ int main(int argc, char *argv[]){
         initial_sigma(i)=0.1;
         initial_sigma(dof+i)=0.5;
     } 
+    Array1D<int> lout(2,0);
+    lout(0) = 0;
+    lout(1) = 730;
+    int noutput = lout.XSize();
     bool PDF = true;
 
     // epsilon
@@ -305,12 +308,11 @@ int main(int argc, char *argv[]){
         ostringstream name2_sample;
         name2_sample << "MCS_sample_disdof" << i <<".dat";
         string name_str2_sample = name2_sample.str();
-        Array2D<double> MCS_samples_dis(nspl,noutput+1,0.e0);
-        Array2D<double> MCS_samples_vel(nspl,noutput+1,0.e0);
-        int j=0;
-        for (int ix=0;ix<nStep+1;ix++){
+        Array2D<double> MCS_samples_dis(nspl,noutput,0.e0);
+        Array2D<double> MCS_samples_vel(nspl,noutput,0.e0);
+        for (int j=0;j<noutput;j++){
             // report to screen
-            if (ix % ((int) nStep/noutput) == 0){
+                int ix = lout(j);
                 cout << "dof " << i << endl;
                 WriteMeanStdDevToStdOut(ix, ix*dTym, mean_MCS(ix,i), std_MCS(ix,i));
                 Array1D<double> temp(nspl,0.e0);
@@ -318,8 +320,6 @@ int main(int argc, char *argv[]){
                 MCS_samples_vel.replaceCol(temp,j);
                 getRow(result_MCS(dof+i),ix,temp);
                 MCS_samples_dis.replaceCol(temp,j);
-                j++;
-            }
         }
         write_datafile(MCS_samples_vel,name_str1_sample.c_str());
         write_datafile(MCS_samples_dis,name_str2_sample.c_str());
@@ -448,8 +448,8 @@ int main(int argc, char *argv[]){
             }
             Array1D<double> e_GS_sample_dis_temp(2,0.e0);
             Array1D<double> e_GS_sample_vel_temp(2,0.e0);
-            Array2D<double> GS_dis_sampt=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, dis, samPts_norm, mstd_dis(j), e_GS_sample_dis_temp);
-            Array2D<double> GS_vel_sampt=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, vel, samPts_norm, mstd_vel(j), e_GS_sample_vel_temp);
+            Array2D<double> GS_dis_sampt=sampleGS(lout,dim, nStep, nPCTerms, myPCSet, dis, samPts_norm, mstd_dis(j), e_GS_sample_dis_temp);
+            Array2D<double> GS_vel_sampt=sampleGS(lout,dim, nStep, nPCTerms, myPCSet, vel, samPts_norm, mstd_vel(j), e_GS_sample_vel_temp);
             e_GS_sample_dis(ord-1)=e_GS_sample_dis_temp;
             e_GS_sample_vel(ord-1)=e_GS_sample_vel_temp;
             ostringstream s2;

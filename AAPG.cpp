@@ -480,6 +480,14 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
 
 
     if (PDF){
+        Array1D<int> lout(noutput+1,0);
+        int j=0;
+        for (int l=0;l<nStep+1;l++){
+            if ((l% (int) nStep/noutput) == 0){
+                lout(j) = l;
+                j++;
+            }
+        }
         // sample result
         Array2D<double> stat1(2,nStep+1,0.e0);
         Array2D<double> stat2(2,nStep+1,0.e0);
@@ -508,18 +516,18 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
         initial_GS(1) = temp;
         myPCSet.InitMeanStDv(sample_mstd_2D(0,0),sample_mstd_2D(0,1),1,initial_GS(0));
         myPCSet.InitMeanStDv(sample_mstd_2D(1,0),sample_mstd_2D(1,1),2,initial_GS(1));
-        Array2D<double> AAPG_sol_sample_1=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, sol_1_assembled, samPts_norm, stat1, e_sample(0));
+        Array2D<double> AAPG_sol_sample_1=sampleGS(lout,dim, nStep, nPCTerms, myPCSet, sol_1_assembled, samPts_norm, stat1, e_sample(0));
         ostringstream s;
         s << "AAPG" << name << "sample_1"<<".dat";
         write_datafile(AAPG_sol_sample_1,s.str().c_str());
         if (AAPG_ord >= 2){
-            Array2D<double> AAPG_sol_sample_2=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, sol_2_assembled, samPts_norm, stat2, e_sample(1));
+            Array2D<double> AAPG_sol_sample_2=sampleGS(lout,dim, nStep, nPCTerms, myPCSet, sol_2_assembled, samPts_norm, stat2, e_sample(1));
             ostringstream s2;
             s2 << "AAPG" << name << "sample_2"<<".dat";
             write_datafile(AAPG_sol_sample_2,s2.str().c_str());
         }
         if (AAPG_ord >= 3){
-            Array2D<double> AAPG_sol_sample_3=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, sol_3_assembled, samPts_norm, stat3, e_sample(2));
+            Array2D<double> AAPG_sol_sample_3=sampleGS(lout,dim, nStep, nPCTerms, myPCSet, sol_3_assembled, samPts_norm, stat3, e_sample(2));
             ostringstream s3;
             s3 << "AAPG" << name << "sample_3"<<".dat";
             write_datafile(AAPG_sol_sample_3,s3.str().c_str());
