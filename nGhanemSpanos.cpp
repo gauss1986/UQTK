@@ -272,7 +272,7 @@ void dev_nGS(int dof, PCSet& myPCSet, Array1D<Array1D<double> >& force, Array1D<
     return;
 }
 
-Array2D<double> postprocess_nGS(int dof, int nStep,  Array1D<Array2D<double> >& solution, PCSet& myPCSet, double dTym, int ord,Array2D<double>& mean_MCS, Array2D<double>& std_MCS, Array2D<double>& e2){
+Array2D<double> postprocess_nGS(int dof, int nStep,  Array1D<Array2D<double> >& solution, PCSet& myPCSet, double dTym, int ord,Array2D<double>& mean_MCS, Array2D<double>& std_MCS, Array1D<Array2D<double> >& mstd_dis, Array1D<Array2D<double> >& mstd_vel, Array2D<double>& e2, Array1D<double>& e3){
     int nPCTerms = myPCSet.GetNumberPCTerms();
     // Open files to write out solutions
     ostringstream s1;
@@ -307,9 +307,15 @@ Array2D<double> postprocess_nGS(int dof, int nStep,  Array1D<Array2D<double> >& 
         getCol(solution(j),0,temp2);
         mean_v.replaceCol(temp2,j);
         mean.replaceCol(temp2,j);
+        mstd_vel(j).replaceRow(temp2,0);
         getCol(solution(j),nPCTerms,temp2);
         mean_u.replaceCol(temp2,j);
         mean.replaceCol(temp2,dof+j);
+        mstd_dis(j).replaceRow(temp2,0);
+        getCol(StDv_u,j,temp2);
+        mstd_dis(j).replaceRow(temp2,1);
+        getCol(StDv_v,j,temp2);
+        mstd_vel(j).replaceRow(temp2,1);
     }
     
     write_datafile(mean,m.c_str());
@@ -320,12 +326,12 @@ Array2D<double> postprocess_nGS(int dof, int nStep,  Array1D<Array2D<double> >& 
     ostringstream info;
     info << "GS_"<<ord << "_d"<< dTym;
     string info_str = info.str();
-    Array2D<double> e =  nerror(info_str, dof, nStep, et,mean,StDv,mean_MCS,std_MCS, e2);
+    Array2D<double> e =  nerror(info_str, dof, nStep, et,mean,StDv,mean_MCS,std_MCS, e2, e3);
 
     return(e);
 }
     
-Array2D<double> nerror(string info, int dof, int nStep, Array1D<Array2D<double> >& et,Array2D<double>& mean,Array2D<double>& StDv, Array2D<double>& mean_MCS, Array2D<double>& std_MCS, Array2D<double>& e2){
+Array2D<double> nerror(string info, int dof, int nStep, Array1D<Array2D<double> >& et,Array2D<double>& mean,Array2D<double>& StDv, Array2D<double>& mean_MCS, Array2D<double>& std_MCS, Array2D<double>& e2, Array1D<double>& e3_norm){
     Array2D<double> e(dof,4,0.e0);
     Array2D<double> temp(dof,4,0.e0);
 
@@ -359,6 +365,32 @@ Array2D<double> nerror(string info, int dof, int nStep, Array1D<Array2D<double> 
         string name_str = name.str();
         write_datafile(error,name_str.c_str());
     }
+
+    Array2D<double> e3(4,nStep+1,0.e0);
+    for (int ix=1;ix<nStep+1;ix++){
+        for (int i=0;i<dof;i++){
+            double temp1 = abs(mean(ix,i+dof)-mean_MCS(ix,i+dof));
+            e3(0,ix)+=temp1*temp1;
+            double temp2 = abs(StDv(ix,i+dof)-std_MCS(ix,i+dof));
+            e3(1,ix)+=temp2*temp2;
+            double temp3 = abs(mean_MCS(ix,i+dof));
+            e3(2,ix)+=temp3*temp3;
+            double temp4 = abs(std_MCS(ix,i+dof));
+            e3(3,ix)+=temp4*temp4;
+        }
+        e3(0,ix)=sqrt(e3(0,ix));
+        e3(1,ix)=sqrt(e3(1,ix));
+        e3(2,ix)=sqrt(e3(2,ix));
+        e3(3,ix)=sqrt(e3(3,ix));
+    }
+    Array1D<double> temp_e3(nStep+1,0.e0);
+    getRow(e3,0,temp_e3); 
+    Array1D<double> temp_e3_2(nStep+1,0.e0);
+    getRow(e3,2,temp_e3_2); 
+    e3_norm(0)=sum(temp_e3)/sum(temp_e3_2);
+    getRow(e3,1,temp_e3); 
+    getRow(e3,3,temp_e3_2); 
+    e3_norm(1)=sum(temp_e3)/sum(temp_e3_2);
     
     ostringstream name2;
     name2 << "e2_" << info << ".dat";

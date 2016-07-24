@@ -18,6 +18,7 @@
 #include "KL.h"
 #include "nMCS.h"
 #include "nGhanemSpanos.h"
+#include "GhanemSpanos.h"
 #include "AAPG.h"
 #include "nAAPG.h"
 #include "ticktock.h"
@@ -44,6 +45,7 @@ int main(int argc, char *argv[]){
         initial_sigma(i)=0.1;
         initial_sigma(dof+i)=0.5;
     } 
+    bool PDF = true;
 
     // epsilon
     //Array1D<double>  epsilon_mean(dof,1e4);
@@ -51,12 +53,15 @@ int main(int argc, char *argv[]){
     double e2 = 0.1;
     /* Read the user input */
     int c;
-    while ((c=getopt(argc,(char **)argv,"r:g:d:e:m:N:"))!=-1){
+    while ((c=getopt(argc,(char **)argv,"r:g:G:d:e:m:N:"))!=-1){
         switch (c) {
         case 'r':
             refine = (strtod(optarg, (char **)NULL));
             break;
         case 'g':
+            ord_GS = (strtod(optarg, (char **)NULL));
+            break;
+        case 'G':
             ord_AAPG_GS = (strtod(optarg, (char **)NULL));
             break;
         case 'd':
@@ -78,6 +83,8 @@ int main(int argc, char *argv[]){
     cout << "e_sigma=" << e2 << endl;
     cout << "nspl=" << nspl << endl;
     cout << "dTym=" << dTym << endl;
+    cout << "ord_GS=" << ord_GS << endl;
+    cout << "ord_AAPG=" << ord_AAPG << endl;
     cout << "ord_AAPG_GS=" << ord_AAPG_GS << endl;
     cout << "AAPG1 is refined by "<< refine << " times" << endl;
     Array1D<double>  epsilon_mean(dof,e1);
@@ -300,12 +307,8 @@ int main(int argc, char *argv[]){
             }
         }
     }
-    ostringstream nameMCS;
-    nameMCS << "mean_MCS_eps" << e1 << ".dat";
-    string nameMCS_str = nameMCS.str();
-    write_datafile(mean_MCS,nameMCS_str.c_str());
-    //write_datafile(mean_MCS,"mean_MCS_n.dat");
-    write_datafile(std_MCS,"std_MCS_n.dat");
+    write_datafile(mean_MCS,"m_MCS.dat");
+    write_datafile(std_MCS,"s_MCS.dat");
    
     /////////////---GS---///////////// 
     //Array1D<Array2D<double> > mstd_MCS(dof);
@@ -314,6 +317,8 @@ int main(int argc, char *argv[]){
     Array1D<Array1D<double> > initial_GS(dof); // Initial conditions
     Array1D<Array1D<double> > epsilon_GS(dof);
     Array1D<Array1D<Array1D<double> > > mck_GS(3);
+    Array1D<Array1D<double> > e_GS_sample_dis(ord_GS);
+    Array1D<Array1D<double> > e_GS_sample_vel(ord_GS);
     for (int ord=1;ord<=ord_GS;ord++){
         // Generate PCSet
         TickTock tt;
@@ -380,7 +385,15 @@ int main(int argc, char *argv[]){
         cout << "Order " << ord << " finished." <<endl; 
         // Post-process the solution
         Array2D<double> e2(dof,4,0.e0);
-        Array2D<double> e_GS = postprocess_nGS(dof,nStep,uv_solution,myPCSet,dTym,ord,mean_MCS,std_MCS,e2);
+        Array1D<double> e3(2,0.e0);
+        Array1D<Array2D<double> > mstd_dis(dof);
+        Array1D<Array2D<double> > mstd_vel(dof);
+        for (int i=0;i<dof;i++){
+            Array2D<double> mstd_sdof(2,nStep+1,0.e0);
+            mstd_dis(i) = mstd_sdof;
+            mstd_vel(i) = mstd_sdof;
+        }
+        Array2D<double> e_GS = postprocess_nGS(dof,nStep,uv_solution,myPCSet,dTym,ord,mean_MCS,std_MCS,mstd_dis,mstd_vel,e2,e3);
         // print out the error
         cout << "Error kind 1 is" << endl;
         for (int i=0;i<dof;i++){
@@ -394,6 +407,41 @@ int main(int argc, char *argv[]){
         name << "e_GS_" << ord << "_d_"<<dTym<<".dat";
         string name_str = name.str();
         write_datafile(e_GS,name_str.c_str());
+
+        cout << "Error kind new is" << endl;
+        cout << "E_mean=" << e3(0) <<", E_std=" << e3(1) << endl;
+        ostringstream name2;
+        name2 << "errornew_GS" << ord <<".dat";
+        string name_str2 = name2.str();
+        write_datafile_1d(e3,name_str2.c_str());
+
+        if (PDF){ 
+        for (int j=0;j<dof;j++){
+            cout << "Sampling dis on dof "<<j <<"..."<< endl;
+            Array2D<double> dis(nStep+1,nPCTerms,0.e0);
+            Array2D<double> vel(nStep+1,nPCTerms,0.e0);
+            Array2D<double> uv_solution_temp = uv_solution(j);
+            for (int k=0;k<nPCTerms;k++){
+                Array1D<double> temp(nStep+1,0.e0);
+                getCol(uv_solution_temp,k,temp);
+                vel.replaceCol(temp,k);
+                getCol(uv_solution_temp,k+nPCTerms,temp);
+                dis.replaceCol(temp,k);
+            }
+            Array2D<double> GS_dis_sampt=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, dis, samPts_norm, mstd_dis(j), e_GS_sample_dis(ord-1));
+            Array2D<double> GS_vel_sampt=sampleGS(noutput,dim, nStep, nPCTerms, myPCSet, vel, samPts_norm, mstd_vel(j), e_GS_sample_vel(ord-1));
+            ostringstream s2;
+            s2 << "GS_sample_error_dis" << ord<< "dof"<<j<<".dat";
+            string SoluGSsample(s2.str());
+            write_datafile(GS_dis_sampt,SoluGSsample.c_str());
+            ostringstream s3;
+            s3 << "GS_sample_error_vel" << ord<<"dof"<<j<<".dat";
+            string SoluGSsample_vel(s3.str());
+            write_datafile(GS_vel_sampt,SoluGSsample_vel.c_str());
+            cout << "GS dis sample error for ord " << ord << " on dof " << j << " is em="<<e_GS_sample_dis(ord)(0) <<", es= "<< e_GS_sample_dis(ord)(1)<< endl;
+            cout << "GS vel sample error for ord " << ord << " on dof " << j << " is em="<<e_GS_sample_vel(ord)(0) <<", es= "<< e_GS_sample_vel(ord)(1)<< endl;
+            }
+        }
     }
 
     write_datafile_1d(time,"t_nMCSGS.dat");

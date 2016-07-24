@@ -384,13 +384,15 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, int nout
     
     // Compute the error compare to MCS
     Array2D<double> e2_AAPG1(dof,4,0.e0);
+    Array1D<double> e3_AAPG1(2,0.e0);
     string info = "AAPG1";
     Array1D<Array2D<double> > et_AAPG1(dof);
-    Array2D<double> e1_AAPG1 =  nerror(info,dof,nStep,et_AAPG1,m1,std1,mean_MCS,std_MCS,e2_AAPG1);
+    Array2D<double> e1_AAPG1 =  nerror(info,dof,nStep,et_AAPG1,m1,std1,mean_MCS,std_MCS,e2_AAPG1,e3_AAPG1);
     string info2 = "AAPG2";
     Array2D<double> e2_AAPG2(dof,4,0.e0);
+    Array1D<double> e3_AAPG2(2,0.e0);
     Array1D<Array2D<double> > et_AAPG2(dof);
-    Array2D<double> e1_AAPG2 =  nerror(info2,dof,nStep,et_AAPG2,m2,std2,mean_MCS,std_MCS,e2_AAPG2);
+    Array2D<double> e1_AAPG2 =  nerror(info2,dof,nStep,et_AAPG2,m2,std2,mean_MCS,std_MCS,e2_AAPG2,e3_AAPG2);
 
     // print out the error
     cout << "AAPG1 Error kind 1 is" << endl;
@@ -409,11 +411,16 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, int nout
     for (int i=0;i<dof;i++){
         cout << "Dof " << i << ", m_v:" << e2_AAPG2(i,0) << ",s_v:" << e2_AAPG2(i,1) << "," <<",m_u:" << e2_AAPG2(i,2) << ",s_u:"<<e2_AAPG2(i,3) << "." << endl;
     }
+    cout << "Error kind new is" << endl;
+    cout << "E1_mean=" << e3_AAPG1(0) <<", E1_std=" << e3_AAPG1(1) << endl;
+    cout << "E2_mean=" << e3_AAPG2(0) <<", E2_std=" << e3_AAPG2(1) << endl;
+    write_datafile_1d(e3_AAPG1,"errornew_AAPG1.dat");
+    write_datafile_1d(e3_AAPG2,"errornew_AAPG2.dat");
 
-    write_datafile(m1,"m1.dat");
-    write_datafile(std1,"s1.dat");
-    write_datafile(m2,"m2.dat");
-    write_datafile(std2,"s2.dat");
+    write_datafile(m1,"m_AAPG1.dat");
+    write_datafile(std1,"s_AAPG1.dat");
+    write_datafile(m2,"m_AAPG2.dat");
+    write_datafile(std2,"s_AAPG2.dat");
     ostringstream name1;
     name1<< "e1_AAPG1_" << refine <<".dat";
     string name1_str = name1.str();
