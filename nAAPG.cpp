@@ -15,10 +15,8 @@
 #include "nGhanemSpanos.h"
 #include "ticktock.h"
 
-void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, int noutput, double factor_OD, int AAPG_ord, bool act_D, Array1D<double>& fbar, Array1D<double>& fbar_fine,double dTym, Array1D<double>& epsilon_mean, string pcType, Array2D<double>& scaledKLmodes,Array2D<double>& scaledKLmodes_fine, Array2D<double>& stat_e,  Array2D<double>& stat_i, Array2D<double>& stat_m, Array2D<double>& stat_c, Array2D<double>& stat_k, Array1D<double>& normsq, Array2D<double>& mean_MCS, Array2D<double>& std_MCS, Array1D<Array2D<double> >& mck){
-    Array2D<double> samPts_norm(2,2,0.e0);
-    bool PDF = false;
-    Array1D<Array1D<double> > e_sample;
+void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<int>& lout, double factor_OD, int AAPG_ord, bool act_D, Array1D<double>& fbar, Array1D<double>& fbar_fine,double dTym, Array1D<double>& epsilon_mean, string pcType, Array2D<double>& scaledKLmodes,Array2D<double>& scaledKLmodes_fine, Array2D<double>& stat_e,  Array2D<double>& stat_i, Array2D<double>& stat_m, Array2D<double>& stat_c, Array2D<double>& stat_k, Array1D<double>& normsq, Array2D<double>& mean_MCS, Array2D<double>& std_MCS, Array1D<Array2D<double> >& mck, bool PDF, Array2D<double>& samPts_norm){
+    Array1D<Array1D<double> > e_sample(AAPG_ord);
 
     // timing var
     Array1D<double> t(6,0.e0);
@@ -353,10 +351,12 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, int nout
     Array2D<double> std3(nStep+1,2*dof,0.e0);
  
     printf("Assemble the solutions...\n");
-    string name = "disvel";
     tt.tick();
     for (int i=0;i<dof*2;i++){
         cout << "DOF " << i << endl;
+        ostringstream name1;
+        name1<< "disvel_dof" << i;
+        string name = name1.str();
         Array1D<double> uv0_temp(nStep+1,0.e0);
         getCol(uv_0,i,uv0_temp);
         Array1D<double> m1_temp(uv0_temp);
@@ -371,7 +371,7 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, int nout
         mstd_MCS.replaceCol(MCS_temp,0);
         getCol(std_MCS,i,MCS_temp);
         mstd_MCS.replaceCol(MCS_temp,1);
-        PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, uv0_temp, uv_1(i), uv_2(i), uv_3, m1_temp, m2_temp, m3_temp, s1_temp, s2_temp, s3_temp, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, factor_OD, mstd_MCS, samPts_norm, name, noutput, e_sample, PDF, pcType,stat_i);
+        PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, uv0_temp, uv_1(i), uv_2(i), uv_3, m1_temp, m2_temp, m3_temp, s1_temp, s2_temp, s3_temp, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, factor_OD, mstd_MCS, samPts_norm, name, lout, e_sample, PDF, pcType,stat_i);
         m1.replaceCol(m1_temp,i);
         m2.replaceCol(m2_temp,i);
         m3.replaceCol(m3_temp,i);

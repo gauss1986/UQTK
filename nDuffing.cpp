@@ -485,7 +485,7 @@ int main(int argc, char *argv[]){
             normsq(ipc) *= norms1d(Pbtot(ipc,id));
    
     cout << "AAPG..." << endl;
-    nAAPG(refine,dof,nkl,dim,nStep,ord_AAPG_GS,noutput,factor_OD,ord_AAPG,act_D,fbar,fbar_fine,dTym,epsilon_mean,pcType,scaledKLmodes,scaledKLmodes_fine,stat_e,stat_i,stat_m,stat_c,stat_k,normsq,mean_MCS,std_MCS,mck);
+    nAAPG(refine,dof,nkl,dim,nStep,ord_AAPG_GS,lout,factor_OD,ord_AAPG,act_D,fbar,fbar_fine,dTym,epsilon_mean,pcType,scaledKLmodes,scaledKLmodes_fine,stat_e,stat_i,stat_m,stat_c,stat_k,normsq,mean_MCS,std_MCS,mck,PDF,samPts_norm);
 
     return 0;
 }
