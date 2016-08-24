@@ -43,20 +43,20 @@ int main(int argc, char *argv[])
     int nspl=1000000;       //MCS sample size
     string pcType;  //PC type
     double epsilon = 1;
-    double sigma = 2.5;   //Standard deviation
+    double sigma = 2;   //Standard deviation
     double dTym = 0.01;
     int ord_AAPG_GS = 2;//GS order in AAPG subproblems
     int dim;        //Stochastic dimensionality
     int nkl;        //Number of terms retained in KL expansion
     char* cov_type; //Covariance type
-    bool act_D=true;     //wheather doing AAPG adaptive or not
+    bool act_D=false;     //wheather doing AAPG adaptive or not
     double dof;     //Spatial dof
     int noutput;    //Number of output points
     double clen;    // Correlation length of the random process
     Array1D<double> inpParams(5,0.e0);//Input parameters
     Array1D<int> init_D(2,0);
     Array1D<int> coeff_D(2,0);
-    bool PDF=true;       //control coeff for outputing PDF
+    bool PDF=false;       //control coeff for outputing PDF
 
     /* Read the user input */
     int c;
@@ -132,18 +132,18 @@ int main(int argc, char *argv[])
     if (CASE==2){//Stochastic forcing and deterministic initial conditions
         pcType = "LU";
         clen = 0.05;
-        dim = 100;
-        nkl = 100;
+        dim = 50;
+        nkl = 50;
         cov_type = (char *)"Exp";
         //sigma = 2.5;
         factor_OD = 1.0;
-        ord_GS = 1;
-        ord_AAPG = 2;
+        ord_GS = 2;
+        ord_AAPG = 3;
         //ord_AAPG_GS = 3;
         //act_D = false;
         p = 0.99;
         dof = 2;
-        noutput = 10;
+        noutput = 2;
         inpParams(0) = 0.0;//Problem to solve 
         inpParams(1) = 0.1;//zeta
         inpParams(2) = epsilon;//epsilon
@@ -493,6 +493,14 @@ int main(int argc, char *argv[])
     Array2D<double> e_GS(ord_GS,2);
     Array1D<Array1D<double> > e_GS_sample(ord_GS);
     Array1D<Array1D<double> > e_GS_sample_vel(ord_GS);
+    Array1D<int> lout(noutput+1,0);
+    int j=0;
+    for (int l=0;l<nStep+1;l++){
+        if ((l% (int) nStep/noutput) == 0){
+            lout(j) = l;
+            j++;
+        }
+    }
     for(int ord=1;ord<ord_GS+1;ord++){
     	tt.tick();
 	    PCSet myPCSet("ISP",ord,dim,pcType,0.0,1.0); 
@@ -570,14 +578,6 @@ int main(int argc, char *argv[])
         //cout << "Normsq 2=" <<normsq(2)<<endl;
 
         if (PDF){ 
-        Array1D<int> lout(noutput+1,0);
-        int j=0;
-        for (int l=0;l<nStep+1;l++){
-            if ((l% (int) nStep/noutput) == 0){
-                lout(j) = l;
-                j++;
-            }
-        }
         cout << "Sampling dis..."<< endl;
         Array2D<double> GS_dis_sampt=sampleGS(lout,dim, nStep, nPCTerms, myPCSet, result(1), samPts_norm, stat_GS, e_GS_sample(ord-1));
         ostringstream s2;

@@ -146,7 +146,7 @@ int main(int argc, char *argv[]){
     Array2D<double> scaledKLmodes_fine(2*nStep_fine+1,nkl,0.e0);
     if (nkl>0){
         cout << "Generating KL..." << endl;
-        double clen = 0.1;//was 0.1
+        double clen = 0.05;//was 0.1
         double sigma=0.4;//was 0.8
         char* cov_type = (char *)"Exp";
         //genKL(scaledKLmodes, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
