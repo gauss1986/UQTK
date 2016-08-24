@@ -395,8 +395,8 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
 }
 
 void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, int AAPG_ord, Array1D<double>& sol_0, Array1D<Array2D<double> >& sol_1, Array2D<Array2D<double> >& sol_2, Array3D<Array2D<double> >& sol_3, Array1D<double>& sol_1_mean, Array1D<double>& sol_2_mean, Array1D<double>& sol_3_mean, Array1D<double>& std1, Array1D<double>& std2, Array1D<double>& std3, int dim, int nStep, int PCTerms_1, int PCTerms_2, int PCTerms_3, int order, double dTym, double factor_OD, Array2D<double>& mstd_MCS, Array2D<double>& samPts_norm, string name, Array1D<int>& lout, Array1D<Array1D<double> >& e_sample, bool PDF, string pcType, Array2D<double>& sample_mstd_2D){
-    TickTock tt;
-    tt.tick();
+    //TickTock tt;
+    //tt.tick();
     // Post-process the AAPG solutions
     // initialization
     int nAAPGTerms = 1+dim+dim*(dim-1)/2+dim*(dim-1)*(dim-2)/6;
@@ -409,13 +409,13 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     Array2D<double> coeffAAPG2(1+dim+dim*(dim-1)/2,nStep+1,1.0);
     Array2D<double> coeffAAPG3(nAAPGTerms,nStep+1,1.0);
 
-    tt.tock("Initialization Took");
+    //tt.tock("Initialization Took");
  
     // assemble and save the mean values
-    printf("Assembling the mean...\n");
-    tt.tick();
+    //printf("Assembling the mean...\n");
+    //tt.tick();
     assemblemean(indi_2, indj_2, indi_3, indj_3, indk_3, sol_0, sol_1, sol_2, sol_3, dim, nStep, AAPG_ord, sol_1_mean, sol_2_mean, sol_3_mean, coeffAAPG1, coeffAAPG2, coeffAAPG3);
-    tt.tock("Assemble mean took");   
+    //tt.tock("Assemble mean took");   
  
     // add the mean to the assembled solution
     sol_1_assembled.replaceCol(sol_1_mean,0);
@@ -423,10 +423,10 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     sol_3_assembled.replaceCol(sol_3_mean,0); 
 
     // assemble the rest PC terms
-    printf("Assembling the rest...\n");
-    tt.tick();
+    //printf("Assembling the rest...\n");
+    //tt.tick();
     assemblerest(indi_2, indj_2, indi_3, indj_3, indk_3, sol_1, sol_2, sol_3, sol_1_assembled, sol_2_assembled, sol_3_assembled, PCTerms_1, PCTerms_2, PCTerms_3, dim, order, nStep, AAPG_ord, coeffAAPG1, coeffAAPG2, coeffAAPG3);
-    tt.tock("Assemble rest took");    
+    //tt.tock("Assemble rest took");    
 
 
     // output sol_1_assembled for debug
@@ -470,10 +470,10 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     write_datafile_1d(normsq,"normsq.dat");
 
     // compute and print the std values
-    printf("Computing the std...\n");
-    tt.tick();
+    //printf("Computing the std...\n");
+    //tt.tick();
     computeStd(nStep, nPCTerms, sol_1_assembled,sol_2_assembled, sol_3_assembled, normsq, std1, std2, std3);
-    tt.tock("Compute std took");
+    //tt.tock("Compute std took");
 
 
     if (PDF){
@@ -677,14 +677,14 @@ void assemblemean(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
 
 void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, Array1D<Array2D<double> >& sol_1, Array2D<Array2D<double> >& sol_2, Array3D<Array2D<double> >& sol_3, Array2D<double>& sol_1_assembled, Array2D<double>& sol_2_assembled, Array2D<double>& sol_3_assembled, int PCTerms_1, int PCTerms_2, int PCTerms_3, int dim, int order, int nStep, int AAPG_ord, Array2D<double>& coeff1, Array2D<double>& coeff2, Array2D<double>& coeff3){
 
-    printf("Computing the index...\n");
+    //printf("Computing the index...\n");
     Array2D<int> ind1(PCTerms_1,dim,0);
     Array2D<Array1D<int> > ind2(dim,dim);
     Array3D<Array1D<int> > ind3(dim,dim,dim);
     index(dim, order, PCTerms_1, PCTerms_2, PCTerms_3, ind1, ind2, ind3);
 
     // Assemble first order AAPG solutions
-    printf("Assembling the first order terms...\n");
+    //printf("Assembling the first order terms...\n");
     for (int i=0;i<dim;i++){
         for (int j=1;j<PCTerms_1;j++){
             // retrieve the col-index on the global PC matrix
@@ -696,7 +696,7 @@ void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
     }
         
     // Assemble second order AAPG solutions
-    printf("Assembling the second order terms...\n");
+    //printf("Assembling the second order terms...\n");
     sol_2_assembled = sol_1_assembled;
     int n = dim+1;
     Array1D<double> coeffn(nStep+1,0.e0);
@@ -724,7 +724,7 @@ void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
     // Assemble third order AAPG solutions
     sol_3_assembled = sol_2_assembled;
     if (AAPG_ord >= 3){
-        printf("Assembling the third order terms...\n");
+        //printf("Assembling the third order terms...\n");
         for (unsigned int ii=0;ii<indi_3.XSize();ii++){
                     // retrieve the index in the global matrix
                     Array1D<int> ind = ind3(indi_3(ii),indj_3(ii),indk_3(ii));

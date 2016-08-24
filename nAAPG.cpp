@@ -16,10 +16,9 @@
 #include "ticktock.h"
 
 void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<int>& lout, double factor_OD, int AAPG_ord, bool act_D, Array1D<double>& fbar, Array1D<double>& fbar_fine,double dTym, Array1D<double>& epsilon_mean, string pcType, Array2D<double>& scaledKLmodes,Array2D<double>& scaledKLmodes_fine, Array2D<double>& stat_e,  Array2D<double>& stat_i, Array2D<double>& stat_m, Array2D<double>& stat_c, Array2D<double>& stat_k, Array1D<double>& normsq, Array2D<double>& mean_MCS, Array2D<double>& std_MCS, Array1D<Array2D<double> >& mck, bool PDF, Array2D<double>& samPts_norm){
-    Array1D<Array1D<double> > e_sample(AAPG_ord);
 
     // timing var
-    Array1D<double> t(6,0.e0);
+    Array1D<double> t(5,0.e0);
     
     // Compute zeroth-order solution
     printf("Zeroth-order term...\n");
@@ -333,7 +332,7 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<
     }
     }
     tt.tock("Took");
-    t(1)=tt.silent_tock();
+    t(2)=tt.silent_tock();
 
     // Third order term
     Array3D<Array2D<double> > uv_3(dim,dim,dim); 
@@ -352,8 +351,12 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<
  
     printf("Assemble the solutions...\n");
     tt.tick();
+    #pragma omp parallel default(none) shared(indi_2,indj_2,indi_3,indj_3,indk_3,AAPG_ord,uv_1,uv_2,uv_3,dim,nStep,PCTerms_1,PCTerms_2,PCTerms_3,order,dTym,factor_OD,samPts_norm,lout,PDF,pcType,stat_i,dof,uv_0,mean_MCS,std_MCS,m1,m2,m3,std1,std2,std3)
+    {
+    #pragma omp for
     for (int i=0;i<dof*2;i++){
-        cout << "DOF " << i << endl;
+        //cout << "DOF " << i << endl;
+        printf("DOF %d\n",i);
         ostringstream name1;
         name1<< "disvel_dof" << i;
         string name = name1.str();
@@ -367,17 +370,21 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<
         Array1D<double> s3_temp(nStep+1,0.e0);
         Array2D<double> mstd_MCS(nStep+1,2,0.e0);
         Array1D<double> MCS_temp(nStep+1,0.e0);
+        Array1D<Array1D<double> > e_sample(AAPG_ord);
         getCol(mean_MCS,i,MCS_temp);
         mstd_MCS.replaceCol(MCS_temp,0);
         getCol(std_MCS,i,MCS_temp);
         mstd_MCS.replaceCol(MCS_temp,1);
         PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, uv0_temp, uv_1(i), uv_2(i), uv_3, m1_temp, m2_temp, m3_temp, s1_temp, s2_temp, s3_temp, dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, factor_OD, mstd_MCS, samPts_norm, name, lout, e_sample, PDF, pcType,stat_i);
-        m1.replaceCol(m1_temp,i);
-        m2.replaceCol(m2_temp,i);
-        m3.replaceCol(m3_temp,i);
-        std1.replaceCol(s1_temp,i);
-        std2.replaceCol(s2_temp,i);
-        std3.replaceCol(s3_temp,i);
+        for (int j=0;j<nStep+1;j++){
+            m1(j,i)=m1_temp(j);
+            m2(j,i)=m2_temp(j);
+            m3(j,i)=m3_temp(j);
+            std1(j,i)=s1_temp(j);
+            std2(j,i)=s2_temp(j);
+            std3(j,i)=s3_temp(j);
+        }
+    }
     }
     tt.tock("Took");
     t(4)=tt.silent_tock();
@@ -440,6 +447,7 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<
     write_datafile(e2_AAPG2,name4_str.c_str());
     write_datafile(et_AAPG2(0),"etat0_AAPG2.dat");
  
+    write_datafile_1d(t,"t_AAPG.dat");
     return;
 }
 
