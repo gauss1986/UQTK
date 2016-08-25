@@ -25,14 +25,14 @@
 
 int main(int argc, char *argv[]){
 
-    int dof=2;
+    int dof=10;
     int ord_GS=1;
     int ord_AAPG=2;
     int ord_AAPG_GS=2;
     int refine = 1;
     bool act_D = false;
     Array1D<double> time(1+ord_GS,0.e0);
-    int nkl=3;
+    int nkl=10;
     int dim=nkl+6*dof;// set epsilon to be stochastic coeffs on each dof
     int nspl =100000;
     int factor_OD = 0.99;
@@ -44,7 +44,7 @@ int main(int argc, char *argv[]){
         initial_sigma(i)=0.1;
         initial_sigma(dof+i)=0.5;
     } 
-    bool PDF = true;
+    bool PDF = false;
 
     // epsilon
     //Array1D<double>  epsilon_mean(dof,1e4);
@@ -79,9 +79,9 @@ int main(int argc, char *argv[]){
     }
     Array1D<int> lout(4,0);
     lout(0) = 0;
-    lout(1) = 7.2/dTym;
-    lout(2) = 7.8/dTym;
-    lout(3) = 9.4/dTym;
+    lout(1) = 6.4/dTym;
+    lout(2) = 7.2/dTym;
+    lout(3) = 9.2/dTym;
     int noutput = lout.XSize();
     e1=e1;
     cout << "epsilon_mean=" << e1 << endl;
