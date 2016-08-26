@@ -329,8 +329,7 @@ int main(int argc, char *argv[]){
             
     write_datafile(mean_MCS,"m_MCS.dat");
     write_datafile(std_MCS,"s_MCS.dat");
-    result_MCS.Clear();   
-
+   
     /////////////---GS---///////////// 
     //Array1D<Array2D<double> > mstd_MCS(dof);
     cout << "Starting GS..." << endl;

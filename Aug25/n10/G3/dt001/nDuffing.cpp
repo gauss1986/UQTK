@@ -44,7 +44,7 @@ int main(int argc, char *argv[]){
         initial_sigma(i)=0.1;
         initial_sigma(dof+i)=0.5;
     } 
-    bool PDF = false;
+    bool PDF = true;
 
     // epsilon
     //Array1D<double>  epsilon_mean(dof,1e4);
@@ -329,8 +329,7 @@ int main(int argc, char *argv[]){
             
     write_datafile(mean_MCS,"m_MCS.dat");
     write_datafile(std_MCS,"s_MCS.dat");
-    result_MCS.Clear();   
-
+   
     /////////////---GS---///////////// 
     //Array1D<Array2D<double> > mstd_MCS(dof);
     cout << "Starting GS..." << endl;
