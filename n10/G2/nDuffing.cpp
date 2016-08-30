@@ -79,9 +79,9 @@ int main(int argc, char *argv[]){
     }
     Array1D<int> lout(4,0);
     lout(0) = 0;
-    lout(1) = 7.5/dTym;
-    lout(2) = 8.1/dTym;
-    lout(3) = 8.8/dTym;
+    lout(1) = 5.1/dTym;
+    lout(2) = 7.5/dTym;
+    lout(3) = 8.9/dTym;
     int noutput = lout.XSize();
     e1=e1;
     cout << "epsilon_mean=" << e1 << endl;

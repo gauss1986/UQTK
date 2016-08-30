@@ -178,10 +178,11 @@ void RHS_GS(int dof, PCSet& myPCSet, Array1D<double>& force, Array1D<Array1D<dou
         }
 }
 
-Array1D<double> postprocess_GS(int noutput, int nPCTerms, int nStep,  Array2D<double>& solution, PCSet& myPCSet, double dTym, FILE* GS_dump, FILE* GSstat_dump, Array2D<double>& mstd_MCS, Array2D<double>& stat, Array2D<double>& et){
+Array1D<double> postprocess_GS(Array1D<int>& lout, int nPCTerms, int nStep,  Array2D<double>& solution, PCSet& myPCSet, double dTym, FILE* GS_dump, FILE* GSstat_dump, Array2D<double>& mstd_MCS, Array2D<double>& stat, Array2D<double>& et){
     // Output solution (mean and std) 
     Array1D<double> temp(nPCTerms,0.e0);
     Array1D<double> StDv(nStep+1,0.e0);
+    unsigned int k=0;
     for (int i=0;i<nStep+1;i++){
         getRow(solution,i,temp);
         StDv(i) = myPCSet.StDv(temp);
@@ -189,8 +190,10 @@ Array1D<double> postprocess_GS(int noutput, int nPCTerms, int nStep,  Array2D<do
         WriteModesToFilePtr(i, temp.GetArrayPointer(), nPCTerms, GS_dump);
         // Write dis (mean and std) to file and screen
         WriteMeanStdDevToFilePtr(i,temp(0),StDv(i),GSstat_dump);
-        if (i % ((int) nStep/noutput) == 0){
+        //if (i % ((int) nStep/noutput) == 0){
+        if (k<lout.XSize() && i == lout(k)){
             WriteMeanStdDevToStdOut(i,i*dTym,temp(0),StDv(i));
+            k++;
         }
     }
 

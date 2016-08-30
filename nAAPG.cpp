@@ -321,6 +321,7 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<
         Array1D<Array2D<double> >  uv_solution(dof);
         // MCS is assumed deterministic for now
         nGS(dof, PCSet_2, epsilon_2(i), mck_2(i), nStep, init_2(i), dTym, force_2(i), uv_solution);
+        //printf("Finished nGS on AAPG2 dof %d\n",i);
         for (int id=0;id<dof;id++){
             for (int iPC=0;iPC<PCTerms_2;iPC++){
                 for (int ix=0;ix<nStep+1;ix++){
@@ -351,7 +352,7 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<
  
     printf("Assemble the solutions...\n");
     tt.tick();
-    #pragma omp parallel default(none) shared(indi_2,indj_2,indi_3,indj_3,indk_3,AAPG_ord,uv_1,uv_2,uv_3,dim,nStep,PCTerms_1,PCTerms_2,PCTerms_3,order,dTym,factor_OD,samPts_norm,lout,PDF,pcType,stat_i,dof,uv_0,mean_MCS,std_MCS,m1,m2,m3,std1,std2,std3)
+     #pragma omp parallel default(none) shared(indi_2,indj_2,indi_3,indj_3,indk_3,AAPG_ord,uv_1,uv_2,uv_3,dim,nStep,PCTerms_1,PCTerms_2,PCTerms_3,order,dTym,factor_OD,samPts_norm,lout,PDF,pcType,stat_i,dof,uv_0,mean_MCS,std_MCS,m1,m2,m3,std1,std2,std3)
     {
     #pragma omp for
     for (int i=0;i<dof*2;i++){
