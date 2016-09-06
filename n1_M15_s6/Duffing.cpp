@@ -53,16 +53,16 @@ int main(int argc, char *argv[])
     double dof;     //Spatial dof
     //int noutput;    //Number of output points
     Array1D<int> lout(4,0);
-    lout(0) = 2/dTym;
+    lout(0) = 0;
     lout(1) = 4/dTym;
-    lout(2) = 6.5/dTym;
-    lout(3) = 9/dTym;
+    lout(2) = 7/dTym;
+    lout(3) = 10/dTym;
     unsigned int noutput = lout.XSize();
     double clen;    // Correlation length of the random process
     Array1D<double> inpParams(5,0.e0);//Input parameters
     Array1D<int> init_D(2,0);
     Array1D<int> coeff_D(2,0);
-    bool PDF=true;       //control coeff for outputing PDF
+    bool PDF=false;       //control coeff for outputing PDF
 
     /* Read the user input */
     int c;
