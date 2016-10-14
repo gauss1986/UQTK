@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
     Array1D<double> inpParams(5,0.e0);//Input parameters
     Array1D<int> init_D(2,0);
     Array1D<int> coeff_D(2,0);
-    bool PDF=false;       //control coeff for outputing PDF
+    bool PDF=true;       //control coeff for outputing PDF
 
     /* Read the user input */
     int c;
@@ -225,8 +225,8 @@ int main(int argc, char *argv[])
     if (CASE==5){//Stochastic zeta and epsilon and stochastic forcing
         pcType = "LU";
         clen = 0.05;
-        dim = 100;
-        nkl = 98;
+        dim = 90;
+        nkl = 88;
         cov_type = (char *)"Exp";
         sigma = 0.5;
         factor_OD = 1.0;

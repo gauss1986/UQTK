@@ -1,0 +1,117 @@
+Intel(R) Advisor can now assist with vectorization and show optimization
+  report messages with your source code.
+See "https://software.intel.com/en-us/intel-advisor-xe" for details.
+
+
+    Report from: Interprocedural optimizations [ipo]
+
+INLINING OPTION VALUES:
+  -inline-factor: 100
+  -inline-min-size: 30
+  -inline-max-size: 230
+  -inline-max-total-size: 2000
+  -inline-max-per-routine: 10000
+  -inline-max-per-compile: 500000
+
+
+Begin optimization report for: print(const char *, double)
+
+    Report from: Interprocedural optimizations [ipo]
+
+DEAD STATIC FUNCTION: (print(const char *, double)) ticktock.cc(14,1)
+
+===========================================================================
+
+Begin optimization report for: std::ios_base::precision(std::ios_base *, std::streamsize)
+
+    Report from: Interprocedural optimizations [ipo]
+
+INLINE REPORT: (std::ios_base::precision(std::ios_base *, std::streamsize)) [4] /usr/include/c++/4.8.5/bits/ios_base.h(631,5)
+
+===========================================================================
+
+Begin optimization report for: std::char_traits<char>::length(const std::char_traits<char>::char_type *)
+
+    Report from: Interprocedural optimizations [ipo]
+
+INLINE REPORT: (std::char_traits<char>::length(const std::char_traits<char>::char_type *)) [7] /usr/include/c++/4.8.5/bits/char_traits.h(259,7)
+  -> EXTERN: (259,16) __builtin_strlen(const char *)
+
+===========================================================================
+
+Begin optimization report for: elapsed_time()
+
+    Report from: Interprocedural optimizations [ipo]
+
+DEAD STATIC FUNCTION: (elapsed_time()) ticktock.cc(23,1)
+
+===========================================================================
+
+Begin optimization report for: TickTock::tick(TickTock *)
+
+    Report from: Interprocedural optimizations [ipo]
+
+INLINE REPORT: (TickTock::tick(TickTock *)) [9] ticktock.cc(30,1)
+  -> INLINE: (32,13) elapsed_time()
+    -> EXTERN: (25,4) gettimeofday(timeval *, timezone *)
+
+===========================================================================
+
+Begin optimization report for: TickTock::tock(const TickTock *, const char *) const
+
+    Report from: Interprocedural optimizations [ipo]
+
+INLINE REPORT: (TickTock::tock(const TickTock *, const char *) const) [10] ticktock.cc(36,1)
+  -> INLINE: (38,5) print(const char *, double)
+    -> (17,19) std::operator<<<std::char_traits<char>>(std::basic_ostream<char, std::char_traits<char>> &, const char *)
+    -> (17,29) std::operator<<<std::char_traits<char>>(std::basic_ostream<char, std::char_traits<char>> &, const char *)
+    -> (17,37) std::operator<<<char, std::char_traits<char>>(std::basic_ostream<char, std::char_traits<char>> &, std::_Setprecision)
+    -> INLINE (MANUAL): (17,58) std::setprecision(int)
+    -> (17,61) std::basic_ostream<char, std::char_traits<char>>::operator<<(std::basic_ostream<char, std::char_traits<char>> *, double)
+    -> (17,67) std::operator<<<std::char_traits<char>>(std::basic_ostream<char, std::char_traits<char>> &, const char *)
+    -> (19,19) std::operator<<<std::char_traits<char>>(std::basic_ostream<char, std::char_traits<char>> &, const char *)
+    -> (19,31) std::operator<<<char, std::char_traits<char>>(std::basic_ostream<char, std::char_traits<char>> &, std::_Setprecision)
+    -> INLINE (MANUAL): (19,52) std::setprecision(int)
+    -> (19,55) std::basic_ostream<char, std::char_traits<char>>::operator<<(std::basic_ostream<char, std::char_traits<char>> *, double)
+    -> (19,61) std::operator<<<std::char_traits<char>>(std::basic_ostream<char, std::char_traits<char>> &, const char *)
+  -> INLINE: (38,19) TickTock::silent_tock(const TickTock *) const
+    -> INLINE: (44,19) elapsed_time()
+      -> EXTERN: (25,4) gettimeofday(timeval *, timezone *)
+
+===========================================================================
+
+Begin optimization report for: TickTock::silent_tock(const TickTock *) const
+
+    Report from: Interprocedural optimizations [ipo]
+
+INLINE REPORT: (TickTock::silent_tock(const TickTock *) const) [11] ticktock.cc(42,1)
+  -> INLINE: (44,19) elapsed_time()
+    -> EXTERN: (25,4) gettimeofday(timeval *, timezone *)
+
+===========================================================================
+
+Begin optimization report for: std::operator|(std::_Ios_Iostate, std::_Ios_Iostate)
+
+    Report from: Interprocedural optimizations [ipo]
+
+DEAD STATIC FUNCTION: (std::operator|(std::_Ios_Iostate, std::_Ios_Iostate)) /usr/include/c++/4.8.5/bits/ios_base.h(158,3)
+
+===========================================================================
+
+Begin optimization report for: std::setprecision(int)
+
+    Report from: Interprocedural optimizations [ipo]
+
+DEAD STATIC FUNCTION: (std::setprecision(int)) /usr/include/c++/4.8.5/iomanip(193,3)
+
+===========================================================================
+
+Begin optimization report for: __sti__$E()
+
+    Report from: Interprocedural optimizations [ipo]
+
+INLINE REPORT: (__sti__$E()) [15] <compiler generated>
+  -> EXTERN: /usr/include/c++/4.8.5/iostream:(74,25) __cxa_atexit()
+  -> EXTERN: /usr/include/c++/4.8.5/iostream:(74,25) std::ios_base::Init::Init(std::ios_base::Init *)
+
+===========================================================================
