@@ -11,7 +11,7 @@
 
 #include "KL_exp.h"
 #define PI 3.14159265
-#define D 1.e-7
+#define D 1.e-5
 #define ERR 1.e-7
 
 double

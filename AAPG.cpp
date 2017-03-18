@@ -395,8 +395,8 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
 }
 
 void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, int AAPG_ord, Array1D<double>& sol_0, Array1D<Array2D<double> >& sol_1, Array2D<Array2D<double> >& sol_2, Array3D<Array2D<double> >& sol_3, Array1D<double>& sol_1_mean, Array1D<double>& sol_2_mean, Array1D<double>& sol_3_mean, Array1D<double>& std1, Array1D<double>& std2, Array1D<double>& std3, int dim, int nStep, int PCTerms_1, int PCTerms_2, int PCTerms_3, int order, double dTym, double factor_OD, Array2D<double>& mstd_MCS, Array2D<double>& samPts_norm, string name, Array1D<int>& lout, Array1D<Array1D<double> >& e_sample, bool PDF, string pcType, Array2D<double>& sample_mstd_2D){
-    //TickTock tt;
-    //tt.tick();
+    TickTock tt;
+    tt.tick();
     // Post-process the AAPG solutions
     // initialization
     int nAAPGTerms = 1+dim+dim*(dim-1)/2+dim*(dim-1)*(dim-2)/6;
@@ -409,13 +409,13 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     Array2D<double> coeffAAPG2(1+dim+dim*(dim-1)/2,nStep+1,1.0);
     Array2D<double> coeffAAPG3(nAAPGTerms,nStep+1,1.0);
 
-    //tt.tock("Initialization Took");
+    tt.tock("Initialization Took");
  
     // assemble and save the mean values
-    //printf("Assembling the mean...\n");
-    //tt.tick();
+    printf("Assembling the mean...\n");
+    tt.tick();
     assemblemean(indi_2, indj_2, indi_3, indj_3, indk_3, sol_0, sol_1, sol_2, sol_3, dim, nStep, AAPG_ord, sol_1_mean, sol_2_mean, sol_3_mean, coeffAAPG1, coeffAAPG2, coeffAAPG3);
-    //tt.tock("Assemble mean took");   
+    tt.tock("Assemble mean took");   
  
     // add the mean to the assembled solution
     sol_1_assembled.replaceCol(sol_1_mean,0);
@@ -423,10 +423,10 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     sol_3_assembled.replaceCol(sol_3_mean,0); 
 
     // assemble the rest PC terms
-    //printf("Assembling the rest...\n");
-    //tt.tick();
+    printf("Assembling the rest...\n");
+    tt.tick();
     assemblerest(indi_2, indj_2, indi_3, indj_3, indk_3, sol_1, sol_2, sol_3, sol_1_assembled, sol_2_assembled, sol_3_assembled, PCTerms_1, PCTerms_2, PCTerms_3, dim, order, nStep, AAPG_ord, coeffAAPG1, coeffAAPG2, coeffAAPG3);
-    //tt.tock("Assemble rest took");    
+    tt.tock("Assemble rest took");    
 
 
     // output sol_1_assembled for debug

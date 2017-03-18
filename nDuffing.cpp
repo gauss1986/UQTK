@@ -44,7 +44,7 @@ int main(int argc, char *argv[]){
         initial_sigma(i)=0.1;
         initial_sigma(dof+i)=0.5;
     } 
-    bool PDF = true;
+    bool PDF = false;
 
     // epsilon
     //Array1D<double>  epsilon_mean(dof,1e4);
