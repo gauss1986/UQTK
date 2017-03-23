@@ -40,7 +40,7 @@ July 25, 2015
 /// Main program of uncertainty propagation of the ODE model excitation force via intrusive spectral projection (ISP)
 int main(int argc, char *argv[])
 {   int CASE=5;
-    int nspl=100000;       //MCS sample size
+    int nspl=10000;       //MCS sample size
     string pcType;  //PC type
     double epsilon = 1;
     double sigma = 2.5;   //Standard deviation
@@ -138,15 +138,15 @@ int main(int argc, char *argv[])
     if (CASE==2){//Stochastic forcing and deterministic initial conditions
         pcType = "LU";
         clen = 0.05;
-        dim = 100;
-        nkl = 100;
+        dim = 15;
+        nkl = 15;
         cov_type = (char *)"Exp";
-        sigma = 0.5;
+        //sigma = 2.5;
         factor_OD = 1.0;
-        ord_GS = 1;
-        ord_AAPG = 2;
+        ord_GS = 2;
+        ord_AAPG = 3;
         //ord_AAPG_GS = 3;
-        act_D = true;
+        act_D = false;
         p = 0.99;
         dof = 2;
         //noutput = 10;
@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
         inpParams(2) = epsilon;//epsilon
         double t_temp = 0.0; 
         for (int i=0;i<2*nStep+1;i++){
-            fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
+            fbar(i) = 2.0*(2.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
             t_temp +=dTym/2;
         }
         init_D(0)=10000;
@@ -224,16 +224,16 @@ int main(int argc, char *argv[])
     }
     if (CASE==5){//Stochastic zeta and epsilon and stochastic forcing
         pcType = "LU";
-        clen = 0.05;
-        dim = 100;
-        nkl = 98;
+        clen = 0.01;
+        dim = 500;
+        nkl = 498;
         cov_type = (char *)"Exp";
         sigma = 0.5;
         factor_OD = 1.0;
         ord_GS = 1;
         ord_AAPG = 2;
         //ord_AAPG_GS = 2;
-        act_D = true;
+        act_D = false;
         p = 0.99;
         dof = 2;
         //noutput = 10;
@@ -242,8 +242,6 @@ int main(int argc, char *argv[])
         inpParams(2) = epsilon;//epsilon
         inpParams(3) = 0.05;//std for zeta
         inpParams(4) = 0.35;//std for epsilon
-        //inpParams(3) = 0.0;//std for zeta
-        //inpParams(4) = 0.0;//std for epsilon
         double t_temp = 0.0; 
         for (int i=0;i<2*nStep+1;i++){
             fbar(i) = 2.0*(1.0-sin(2*3.1415926*t_temp)*exp(-0.3*t_temp));
