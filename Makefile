@@ -22,12 +22,10 @@ INCS2 =  UtilsLorenz.h
 
 LIBINCDIR = $(TOPDIR)/src_cpp/include/
 LIBBINDIR = $(TOPDIR)/src_cpp/lib/
-INCDIRS   = -I. -I$(LIBINCDIR)
-#INCDIRS   = -I. -I$(LIBINCDIR) -I$(SCINET_GSL_INC)
+INCDIRS   = -I. -I$(LIBINCDIR) -I$(SCINET_GSL_INC)
 
 LIBS = -L$(LIBBINDIR) -lUQTk -lquad -luqtkmcmc -luqtktools -llbfgs -lcvode-2.6.0 -ldsfmt \
-       -l$(LAPACK) -l$(SLATEC) -l$(BLAS) -lxmlutils -lexpat $(FCLIB) -L$(SCINET_GSL_LIB)
-       #-l$(LAPACK) -l$(SLATEC) -l$(BLAS) -lxmlutils -lexpat $(FCLIB) -L$(SCINET_GSL_LIB) -lgsl -lgslcblas
+       -l$(LAPACK) -l$(SLATEC) -l$(BLAS) -lxmlutils -lexpat $(FCLIB) -L$(SCINET_GSL_LIB) -lgsl -lgslcblas
 LDEP = $(LIBBINDIR)/libUQTk.a $(LIBBINDIR)/libquad.a $(LIBBINDIR)/liblbfgs.a $(LIBBINDIR)/libbcs.a \
        $(LIBBINDIR)/libuqtktools.a $(LIBBINDIR)/libcvode-2.6.0.a \
        $(LIBBINDIR)/libdsfmt.a $(LIBBINDIR)/lib$(LAPACK).a \
@@ -56,8 +54,7 @@ $(TARGET4): $(OBJ4) $(LDEP)
 	$(CXX) $(CXXFLAGS) $(DEFS) $(INCDIRS) -o $(TARGET4) $(OBJ4) $(LIBS)
 
 test:
-	g++ -Wall -O2 -D__wsu -I. -I../../src_cpp/include/ -I$(SCINET_GSL_INC) -o test.x test.cpp  -L$(SCINET_GSL_LIB) 
-	#g++ -Wall -O2 -D__wsu -I. -I../../src_cpp/include/ -I$(SCINET_GSL_INC) -o test.x test.cpp  -L$(SCINET_GSL_LIB) -lgsl -lgslcblas 
+	g++ -Wall -O2 -D__wsu -I. -I../../src_cpp/include/ -I$(SCINET_GSL_INC) -o test.x test.cpp  -L$(SCINET_GSL_LIB) -lgsl -lgslcblas 
 
 clean:
 	rm -f $(OBJ) $(TARGET)*~ $(OBJ2) $(TARGET2) *~ $(OBJ3) $(TARGET3) *~ $(OBJ4) $(TARGET4)

@@ -404,10 +404,14 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     //int nPCTerms = myPCSet.GetNumberPCTerms();
     Array2D<double> sol_1_assembled(nStep+1,nPCTerms,0.e0);
     Array2D<double> sol_2_assembled(nStep+1,nPCTerms,0.e0);
-    Array2D<double> sol_3_assembled(nStep+1,nPCTerms,0.e0);
     Array2D<double> coeffAAPG1(1+dim,nStep+1,1.0);
     Array2D<double> coeffAAPG2(1+dim+dim*(dim-1)/2,nStep+1,1.0);
-    Array2D<double> coeffAAPG3(nAAPGTerms,nStep+1,1.0);
+    Array2D<double> sol_3_assembled;
+    Array2D<double> coeffAAPG3;
+    if (AAPG_ord>=3){
+        sol_3_assembled.Resize(nStep+1,nPCTerms,0.e0);
+        coeffAAPG3.Resize(nAAPGTerms,nStep+1,0.e0);
+    }
 
     tt.tock("Initialization Took");
  
@@ -420,7 +424,9 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     // add the mean to the assembled solution
     sol_1_assembled.replaceCol(sol_1_mean,0);
     sol_2_assembled.replaceCol(sol_2_mean,0); 
-    sol_3_assembled.replaceCol(sol_3_mean,0); 
+    if (AAPG_ord>=3){
+        sol_3_assembled.replaceCol(sol_3_mean,0); 
+    }
 
     // assemble the rest PC terms
     printf("Assembling the rest...\n");
@@ -560,16 +566,23 @@ void index(int dim, int order, int PCTerms_1, int PCTerms_2, int PCTerms_3, Arra
     // 3D psibasis
     Array2D<int> Pb3(PCTerms_3,3);
     computeMultiIndex(3,order,Pb3);
-   
+      
+    cout << "First order index" << endl;
+    #pragma omp parallel for shared(dim,PCTerms_1,Pbtot) 
     for (int i=0;i<dim;i++){
         Array2D<int> Pb1_more(PCTerms_1,dim,0);
-        for (int ind=0;ind<PCTerms_1;ind++){
-            Pb1_more(ind,i)=Pb1(ind,0);
+        for (int j=0;j<PCTerms_1;j++){
+            Pb1_more(j,i)=Pb1(j,0);
         }
         Array1D<int> ind=identicalrow(PCTerms_1,dim,Pbtot,Pb1_more);
-        ind1.replaceCol(ind,i);
+        //ind1.replaceCol(ind,i);
+        for (int j=0;j<PCTerms_1;j++){
+            ind1(j,i)=ind(j);
+        }
     }
     
+    cout << "Second order index" << endl;
+    #pragma omp parallel for shared(dim,PCTerms_2,Pbtot) 
     for (int i=0;i<dim-1;i++){
         for (int j=i+1;j<dim;j++){
             Array2D<int> Pb2_more(PCTerms_2,dim,0);
@@ -581,6 +594,8 @@ void index(int dim, int order, int PCTerms_1, int PCTerms_2, int PCTerms_3, Arra
         }
     }
 
+    cout << "Third order index" << endl;
+    #pragma omp parallel for shared(dim,PCTerms_3,Pbtot) 
     for (int i=0;i<dim-2;i++){
         for (int j=i+1;j<dim-1;j++){
             for (int k=j+1;k<dim;k++){
@@ -677,14 +692,14 @@ void assemblemean(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
 
 void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, Array1D<Array2D<double> >& sol_1, Array2D<Array2D<double> >& sol_2, Array3D<Array2D<double> >& sol_3, Array2D<double>& sol_1_assembled, Array2D<double>& sol_2_assembled, Array2D<double>& sol_3_assembled, int PCTerms_1, int PCTerms_2, int PCTerms_3, int dim, int order, int nStep, int AAPG_ord, Array2D<double>& coeff1, Array2D<double>& coeff2, Array2D<double>& coeff3){
 
-    //printf("Computing the index...\n");
+    printf("Computing the index...\n");
     Array2D<int> ind1(PCTerms_1,dim,0);
     Array2D<Array1D<int> > ind2(dim,dim);
     Array3D<Array1D<int> > ind3(dim,dim,dim);
     index(dim, order, PCTerms_1, PCTerms_2, PCTerms_3, ind1, ind2, ind3);
 
     // Assemble first order AAPG solutions
-    //printf("Assembling the first order terms...\n");
+    printf("Assembling the first order terms...\n");
     for (int i=0;i<dim;i++){
         for (int j=1;j<PCTerms_1;j++){
             // retrieve the col-index on the global PC matrix
@@ -696,28 +711,34 @@ void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
     }
         
     // Assemble second order AAPG solutions
-    //printf("Assembling the second order terms...\n");
+    printf("Assembling the second order terms...\n");
     sol_2_assembled = sol_1_assembled;
     int n = dim+1;
     Array1D<double> coeffn(nStep+1,0.e0);
+    getRow(coeff2,n,coeffn);
     if (AAPG_ord >= 2){
         for (unsigned int i=0;i<indi_2.XSize();i++){
-                getRow(coeff2,n,coeffn);
-                // Add second-order AAPG terms
-                for (int p=1;p<PCTerms_2;p++){
-                    // retrieve the index in the global matrix
-                    int ind = ind2(indi_2(i),indj_2(i))(p);
-                    for (int it=0;it<nStep+1;it++){
-                        sol_2_assembled(it,ind)=sol_2_assembled(it,ind)+coeffn(it)*sol_2(indi_2(i),indj_2(i))(it,p);
-                     }
+            // Add second-order AAPG terms
+            cout << double(i)/indi_2.XSize()*100 << "%%" << endl;
+            #pragma omp parallel for shared(PCTerms_2,indi_2,indj_2,nStep,sol_2_assembled,coeffn) 
+            for (int p=1;p<PCTerms_2;p++){
+                // retrieve the index in the global matrix
+                int ind = ind2(indi_2(i),indj_2(i))(p);
+                Array1D<double> sol_2_col(nStep+1,0.e0);
+                getCol(sol_2(indi_2(i),indj_2(i)),p,sol_2_col);
+                for (int it=0;it<nStep+1;it++){
+                    //sol_2_assembled(it,ind)=sol_2_assembled(it,ind)+coeffn(it)*sol_2(indi_2(i),indj_2(i))(it,p);
+                    sol_2_assembled(it,ind)=sol_2_assembled(it,ind)+coeffn(it)*sol_2_col(it);
                 }
-
-                // Subtract first-order AAPG terms
-                for (int p=1;p<PCTerms_1;p++){
-                    subtractfirst(p,indi_2(i),ind1,sol_1,nStep,coeffn,sol_2_assembled);
-                    subtractfirst(p,indj_2(i),ind1,sol_1,nStep,coeffn,sol_2_assembled);
-                }
-                n++;    
+            }
+        }
+        for (unsigned int i=0;i<indi_2.XSize();i++){
+            // Subtract first-order AAPG terms
+            for (int p=1;p<PCTerms_1;p++){
+                subtractfirst(p,indi_2(i),ind1,sol_1,nStep,coeffn,sol_2_assembled);
+                subtractfirst(p,indj_2(i),ind1,sol_1,nStep,coeffn,sol_2_assembled);
+            }
+            n++;    
         }
     }    
     
