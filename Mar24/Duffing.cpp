@@ -40,7 +40,7 @@ July 25, 2015
 /// Main program of uncertainty propagation of the ODE model excitation force via intrusive spectral projection (ISP)
 int main(int argc, char *argv[])
 {   int CASE=5;
-    int nspl=10000;       //MCS sample size
+    int nspl=100000;       //MCS sample size
     string pcType;  //PC type
     double epsilon = 1;
     double sigma = 2.5;   //Standard deviation

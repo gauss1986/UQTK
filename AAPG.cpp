@@ -187,11 +187,11 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
                 inpParams_2(k)(2)=inpParams(2);
                 active_2D(k)= temp_active;
                 for (int l=0;l<2;l++){
-                    if (i==coeff_D(l)){
+                    if (ind(i)==coeff_D(l)){
                         inpParams_2(k)(l+3)=inpParams(l+3);
                         active_2D(k)(l)=0; 
                     }
-                    if (j==coeff_D(l)){
+                    if (ind(j)==coeff_D(l)){
                         inpParams_2(k)(l+3)=inpParams(l+3); 
                         active_2D(k)(l)=1; 
                     }
