@@ -60,7 +60,7 @@ Array1D<double> KL_exp (double sigma, double a, double clen, int N, Array2D<doub
 
   double intv = PI/2/a;
   for (int i=0;i<N;i++){
-    std::cout << "No." << i << std::endl;
+    //std::cout << "No." << i << std::endl;
     double x_lo=0, x_hi=0;
 
     gsl_function F;
@@ -88,9 +88,9 @@ Array1D<double> KL_exp (double sigma, double a, double clen, int N, Array2D<doub
       x_hi = gsl_root_fsolver_x_upper (s);
       status = gsl_root_test_interval (x_lo, x_hi,0, ERR);
 
-      if (status == GSL_SUCCESS){
-        printf ("iter=%5d, result=%.7f, range=%.7f\n", iter, r, x_hi-x_lo); 
-      }  
+      //if (status == GSL_SUCCESS){
+        //printf ("iter=%5d, result=%.7f, range=%.7f\n", iter, r, x_hi-x_lo); 
+      //}  
     }
     while (status == GSL_CONTINUE && iter < max_iter);
     

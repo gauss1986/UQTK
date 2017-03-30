@@ -15,7 +15,7 @@
 ## Job specific
 ##===================================
 #
-# @ job_name = nDuffing_100
+# @ job_name = nDuffing_2000_actD_printindex2
 # @ job_type = parallel
 # @ class = verylong
 # @ output = $(jobid).out
@@ -28,4 +28,4 @@
 #===================================
 
 module load gcc gsl/1.15-gcc
-./nDuffing.x
+./Duffing.x

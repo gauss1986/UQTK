@@ -114,20 +114,20 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
             double temp =PCSet_1.StDv(dis_temp);  
             var(i)=var(i)+temp*temp*dTym;  
         }
-        cout << "Sum of var on dim No." <<i <<" is "<< var(i) << endl;
+        //cout << "Sum of var on dim No." <<i <<" is "<< var(i) << endl;
     }
     // sort the variance in ascending order
     shell_sort_ind(var,ind);
     cout << "Var is sorted now" << endl;
-    for (int i=0;i<dim;i++){
-        cout << "Sum of var on dim NO. " <<ind(i) <<" is "<< var(i) << endl;
-    }
+    //for (int i=0;i<dim;i++){
+    //    cout << "Sum of var on dim NO. " <<ind(i) <<" is "<< var(i) << endl;
+   // }
     // select the active dims
     double var_sum = sum(var);
     double temp = 0.e0;
     int i_temp = 0;
     while ((temp+=var(i_temp))<((1-p)*var_sum)&&i_temp<dim){
-        cout << "Dim No." << ind(0) << " is non-active." << " Percentage:"<<temp/var_sum*100<<"%"<< endl;
+        //cout << "Dim No." << ind(0) << " is non-active." << " Percentage:"<<temp/var_sum*100<<"%"<< endl;
         ind.erase(0);
         i_temp++;
     }
@@ -216,14 +216,19 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
     }
  
     // Third order term
-    Array3D<Array2D<double> > dis_3(dim,dim,dim); 
-    Array3D<Array2D<double> > vel_3(dim,dim,dim); 
     int PCTerms_3 = 0;
-    Array1D<int> indi_3(N_adof*(N_adof-1)*(N_adof-2)/6,0);
-    Array1D<int> indj_3(N_adof*(N_adof-1)*(N_adof-2)/6,0);
-    Array1D<int> indk_3(N_adof*(N_adof-1)*(N_adof-2)/6,0);
+    Array3D<Array2D<double> > dis_3;
+    Array3D<Array2D<double> > vel_3;
+    Array1D<int> indi_3;
+    Array1D<int> indj_3;
+    Array1D<int> indk_3;
     if (AAPG_ord >= 3){
     printf("Third-order terms...");
+    dis_3.Resize(dim,dim,dim); 
+    vel_3.Resize(dim,dim,dim); 
+    indi_3.Resize(N_adof*(N_adof-1)*(N_adof-2)/6,0);
+    indj_3.Resize(N_adof*(N_adof-1)*(N_adof-2)/6,0);
+    indk_3.Resize(N_adof*(N_adof-1)*(N_adof-2)/6,0);
     PCSet PCSet_3("ISP",order,3,pcType,0.0,1.0); 
     PCTerms_3 = PCSet_3.GetNumberPCTerms();
     // Initial condition
@@ -551,7 +556,7 @@ void index(int AAPG_ord, int dim, int order, int PCTerms_1, int PCTerms_2, int P
     int Px = computeNPCTerms(dim, order);
     Array2D<int> Pbtot(Px,dim);
     computeMultiIndex(dim,order,Pbtot);
-    write_datafile(Pbtot,"indexglobal.dat");
+    //write_datafile(Pbtot,"indexglobal.dat");
     // 1D psibasis
     Array2D<int> Pb1(PCTerms_1,1);
     computeMultiIndex(1,order,Pb1);
@@ -581,8 +586,11 @@ void index(int AAPG_ord, int dim, int order, int PCTerms_1, int PCTerms_2, int P
     
     cout << "Second order index" << endl;
     tt.tick();
-    #pragma omp parallel for shared(dim,PCTerms_2,Pbtot) 
     for (int i=0;i<dim-1;i++){
+        if (dim>=500 && (2*dim-2-i)*(i+1)%(dim*(dim-1)/100)==0){
+            cout << double((2*dim-2-i)*(i+1))/dim/(dim-1)*100 << "%" << endl;
+        }
+        #pragma omp parallel for shared(dim,PCTerms_2,Pbtot) 
         for (int j=i+1;j<dim;j++){
             Array2D<int> Pb2_more(PCTerms_2,dim,0);
             for (int ind=0;ind<PCTerms_2;ind++){
@@ -595,6 +603,7 @@ void index(int AAPG_ord, int dim, int order, int PCTerms_1, int PCTerms_2, int P
     tt.tock("Cost ");
 
     if (AAPG_ord >=3){
+    ind3.Resize(dim,dim,dim);
     cout << "Third order index" << endl;
     tt.tick();
     #pragma omp parallel for shared(dim,PCTerms_3,Pbtot) 
@@ -699,7 +708,7 @@ void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
     printf("Computing the index...\n");
     Array2D<int> ind1(PCTerms_1,dim,0);
     Array2D<Array1D<int> > ind2(dim,dim);
-    Array3D<Array1D<int> > ind3(dim,dim,dim);
+    Array3D<Array1D<int> > ind3;
     index(AAPG_ord, dim, order, PCTerms_1, PCTerms_2, PCTerms_3, ind1, ind2, ind3);
 
     // Assemble first order AAPG solutions
