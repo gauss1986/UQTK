@@ -545,12 +545,16 @@ Array1D<int> identicalrow(int PCTerms, int dim, Array2D<int>& Pbtot, Array2D<int
     return (ind);
 }
 
-void index(int dim, int order, int PCTerms_1, int PCTerms_2, int PCTerms_3, Array2D<int>& ind1, Array2D<Array1D<int> >& ind2, Array3D<Array1D<int> >& ind3){
+void index(int AAPG_ord, int dim, int order, int PCTerms_1, int PCTerms_2, int PCTerms_3, Array2D<int>& ind1, Array2D<Array1D<int> >& ind2, Array3D<Array1D<int> >& ind3, Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3){
+    // dim of second and third order adaptive terms
+    int N2 = indi_2.XSize();
+    int N3 = indi_3.XSize();
+
     // Get corresponding row index in the global matrix for sub-problem solutions
     int Px = computeNPCTerms(dim, order);
     Array2D<int> Pbtot(Px,dim);
     computeMultiIndex(dim,order,Pbtot);
-    write_datafile(Pbtot,"indexglobal.dat");
+    //write_datafile(Pbtot,"indexglobal.dat");
     // 1D psibasis
     Array2D<int> Pb1(PCTerms_1,1);
     computeMultiIndex(1,order,Pb1);
@@ -560,39 +564,63 @@ void index(int dim, int order, int PCTerms_1, int PCTerms_2, int PCTerms_3, Arra
     // 3D psibasis
     Array2D<int> Pb3(PCTerms_3,3);
     computeMultiIndex(3,order,Pb3);
-   
+      
+    cout << "First order index" << endl;
+    TickTock tt;
+    tt.tick();
+    #pragma omp parallel for shared(dim,PCTerms_1,Pbtot) 
     for (int i=0;i<dim;i++){
         Array2D<int> Pb1_more(PCTerms_1,dim,0);
-        for (int ind=0;ind<PCTerms_1;ind++){
-            Pb1_more(ind,i)=Pb1(ind,0);
+        for (int j=0;j<PCTerms_1;j++){
+            Pb1_more(j,i)=Pb1(j,0);
         }
         Array1D<int> ind=identicalrow(PCTerms_1,dim,Pbtot,Pb1_more);
-        ind1.replaceCol(ind,i);
+        //ind1.replaceCol(ind,i);
+        for (int j=0;j<PCTerms_1;j++){
+            ind1(j,i)=ind(j);
+        }
     }
+    tt.tock("Cost ");
     
-    for (int i=0;i<dim-1;i++){
-        for (int j=i+1;j<dim;j++){
-            Array2D<int> Pb2_more(PCTerms_2,dim,0);
-            for (int ind=0;ind<PCTerms_2;ind++){
-                Pb2_more(ind,i)=Pb2(ind,0);
-                Pb2_more(ind,j)=Pb2(ind,1);
-            }
-            ind2(i,j)=identicalrow(PCTerms_2,dim,Pbtot,Pb2_more);
+    cout << "Second order index" << endl;
+    tt.tick();
+    #pragma omp parallel for shared(N2,dim,PCTerms_2,Pbtot) 
+    for (int i=0;i<N2;i++){
+        //if (dim>=500 && (2*dim-2-i)*(i+1)%(dim*(dim-1)/100)==0){
+        //    cout << double((2*dim-2-i)*(i+1))/dim/(dim-1)*100 << "%" << endl;
+        //}
+        //for (int j=i+1;j<N2;j++){
+        Array2D<int> Pb2_more(PCTerms_2,dim,0);
+        for (int ind=0;ind<PCTerms_2;ind++){
+            Pb2_more(ind,indi_2(i))=Pb2(ind,0);
+            Pb2_more(ind,indj_2(i))=Pb2(ind,1);
         }
+        ind2(indi_2(i),indj_2(i))=identicalrow(PCTerms_2,dim,Pbtot,Pb2_more);
+        //}
     }
+    tt.tock("Cost ");
 
-    for (int i=0;i<dim-2;i++){
-        for (int j=i+1;j<dim-1;j++){
-            for (int k=j+1;k<dim;k++){
-                Array2D<int> Pb3_more(PCTerms_3,dim,0);
-                for (int ind=0;ind<PCTerms_3;ind++){
-                    Pb3_more(ind,i)=Pb3(ind,0);    
-                    Pb3_more(ind,j)=Pb3(ind,1);    
-                    Pb3_more(ind,k)=Pb3(ind,2);    
-                }
-                ind3(i,j,k)=identicalrow(PCTerms_3,dim,Pbtot,Pb3_more);
-            }
+    if (AAPG_ord >=3){
+    ind3.Resize(dim,dim,dim);
+    cout << "Third order index" << endl;
+    tt.tick();
+    //for (int i=0;i<dim-2;i++){
+    //    for (int j=i+1;j<dim-1;j++){
+    //        for (int k=j+1;k<dim;k++){
+    #pragma omp parallel for shared(N3,dim,PCTerms_3,Pbtot) 
+    for (int i=0;i<N3;i++){
+        Array2D<int> Pb3_more(PCTerms_3,dim,0);
+        for (int ind=0;ind<PCTerms_3;ind++){
+            Pb3_more(ind,indi_3(i))=Pb3(ind,0);    
+            Pb3_more(ind,indj_3(i))=Pb3(ind,1);    
+            Pb3_more(ind,indk_3(i))=Pb3(ind,2);    
         }
+        ind3(indi_3(i),indj_3(i),indk_3(i))=identicalrow(PCTerms_3,dim,Pbtot,Pb3_more);
+    }
+    //        }
+    //    }
+    //}
+    tt.tock("Cost ");
     }
 }
 
@@ -681,8 +709,7 @@ void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
     Array2D<int> ind1(PCTerms_1,dim,0);
     Array2D<Array1D<int> > ind2(dim,dim);
     Array3D<Array1D<int> > ind3(dim,dim,dim);
-    index(dim, order, PCTerms_1, PCTerms_2, PCTerms_3, ind1, ind2, ind3);
-
+    index(AAPG_ord, dim, order, PCTerms_1, PCTerms_2, PCTerms_3, ind1, ind2, ind3, indi_2, indj_2, indi_3, indj_3, indk_3);
     // Assemble first order AAPG solutions
     //printf("Assembling the first order terms...\n");
     for (int i=0;i<dim;i++){
