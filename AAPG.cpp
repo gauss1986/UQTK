@@ -117,26 +117,29 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
             double temp =PCSet_1.StDv(dis_temp);  
             var(i)=var(i)+temp*temp*dTym;  
         }
-        cout << "Sum of var on dim No." <<i <<" is "<< var(i) << endl;
+        //cout << "Sum of var on dim No." <<i <<" is "<< var(i) << endl;
     }
     // sort the variance in ascending order
     shell_sort_ind(var,ind);
     cout << "Var is sorted now" << endl;
-    for (int i=0;i<dim;i++){
-        cout << "Sum of var on dim NO. " <<ind(i) <<" is "<< var(i) << endl;
-    }
+    //for (int i=0;i<dim;i++){
+    //    cout << "Sum of var on dim NO. " <<ind(i) <<" is "<< var(i) << endl;
+    //}
     // select the active dims
     double var_sum = sum(var);
     double temp = 0.e0;
     int i_temp = 0;
     while ((temp+=var(i_temp))<((1-p)*var_sum)&&i_temp<dim){
-        cout << "Dim No." << ind(0) << " is non-active." << " Percentage:"<<temp/var_sum*100<<"%"<< endl;
+        //cout << "Dim No." << ind(0) << " is non-active." << " Percentage:"<<temp/var_sum*100<<"%"<< endl;
         ind.erase(0);
         i_temp++;
     }
     shell_sort(ind);
     }
     int N_adof = ind.XSize();
+    cout << "Active Dims are:" << endl;
+    for (int i=0;i<N_adof;i++) cout << ind(i) << endl;
+    cout << endl;
 
     // Second order term
     Array2D<Array2D<double> > vel_2(dim,dim); 
@@ -218,15 +221,22 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
     }
  
     // Third order term
-    Array3D<Array2D<double> > dis_3(dim,dim,dim); 
-    Array3D<Array2D<double> > vel_3(dim,dim,dim); 
+    Array3D<Array2D<double> > dis_3; 
+    Array3D<Array2D<double> > vel_3; 
     int PCTerms_3 = 0;
-    Array1D<int> indi_3(N_adof*(N_adof-1)*(N_adof-2)/6,0);
-    Array1D<int> indj_3(N_adof*(N_adof-1)*(N_adof-2)/6,0);
-    Array1D<int> indk_3(N_adof*(N_adof-1)*(N_adof-2)/6,0);
+    Array1D<int> indi_3;
+    Array1D<int> indj_3;
+    Array1D<int> indk_3;
     if (AAPG_ord >= 3){
+    dis_3.Resize(dim,dim,dim);
+    vel_3.Resize(dim,dim,dim);
+    indi_3.Resize(N_adof*(N_adof-1)*(N_adof-2)/6,0);
+    indj_3.Resize(N_adof*(N_adof-1)*(N_adof-2)/6,0);
+    indk_3.Resize(N_adof*(N_adof-1)*(N_adof-2)/6,0);
+
     printf("Third-order terms...");
     PCSet PCSet_3("ISP",order,3,pcType,0.0,1.0); 
+    cout <<"Finished" << endl;
     PCTerms_3 = PCSet_3.GetNumberPCTerms();
     // Initial condition
     Array1D<Array1D<Array1D<double> > > initial_GS3(N_adof*(N_adof-1)*(N_adof-2)/6);
@@ -399,31 +409,43 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     //tt.tick();
     // Post-process the AAPG solutions
     // initialization
-    int nAAPGTerms = 1+dim+dim*(dim-1)/2+dim*(dim-1)*(dim-2)/6;
+
     int  nPCTerms = computeNPCTerms(dim, order);
     //int nPCTerms = myPCSet.GetNumberPCTerms();
     Array2D<double> sol_1_assembled(nStep+1,nPCTerms,0.e0);
-    Array2D<double> sol_2_assembled(nStep+1,nPCTerms,0.e0);
-    Array2D<double> sol_3_assembled(nStep+1,nPCTerms,0.e0);
+    Array2D<double> sol_2_assembled;
+    Array2D<double> sol_3_assembled;
     Array2D<double> coeffAAPG1(1+dim,nStep+1,1.0);
-    Array2D<double> coeffAAPG2(1+dim+dim*(dim-1)/2,nStep+1,1.0);
-    Array2D<double> coeffAAPG3(nAAPGTerms,nStep+1,1.0);
+    Array2D<double> coeffAAPG2;
+    Array2D<double> coeffAAPG3;
 
+    if (AAPG_ord>=2){
+        sol_2_assembled.Resize(nStep+1,nPCTerms,0.e0);
+        coeffAAPG2.Resize(1+dim+dim*(dim-1)/2,nStep+1,1.0);
+    }
+    if (AAPG_ord>=3){
+        sol_3_assembled.Resize(nStep+1,nPCTerms,0.e0);
+        coeffAAPG3.Resize(1+dim+dim*(dim-1)/2+dim*(dim-1)*(dim-2)/6,nStep+1,1.0);
+    }
     //tt.tock("Initialization Took");
  
     // assemble and save the mean values
-    //printf("Assembling the mean...\n");
+    printf("Assembling the mean...\n");
     //tt.tick();
     assemblemean(indi_2, indj_2, indi_3, indj_3, indk_3, sol_0, sol_1, sol_2, sol_3, dim, nStep, AAPG_ord, sol_1_mean, sol_2_mean, sol_3_mean, coeffAAPG1, coeffAAPG2, coeffAAPG3);
     //tt.tock("Assemble mean took");   
  
     // add the mean to the assembled solution
     sol_1_assembled.replaceCol(sol_1_mean,0);
-    sol_2_assembled.replaceCol(sol_2_mean,0); 
-    sol_3_assembled.replaceCol(sol_3_mean,0); 
+    if (AAPG_ord>=2){ 
+        sol_2_assembled.replaceCol(sol_2_mean,0); 
+    }
+    if (AAPG_ord>=3){
+        sol_3_assembled.replaceCol(sol_3_mean,0); 
+    }
 
     // assemble the rest PC terms
-    //printf("Assembling the rest...\n");
+    printf("Assembling the rest...\n");
     //tt.tick();
     assemblerest(indi_2, indj_2, indi_3, indj_3, indk_3, sol_1, sol_2, sol_3, sol_1_assembled, sol_2_assembled, sol_3_assembled, PCTerms_1, PCTerms_2, PCTerms_3, dim, order, nStep, AAPG_ord, coeffAAPG1, coeffAAPG2, coeffAAPG3);
     //tt.tock("Assemble rest took");    
@@ -675,6 +697,7 @@ void assemblemean(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
     // third-order terms
     sol_3_mean = sol_2_mean;
     if (AAPG_ord >= 3){
+        cout << "Ord 3" << endl;
         for (unsigned ii=0;ii<indi_3.XSize();ii++){
                     Array1D<double> Temp(nStep+1,0.e0);
                     getCol(sol_3(indi_3(ii),indj_3(ii),indk_3(ii)),0,Temp);
@@ -708,7 +731,7 @@ void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
     //printf("Computing the index...\n");
     Array2D<int> ind1(PCTerms_1,dim,0);
     Array2D<Array1D<int> > ind2(dim,dim);
-    Array3D<Array1D<int> > ind3(dim,dim,dim);
+    Array3D<Array1D<int> > ind3;
     index(AAPG_ord, dim, order, PCTerms_1, PCTerms_2, PCTerms_3, ind1, ind2, ind3, indi_2, indj_2, indi_3, indj_3, indk_3);
     // Assemble first order AAPG solutions
     //printf("Assembling the first order terms...\n");

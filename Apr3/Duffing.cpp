@@ -225,15 +225,15 @@ int main(int argc, char *argv[])
     if (CASE==5){//Stochastic zeta and epsilon and stochastic forcing
         pcType = "LU";
         clen = 0.05;
-        dim = 400;
-        nkl = 398;
+        dim = 200;
+        nkl = 198;
         cov_type = (char *)"Exp";
         sigma = 0.5;
         factor_OD = 1.0;
         ord_GS = 1;
         ord_AAPG = 3;
         //ord_AAPG_GS = 2;
-        act_D  = true;
+        act_D  = false;
         p = 0.99;
         dof = 2;
         //noutput = 10;
@@ -314,7 +314,6 @@ int main(int argc, char *argv[])
 
     // Generate the KL expansion of the excitation force, the first nkl terms are stochastic
     Array2D<double> scaledKLmodes(2*nStep+1,dim,0.e0);
-    Array2D<double> var(2*nStep+1,nkl,0.e0);
     if (CASE==2 || CASE ==3 || CASE==5){
         Array2D<double> scaledKLmodes_small(2*nStep+1,nkl,0.e0);
         genKL(scaledKLmodes_small, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
@@ -322,18 +321,9 @@ int main(int argc, char *argv[])
         for (int i=0;i<nkl;i++){
             getCol(scaledKLmodes_small,i,KLmodes_temp);
             scaledKLmodes.replaceCol(KLmodes_temp,i);
-            for (int j=0;j<2*nStep+1;j++){
-                if (i==0){
-                    var(j,i) = pow(KLmodes_temp(j),2);
-                }
-                else{
-                    var(j,i) = var(j,i-1) + pow(KLmodes_temp(j),2);
-                }
-            }
         }
     }
     write_datafile(scaledKLmodes,"KL.dat");
-    write_datafile(var,"var.dat");
  
     // Sample initial conditions for MCS 
     Array2D<double> initial_samples(nspl,dim,0.e0);

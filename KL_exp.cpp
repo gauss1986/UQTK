@@ -96,6 +96,7 @@ Array1D<double> KL_exp (double sigma, double a, double clen, int N, Array2D<doub
     
     // compute the eigenvalues using the w just found
     eigs(i)=KL_lambda(sigma,c,r);
+    cout << "eig(" << i << ")=" << eigs(i) << endl;
 
     for (unsigned int it=0;it<KLmodes.XSize();it++){
         if (i%2 == 0){
