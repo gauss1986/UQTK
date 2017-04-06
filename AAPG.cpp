@@ -405,8 +405,8 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
 }
 
 void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, int AAPG_ord, Array1D<double>& sol_0, Array1D<Array2D<double> >& sol_1, Array2D<Array2D<double> >& sol_2, Array3D<Array2D<double> >& sol_3, Array1D<double>& sol_1_mean, Array1D<double>& sol_2_mean, Array1D<double>& sol_3_mean, Array1D<double>& std1, Array1D<double>& std2, Array1D<double>& std3, int dim, int nStep, int PCTerms_1, int PCTerms_2, int PCTerms_3, int order, double dTym, double factor_OD, Array2D<double>& mstd_MCS, Array2D<double>& samPts_norm, string name, Array1D<int>& lout, Array1D<Array1D<double> >& e_sample, bool PDF, string pcType, Array2D<double>& sample_mstd_2D){
-    //TickTock tt;
-    //tt.tick();
+    TickTock tt;
+    tt.tick();
     // Post-process the AAPG solutions
     // initialization
 
@@ -427,7 +427,7 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
         sol_3_assembled.Resize(nStep+1,nPCTerms,0.e0);
         coeffAAPG3.Resize(1+dim+dim*(dim-1)/2+dim*(dim-1)*(dim-2)/6,nStep+1,1.0);
     }
-    //tt.tock("Initialization Took");
+    tt.tock("Initialization Took");
  
     // assemble and save the mean values
     printf("Assembling the mean...\n");
@@ -651,6 +651,7 @@ void assemblemean(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
     //Array1D<Array1D<double> > sol_1_mean_ind(dim);
     Array2D<double> sol_1_mean_ind(dim, nStep+1, 0.e0);
     if (AAPG_ord >= 1){
+        cout << "Ord 1" << endl;
         // First-order terms
         for (int i=0;i<dim;i++){
             // Retrieve mean
@@ -673,6 +674,7 @@ void assemblemean(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
     sol_2_mean = sol_1_mean;
     Array2D<Array1D<double> > sol_2_mean_ind(dim, dim); 
     if (AAPG_ord >= 2){
+        cout << "Ord 1" << endl;
         for (unsigned int i=0;i<indi_2.XSize();i++){
                 Array1D<double> Temp(nStep+1,0.e0);
                 getCol(sol_2(indi_2(i),indj_2(i)),0,Temp);
