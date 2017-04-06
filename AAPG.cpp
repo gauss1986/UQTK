@@ -415,24 +415,19 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     Array2D<double> sol_1_assembled(nStep+1,nPCTerms,0.e0);
     Array2D<double> sol_2_assembled;
     Array2D<double> sol_3_assembled;
-    Array2D<double> coeffAAPG1(1+dim,nStep+1,1.0);
-    Array2D<double> coeffAAPG2;
-    Array2D<double> coeffAAPG3;
 
     if (AAPG_ord>=2){
         sol_2_assembled.Resize(nStep+1,nPCTerms,0.e0);
-        coeffAAPG2.Resize(1+dim+dim*(dim-1)/2,nStep+1,1.0);
     }
     if (AAPG_ord>=3){
         sol_3_assembled.Resize(nStep+1,nPCTerms,0.e0);
-        coeffAAPG3.Resize(1+dim+dim*(dim-1)/2+dim*(dim-1)*(dim-2)/6,nStep+1,1.0);
     }
     tt.tock("Initialization Took");
  
     // assemble and save the mean values
     printf("Assembling the mean...\n");
     //tt.tick();
-    assemblemean(indi_2, indj_2, indi_3, indj_3, indk_3, sol_0, sol_1, sol_2, sol_3, dim, nStep, AAPG_ord, sol_1_mean, sol_2_mean, sol_3_mean, coeffAAPG1, coeffAAPG2, coeffAAPG3);
+    assemblemean(indi_2, indj_2, indi_3, indj_3, indk_3, sol_0, sol_1, sol_2, sol_3, dim, nStep, AAPG_ord, sol_1_mean, sol_2_mean, sol_3_mean);
     //tt.tock("Assemble mean took");   
  
     // add the mean to the assembled solution
@@ -447,7 +442,7 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     // assemble the rest PC terms
     printf("Assembling the rest...\n");
     //tt.tick();
-    assemblerest(indi_2, indj_2, indi_3, indj_3, indk_3, sol_1, sol_2, sol_3, sol_1_assembled, sol_2_assembled, sol_3_assembled, PCTerms_1, PCTerms_2, PCTerms_3, dim, order, nStep, AAPG_ord, coeffAAPG1, coeffAAPG2, coeffAAPG3);
+    assemblerest(indi_2, indj_2, indi_3, indj_3, indk_3, sol_1, sol_2, sol_3, sol_1_assembled, sol_2_assembled, sol_3_assembled, PCTerms_1, PCTerms_2, PCTerms_3, dim, order, nStep, AAPG_ord);
     //tt.tock("Assemble rest took");    
 
 
@@ -646,7 +641,7 @@ void index(int AAPG_ord, int dim, int order, int PCTerms_1, int PCTerms_2, int P
     }
 }
 
-void assemblemean(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, Array1D<double>& sol_0, Array1D<Array2D<double> >& sol_1, Array2D<Array2D<double> >& sol_2, Array3D<Array2D<double> >& sol_3, int dim, int nStep, int AAPG_ord, Array1D<double>& sol_1_mean, Array1D<double>& sol_2_mean, Array1D<double>& sol_3_mean, Array2D<double>& coeff1, Array2D<double>& coeff2, Array2D<double>& coeff3){
+void assemblemean(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, Array1D<double>& sol_0, Array1D<Array2D<double> >& sol_1, Array2D<Array2D<double> >& sol_2, Array3D<Array2D<double> >& sol_3, int dim, int nStep, int AAPG_ord, Array1D<double>& sol_1_mean, Array1D<double>& sol_2_mean, Array1D<double>& sol_3_mean){
     // save first-order AAPG component functions for the assembly of second-order AAPG mean value
     //Array1D<Array1D<double> > sol_1_mean_ind(dim);
     Array2D<double> sol_1_mean_ind(dim, nStep+1, 0.e0);
@@ -663,9 +658,6 @@ void assemblemean(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
             //sol_1_mean_ind(i) = Temp1;        
             sol_1_mean_ind.replaceRow(Temp1,i);
             // Add correction terms to the mean
-            Array1D<double> Temp2(nStep+1,0.e0);
-            getRow(coeff1,i+1,Temp2);
-            dotprodVec(Temp2,Temp1);
             addVec(Temp1,sol_1_mean);
         }
     }
@@ -689,9 +681,6 @@ void assemblemean(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
                 // save the mean value for third-order use
                 sol_2_mean_ind(indi_2(i),indj_2(i))=Temp;
                 // Add correction terms to the mean
-                Array1D<double> Temp2(nStep+1,0.e0);
-                getRow(coeff2,n,Temp2);
-                dotprodVec(Temp2,Temp);
                 addVec(Temp,sol_2_mean);
                 n++;
         }
@@ -718,9 +707,6 @@ void assemblemean(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
                     subtractVec(sol_2_mean_ind(indj_3(ii),indk_3(ii)),Temp);
                     subtractVec(sol_2_mean_ind(indi_3(ii),indk_3(ii)),Temp);
                     // Add correction terms to the mean
-                    Array1D<double> Temp2(nStep+1,0.e0);
-                    getRow(coeff3,n,Temp2);
-                    dotprodVec(Temp2,Temp);
                     addVec(Temp,sol_3_mean);
                     n++;
         }
@@ -728,7 +714,7 @@ void assemblemean(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
     return;
 }
 
-void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, Array1D<Array2D<double> >& sol_1, Array2D<Array2D<double> >& sol_2, Array3D<Array2D<double> >& sol_3, Array2D<double>& sol_1_assembled, Array2D<double>& sol_2_assembled, Array2D<double>& sol_3_assembled, int PCTerms_1, int PCTerms_2, int PCTerms_3, int dim, int order, int nStep, int AAPG_ord, Array2D<double>& coeff1, Array2D<double>& coeff2, Array2D<double>& coeff3){
+void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_3, Array1D<int>& indj_3, Array1D<int>& indk_3, Array1D<Array2D<double> >& sol_1, Array2D<Array2D<double> >& sol_2, Array3D<Array2D<double> >& sol_3, Array2D<double>& sol_1_assembled, Array2D<double>& sol_2_assembled, Array2D<double>& sol_3_assembled, int PCTerms_1, int PCTerms_2, int PCTerms_3, int dim, int order, int nStep, int AAPG_ord){
 
     //printf("Computing the index...\n");
     Array2D<int> ind1(PCTerms_1,dim,0);
@@ -742,7 +728,7 @@ void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
             // retrieve the col-index on the global PC matrix
             int ind = ind1(j,i);
             for (int it=0;it<nStep+1;it++){
-                sol_1_assembled(it,ind)=sol_1_assembled(it,ind)+coeff1(i+1,it)*sol_1(i)(it,j);
+                sol_1_assembled(it,ind)=sol_1_assembled(it,ind)+sol_1(i)(it,j);
             }
         }        
     }
@@ -751,23 +737,22 @@ void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
     //printf("Assembling the second order terms...\n");
     sol_2_assembled = sol_1_assembled;
     int n = dim+1;
-    Array1D<double> coeffn(nStep+1,0.e0);
     if (AAPG_ord >= 2){
         for (unsigned int i=0;i<indi_2.XSize();i++){
-                getRow(coeff2,n,coeffn);
                 // Add second-order AAPG terms
                 for (int p=1;p<PCTerms_2;p++){
                     // retrieve the index in the global matrix
                     int ind = ind2(indi_2(i),indj_2(i))(p);
                     for (int it=0;it<nStep+1;it++){
-                        sol_2_assembled(it,ind)=sol_2_assembled(it,ind)+coeffn(it)*sol_2(indi_2(i),indj_2(i))(it,p);
+                        sol_2_assembled(it,ind)=sol_2_assembled(it,ind)+sol_2(indi_2(i),indj_2(i))(it,p);
                      }
                 }
 
                 // Subtract first-order AAPG terms
                 for (int p=1;p<PCTerms_1;p++){
-                    subtractfirst(p,indi_2(i),ind1,sol_1,nStep,coeffn,sol_2_assembled);
-                    subtractfirst(p,indj_2(i),ind1,sol_1,nStep,coeffn,sol_2_assembled);
+                    double coeff = 1.0;
+                    subtractfirst(p,indi_2(i),ind1,sol_1,nStep,sol_2_assembled,coeff);
+                    subtractfirst(p,indj_2(i),ind1,sol_1,nStep,sol_2_assembled,coeff);
                 }
                 n++;    
         }
@@ -780,28 +765,26 @@ void assemblerest(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
         for (unsigned int ii=0;ii<indi_3.XSize();ii++){
                     // retrieve the index in the global matrix
                     Array1D<int> ind = ind3(indi_3(ii),indj_3(ii),indk_3(ii));
-                    Array1D<double> coeffn(nStep+1,0.e0);
-                    getRow(coeff3,n,coeffn);
                     
                     // Add third-order AAPG terms
                     for (int p=1;p<PCTerms_3;p++){
                         for (int it=0;it<nStep+1;it++)
-                            sol_3_assembled(it,ind(p))=sol_3_assembled(it,ind(p))+coeffn(it)*sol_3(indi_3(ii),indj_3(ii),indk_3(ii))(it,p);
+                            sol_3_assembled(it,ind(p))=sol_3_assembled(it,ind(p))+sol_3(indi_3(ii),indj_3(ii),indk_3(ii))(it,p);
                     }
 
                     // Subtract second-order AAPG terms
                     for (int p=1;p<PCTerms_2;p++){
-                        subtractsecond(p,indi_3(ii),indj_3(ii),ind2,sol_2,nStep,coeffn,sol_3_assembled); 
-                        subtractsecond(p,indj_3(ii),indk_3(ii),ind2,sol_2,nStep,coeffn,sol_3_assembled); 
-                        subtractsecond(p,indi_3(ii),indk_3(ii),ind2,sol_2,nStep,coeffn,sol_3_assembled); 
+                        subtractsecond(p,indi_3(ii),indj_3(ii),ind2,sol_2,nStep,sol_3_assembled); 
+                        subtractsecond(p,indj_3(ii),indk_3(ii),ind2,sol_2,nStep,sol_3_assembled); 
+                        subtractsecond(p,indi_3(ii),indk_3(ii),ind2,sol_2,nStep,sol_3_assembled); 
                     }
 
                     // Subtract first-order AAPG terms
-                    coeffn.Resize(nStep+1,-1); 
                     for (int p=1;p<PCTerms_1;p++){
-                        subtractfirst(p,indi_3(ii),ind1,sol_1,nStep,coeffn,sol_3_assembled);
-                        subtractfirst(p,indj_3(ii),ind1,sol_1,nStep,coeffn,sol_3_assembled);
-                        subtractfirst(p,indk_3(ii),ind1,sol_1,nStep,coeffn,sol_3_assembled);
+                        double coeff = -1.0;
+                        subtractfirst(p,indi_3(ii),ind1,sol_1,nStep,sol_3_assembled,coeff);
+                        subtractfirst(p,indj_3(ii),ind1,sol_1,nStep,sol_3_assembled,coeff);
+                        subtractfirst(p,indk_3(ii),ind1,sol_1,nStep,sol_3_assembled,coeff);
                     }
                     n++;
         }
@@ -830,19 +813,19 @@ void computeStd(int nStep, int nPCTerms, Array2D<double>& sol_1_assembled, Array
     return;
 }
 
-void subtractfirst(int p,int ii, Array2D<int>& ind1,Array1D<Array2D<double> >& sol_1,int nStep,Array1D<double>& coeffn,Array2D<double>& sol_assembled){
+void subtractfirst(int p,int ii, Array2D<int>& ind1,Array1D<Array2D<double> >& sol_1,int nStep,Array2D<double>& sol_assembled,double coeff){
     int ind = ind1(p,ii);
     for (int it=0;it<nStep+1;it++){
-        sol_assembled(it,ind) = sol_assembled(it,ind)-coeffn(it)*sol_1(ii)(it,p);
+        sol_assembled(it,ind) = sol_assembled(it,ind)-coeff*sol_1(ii)(it,p);
     }
 
     return;
 }
 
-void subtractsecond(int p,int ii,int jj, Array2D<Array1D<int> >& ind2, Array2D<Array2D<double> >& sol_2, int nStep, Array1D<double>& coeffn, Array2D<double>& sol_assembled){
+void subtractsecond(int p,int ii,int jj, Array2D<Array1D<int> >& ind2, Array2D<Array2D<double> >& sol_2, int nStep, Array2D<double>& sol_assembled){
     int ind = ind2(ii,jj)(p);
     for (int it=0;it<nStep+1;it++){
-        sol_assembled(it,ind) = sol_assembled(it,ind)-coeffn(it)*sol_2(ii,jj)(it,p);
+        sol_assembled(it,ind) = sol_assembled(it,ind)-sol_2(ii,jj)(it,p);
     }
     
     return;

@@ -233,7 +233,7 @@ int main(int argc, char *argv[])
         ord_GS = 1;
         ord_AAPG = 3;
         //ord_AAPG_GS = 2;
-        act_D  = true;
+        act_D  = false;
         p = 0.99;
         dof = 2;
         //noutput = 10;
