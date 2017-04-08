@@ -242,11 +242,9 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
     Array1D<Array1D<Array1D<double> > > initial_GS3(N_adof*(N_adof-1)*(N_adof-2)/6);
     Array1D<Array1D<double> > temp3(dof);
     Array1D<double> temp_init3(PCTerms_3,0.e0);
-    Array1D<Array2D<double> > force_3(N_adof*(N_adof-1)*(N_adof-2)/6);
-    Array1D<double> temp_coeff3(5,0.e0);
-    Array1D<Array1D<double> > inpParams_3(N_adof*(N_adof-1)*(N_adof-2)/6);
-    Array1D<Array1D<int> > active_3D(N_adof*(N_adof-1)*(N_adof-2)/6);
-    Array1D<int> temp_active(2,0);
+    //Array1D<Array2D<double> > force_3(N_adof*(N_adof-1)*(N_adof-2)/6);
+    //Array1D<Array1D<double> > inpParams_3(N_adof*(N_adof-1)*(N_adof-2)/6);
+    //Array1D<Array1D<int> > active_3D(N_adof*(N_adof-1)*(N_adof-2)/6);
     int l=0;
     for (int i=0;i<N_adof-2;i++){
         for (int j=i+1;j<N_adof-1;j++){
@@ -265,38 +263,9 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
                     if (k==init_D(L))
                         PCSet_3.InitMeanStDv(sample_mstd_2D(L,0),sample_mstd_2D(L,1),3,initial_GS3(l)(L));
                 }
-                // force
-                Array2D<double> f_3(2*nStep+1,PCTerms_3,0.e0);
-                for (int it=0;it<2*nStep+1;it++){
-                    f_3(it,0) = fbar(it);
-                    f_3(it,1) = scaledKLmodes(it,ind(i));
-                    f_3(it,2) = scaledKLmodes(it,ind(j));
-                    f_3(it,3) = scaledKLmodes(it,ind(k));
-                }
-		        force_3(l)=f_3;
-    		    indi_3(l)=ind(i);
+                indi_3(l)=ind(i);
 		        indj_3(l)=ind(j);
 		        indk_3(l)=ind(k);
-                // parameters
-                active_3D(l)= temp_active;
-                inpParams_3(l)=temp_coeff3;
-                inpParams_3(l)(0)=inpParams(0);
-                inpParams_3(l)(1)=inpParams(1);
-                inpParams_3(l)(2)=inpParams(2);
-                for (int L=0;L<2;L++){
-                    if (ind(i)==coeff_D(L)){
-                        inpParams_3(l)(L+3)=inpParams(L+3);
-                        active_3D(l)(L)=0; 
-                    }
-                    if (ind(j)==coeff_D(L)){
-                        inpParams_3(l)(L+3)=inpParams(L+3); 
-                        active_3D(l)(L)=1; 
-                    }
-                    if (ind(k)==coeff_D(L)){
-                        inpParams_3(l)(L+3)=inpParams(L+3);
-                        active_3D(l)(L)=2; 
-                    }
-                }
 		        l++;
                 }
             }
@@ -304,7 +273,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
     //start = clock();
     tt.tick();
     cout << "Finished generating initial conditions and excition force. Now starting parallel computing of sub-problems..."<< endl<<flush;
-    #pragma omp parallel default(none) shared(dof, l,indi_3,indj_3,indk_3,PCSet_3, PCTerms_3,nStep,initial_GS3,dTym,inpParams_3,vel_3,dis_3,force_3,active_3D)
+    #pragma omp parallel default(none) shared(dof, l,indi_3,indj_3,indk_3,PCSet_3, PCTerms_3,nStep,initial_GS3,dTym,vel_3,dis_3,inpParams,scaledKLmodes,fbar,coeff_D)
     {
     #pragma omp for
     for (int i=0;i<l;i++){
@@ -312,7 +281,35 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
         //Array1D<int> active_3D(2,0);
         //active_3D(0)=0;
         //active_3D(1)=1;
-        GS(dof, PCSet_3, active_3D(i), PCTerms_3, nStep, initial_GS3(i), dTym, inpParams_3(i), force_3(i),temp);         
+        // force
+        Array2D<double> f_3(2*nStep+1,PCTerms_3,0.e0);
+        for (int it=0;it<2*nStep+1;it++){
+            f_3(it,0) = fbar(it);
+            f_3(it,1) = scaledKLmodes(it,indi_3(i));
+            f_3(it,2) = scaledKLmodes(it,indj_3(i));
+            f_3(it,3) = scaledKLmodes(it,indk_3(i));
+        }
+        // parameters
+        Array1D<int> active_3D(2,0);
+        Array1D<double> inpParams_3(5,0.e0);
+        inpParams_3(0)=inpParams(0);
+        inpParams_3(1)=inpParams(1);
+        inpParams_3(2)=inpParams(2);
+        for (int L=0;L<2;L++){
+            if (indi_3(i)==coeff_D(L)){
+               inpParams_3(L+3)=inpParams(L+3);
+               active_3D(L)=0; 
+            }
+            if (indj_3(i)==coeff_D(L)){
+               inpParams_3(L+3)=inpParams(L+3); 
+               active_3D(L)=1; 
+            }
+            if (indk_3(i)==coeff_D(L)){
+               inpParams_3(L+3)=inpParams(L+3);
+               active_3D(L)=2; 
+            }
+        }
+        GS(dof, PCSet_3, active_3D, PCTerms_3, nStep, initial_GS3(i), dTym, inpParams_3, f_3,temp);         
 	    dis_3(indi_3(i),indj_3(i),indk_3(i)) = temp(1);
 	    vel_3(indi_3(i),indj_3(i),indk_3(i)) = temp(0);
     }
