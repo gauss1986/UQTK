@@ -225,8 +225,8 @@ int main(int argc, char *argv[])
     if (CASE==5){//Stochastic zeta and epsilon and stochastic forcing
         pcType = "LU";
         clen = 0.05;
-        dim = 200;
-        nkl = 198;
+        dim = 400;
+        nkl = 398;
         cov_type = (char *)"Exp";
         sigma = 0.5;
         factor_OD = 1.0;

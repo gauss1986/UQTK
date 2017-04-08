@@ -227,45 +227,33 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
     Array1D<int> indi_3;
     Array1D<int> indj_3;
     Array1D<int> indk_3;
+    Array1D<int> i_3;
+    Array1D<int> j_3;
+    Array1D<int> k_3;
     if (AAPG_ord >= 3){
     dis_3.Resize(dim,dim,dim);
     vel_3.Resize(dim,dim,dim);
     indi_3.Resize(N_adof*(N_adof-1)*(N_adof-2)/6,0);
     indj_3.Resize(N_adof*(N_adof-1)*(N_adof-2)/6,0);
     indk_3.Resize(N_adof*(N_adof-1)*(N_adof-2)/6,0);
+    i_3.Resize(N_adof*(N_adof-1)*(N_adof-2)/6,0);
+    j_3.Resize(N_adof*(N_adof-1)*(N_adof-2)/6,0);
+    k_3.Resize(N_adof*(N_adof-1)*(N_adof-2)/6,0);
 
     printf("Third-order terms...");
     PCSet PCSet_3("ISP",order,3,pcType,0.0,1.0); 
     cout <<"Finished" << endl;
     PCTerms_3 = PCSet_3.GetNumberPCTerms();
-    // Initial condition
-    Array1D<Array1D<Array1D<double> > > initial_GS3(N_adof*(N_adof-1)*(N_adof-2)/6);
-    Array1D<Array1D<double> > temp3(dof);
-    Array1D<double> temp_init3(PCTerms_3,0.e0);
-    //Array1D<Array2D<double> > force_3(N_adof*(N_adof-1)*(N_adof-2)/6);
-    //Array1D<Array1D<double> > inpParams_3(N_adof*(N_adof-1)*(N_adof-2)/6);
-    //Array1D<Array1D<int> > active_3D(N_adof*(N_adof-1)*(N_adof-2)/6);
     int l=0;
     for (int i=0;i<N_adof-2;i++){
         for (int j=i+1;j<N_adof-1;j++){
             for (int k=j+1;k<N_adof;k++){
-                initial_GS3(l)=temp3;
-                // Initial condition
-                for (int L=0;L<dof;L++){
-                    initial_GS3(l)(L) = temp_init3;
-                    initial_GS3(l)(L)(0) = sample_mstd_2D(L,0);
-                }
-                for (int L=0;L<dof;L++){
-                    if (i==init_D(L))
-                        PCSet_3.InitMeanStDv(sample_mstd_2D(L,0),sample_mstd_2D(L,1),1,initial_GS3(l)(L));
-                    if (j==init_D(L))
-                        PCSet_3.InitMeanStDv(sample_mstd_2D(L,0),sample_mstd_2D(L,1),2,initial_GS3(l)(L));
-                    if (k==init_D(L))
-                        PCSet_3.InitMeanStDv(sample_mstd_2D(L,0),sample_mstd_2D(L,1),3,initial_GS3(l)(L));
-                }
                 indi_3(l)=ind(i);
 		        indj_3(l)=ind(j);
 		        indk_3(l)=ind(k);
+                i_3(l)=i;
+		        j_3(l)=j;
+		        k_3(l)=k;
 		        l++;
                 }
             }
@@ -273,7 +261,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
     //start = clock();
     tt.tick();
     cout << "Finished generating initial conditions and excition force. Now starting parallel computing of sub-problems..."<< endl<<flush;
-    #pragma omp parallel default(none) shared(dof, l,indi_3,indj_3,indk_3,PCSet_3, PCTerms_3,nStep,initial_GS3,dTym,vel_3,dis_3,inpParams,scaledKLmodes,fbar,coeff_D)
+    #pragma omp parallel default(none) shared(dof, l,indi_3,indj_3,indk_3,i_3,j_3,k_3,PCSet_3, PCTerms_3,nStep,dTym,vel_3,dis_3,inpParams,scaledKLmodes,fbar,coeff_D,sample_mstd_2D,init_D)
     {
     #pragma omp for
     for (int i=0;i<l;i++){
@@ -309,7 +297,22 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
                active_3D(L)=2; 
             }
         }
-        GS(dof, PCSet_3, active_3D, PCTerms_3, nStep, initial_GS3(i), dTym, inpParams_3, f_3,temp);         
+        // Initial condition
+        Array1D<Array1D<double> > initial_GS3(dof);
+        Array1D<double> temp_init3(PCTerms_3,0.e0);
+        for (int L=0;L<dof;L++){
+            initial_GS3(L) = temp_init3;
+            initial_GS3(L)(0) = sample_mstd_2D(L,0);
+        }
+        for (int L=0;L<dof;L++){
+            if (i_3(i)==init_D(L))
+               PCSet_3.InitMeanStDv(sample_mstd_2D(L,0),sample_mstd_2D(L,1),1,initial_GS3(L));
+            if (j_3(i)==init_D(L))
+               PCSet_3.InitMeanStDv(sample_mstd_2D(L,0),sample_mstd_2D(L,1),2,initial_GS3(L));
+            if (k_3(i)==init_D(L))
+               PCSet_3.InitMeanStDv(sample_mstd_2D(L,0),sample_mstd_2D(L,1),3,initial_GS3(L));
+        }
+        GS(dof, PCSet_3, active_3D, PCTerms_3, nStep, initial_GS3, dTym, inpParams_3, f_3,temp);         
 	    dis_3(indi_3(i),indj_3(i),indk_3(i)) = temp(1);
 	    vel_3(indi_3(i),indj_3(i),indk_3(i)) = temp(0);
     }
