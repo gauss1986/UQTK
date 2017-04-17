@@ -225,14 +225,14 @@ int main(int argc, char *argv[])
     if (CASE==5){//Stochastic zeta and epsilon and stochastic forcing
         pcType = "LU";
         clen = 0.05;
-        dim = 1000;
-        nkl = 998;
+        dim = 400;
+        nkl = 398;
         cov_type = (char *)"Exp";
         sigma = 0.5;
         factor_OD = 1.0;
         ord_GS = 1;
-        ord_AAPG = 3;
-        ord_AAPG_GS = 2;
+        ord_AAPG = 2;
+        ord_AAPG_GS = 3;
         act_D  = false;
         p = 0.99;
         dof = 2;

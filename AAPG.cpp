@@ -232,7 +232,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
     Array1D<int> k_3;
     if (AAPG_ord >= 3){
     dis_3.Resize(dim,dim,dim);
-    vel_3.Resize(dim,dim,dim);
+    //vel_3.Resize(dim,dim,dim);
     indi_3.Resize(N_adof*(N_adof-1)*(N_adof-2)/6,0);
     indj_3.Resize(N_adof*(N_adof-1)*(N_adof-2)/6,0);
     indk_3.Resize(N_adof*(N_adof-1)*(N_adof-2)/6,0);
@@ -314,7 +314,7 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
         }
         GS(dof, PCSet_3, active_3D, PCTerms_3, nStep, initial_GS3, dTym, inpParams_3, f_3,temp);         
 	    dis_3(indi_3(i),indj_3(i),indk_3(i)) = temp(1);
-	    vel_3(indi_3(i),indj_3(i),indk_3(i)) = temp(0);
+	    //vel_3(indi_3(i),indj_3(i),indk_3(i)) = temp(0);
     }
     }
     tt.tock("Took");
@@ -338,18 +338,18 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
     PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, dis_0, dis_1, dis_2, dis_3, dis_1_mean, dis_2_mean, dis_3_mean, std1, std2, std3,  dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, factor_OD, mstd_MCS, samPts_norm, name, lout, e_sample_dis, PDF, pcType, sample_mstd_2D);
     tt.tock("Took");
     t(4)=tt.silent_tock();
-    printf("Vel...\n");
-    string name2 = "vel";
-    Array1D<double> vel_1_mean = vel_0;
-    Array1D<double> vel_2_mean = vel_0;
-    Array1D<double> vel_3_mean = vel_0;
-    Array1D<double> std_vel_1(nStep+1,0.e0);
-    Array1D<double> std_vel_2(nStep+1,0.e0);
-    Array1D<double> std_vel_3(nStep+1,0.e0);
-    tt.tick();
-    PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, vel_0, vel_1, vel_2, vel_3, vel_1_mean, vel_2_mean, vel_3_mean, std_vel_1, std_vel_2, std_vel_3,  dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, factor_OD, mstd_MCS, samPts_norm, name2, lout, e_sample_vel, PDF, pcType, sample_mstd_2D);
-    tt.tock("Took");
-    t(5)=tt.silent_tock();
+    //printf("Vel...\n");
+    //string name2 = "vel";
+    //Array1D<double> vel_1_mean = vel_0;
+    //Array1D<double> vel_2_mean = vel_0;
+    //Array1D<double> vel_3_mean = vel_0;
+    //Array1D<double> std_vel_1(nStep+1,0.e0);
+    //Array1D<double> std_vel_2(nStep+1,0.e0);
+    //Array1D<double> std_vel_3(nStep+1,0.e0);
+    //tt.tick();
+    //PostProcess(indi_2,indj_2, indi_3, indj_3, indk_3, AAPG_ord, vel_0, vel_1, vel_2, vel_3, vel_1_mean, vel_2_mean, vel_3_mean, std_vel_1, std_vel_2, std_vel_3,  dim, nStep, PCTerms_1, PCTerms_2, PCTerms_3, order, dTym, factor_OD, mstd_MCS, samPts_norm, name2, lout, e_sample_vel, PDF, pcType, sample_mstd_2D);
+    //tt.tock("Took");
+    //t(5)=tt.silent_tock();
    
     // print out mean/std valus at specific points for comparison
     printf("\n");
@@ -363,8 +363,8 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
         Array1D<double> e1 =  error(et1,dis_1_mean, std1, mstd_MCS);    
     	write_datafile_1d(dis_1_mean,"dis_1_mean.dat");
     	write_datafile_1d(std1,"dis_1_std.dat");
-    	write_datafile_1d(vel_1_mean,"vel_1_mean.dat");
-    	write_datafile_1d(std_vel_1,"vel_1_std.dat");
+    	//write_datafile_1d(vel_1_mean,"vel_1_mean.dat");
+    	//write_datafile_1d(std_vel_1,"vel_1_std.dat");
     	write_datafile(et1,"e_dis_AAPG1.dat");
         fprintf(err_dump,"%lg %lg\n",e1(0),e1(1)); 
         e_AAPG.replaceRow(e1,0);
@@ -379,8 +379,8 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
         Array1D<double> e2 =  error(et2,dis_2_mean, std2, mstd_MCS);    
     	write_datafile_1d(dis_2_mean,"dis_2_mean.dat");
     	write_datafile_1d(std2,"dis_2_std.dat");
-    	write_datafile_1d(vel_2_mean,"vel_2_mean.dat");
-    	write_datafile_1d(std_vel_2,"vel_2_std.dat");
+    	//write_datafile_1d(vel_2_mean,"vel_2_mean.dat");
+    	//write_datafile_1d(std_vel_2,"vel_2_std.dat");
     	write_datafile(et2,"e_dis_AAPG2.dat");
         fprintf(err_dump,"%lg %lg\n",e2(0),e2(1)); 
         e_AAPG.replaceRow(e2,1);
@@ -395,8 +395,8 @@ Array1D<double> AAPG(int dof, Array1D<double> inpParams, Array1D<double>& fbar, 
         Array1D<double> e3 =  error(et3,dis_3_mean, std3, mstd_MCS);    
     	write_datafile_1d(dis_3_mean,"dis_3_mean.dat");
     	write_datafile_1d(std3,"dis_3_std.dat");
-    	write_datafile_1d(vel_3_mean,"vel_3_mean.dat");
-    	write_datafile_1d(std_vel_3,"vel_3_std.dat");
+    	//write_datafile_1d(vel_3_mean,"vel_3_mean.dat");
+    	//write_datafile_1d(std_vel_3,"vel_3_std.dat");
     	write_datafile(et3,"e_dis_AAPG3.dat");
         fprintf(err_dump,"%lg %lg\n",e3(0),e3(1)); 
         e_AAPG.replaceRow(e3,2);
