@@ -15,7 +15,7 @@
 #include "nGhanemSpanos.h"
 #include "ticktock.h"
 
-void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<int>& lout, double factor_OD, int AAPG_ord, bool act_D, Array1D<double>& fbar, Array1D<double>& fbar_fine,double dTym, Array1D<double>& epsilon_mean, string pcType, Array2D<double>& scaledKLmodes,Array2D<double>& scaledKLmodes_fine, Array2D<double>& stat_e,  Array2D<double>& stat_i, Array2D<double>& stat_m, Array2D<double>& stat_c, Array2D<double>& stat_k, Array1D<double>& normsq, Array2D<double>& mean_MCS, Array2D<double>& std_MCS, Array1D<Array2D<double> >& mck, bool PDF, Array2D<double>& samPts_norm){
+void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<int>& lout, double factor_OD, int AAPG_ord, bool act_D, Array1D<double>& fbar, Array1D<double>& fbar_fine,double dTym, Array1D<double>& epsilon_mean, string pcType, Array2D<double>& scaledKLmodes,Array2D<double>& scaledKLmodes_fine, Array2D<double>& stat_e,  Array2D<double>& stat_i, Array2D<double>& stat_m, Array2D<double>& stat_c, Array2D<double>& stat_k, Array1D<double>& normsq, Array2D<double>& mean_MCS, Array2D<double>& std_MCS, Array1D<Array2D<double> >& mck, bool PDF, Array2D<double>& samPts_norm, bool active_D, double p){
 
     // timing var
     Array1D<double> t(5,0.e0);
@@ -155,8 +155,10 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<
         }
         uv_1(id)=temp;
     }
+    // compute the std in each sub-dim and select the 'active' dim based on P5 of X. Yang et al. Adaptive ANOVA decomp. of stocha. imcompre
+    Array1D<double> var(dim,0.e0); 
     tt.tick();
-    #pragma omp parallel default(none) shared(refine,dof,PCSet_1,mck_1,nStep,dTym,PCTerms_1,epsilon_1,init_1,force_1,dim,uv_1)
+    #pragma omp parallel default(none) shared(refine,dof,PCSet_1,mck_1,nStep,dTym,PCTerms_1,epsilon_1,init_1,force_1,dim,uv_1,var)
     {
     #pragma omp for
     for (int i=0;i<dim;i++){
@@ -171,17 +173,42 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<
                 }
             }
         }
+        // adaptive AAPG routines
+        Array1D<double> sol_temp(2*PCTerms_1,0.e0);
+        Array1D<double> dis_temp(PCTerms_1,0.e0);
+        for (int it=0;it<nStep+1;it++){
+            for (int id=0;id<dof;id++){
+                getRow(uv_solution(id),it,sol_temp);
+                    for (int iPC=0;iPC<PCTerms_1;iPC++) dis_temp(iPC) = sol_temp(PCTerms_1+iPC);
+                double temp =PCSet_1.StDv(dis_temp);  
+                var(i)=var(i)+temp*temp*dTym;
+            }  
+        }
     }
     }
     tt.tock("Took");
     t(1)=tt.silent_tock();
 
     Array1D<int> ind(dim,0);
-    if (!act_D){
-        for (int i=0;i<dim;i++)
-            ind(i)=i;
+    for (int i=0;i<dim;i++) ind(i)=i;
+    write_datafile_1d(var,"AAPG1var_ndof.dat");
+    if (active_D){
+        // sort the variance in ascending order
+        shell_sort_ind(var,ind);
+        cout << "Var is sorted now" << endl;
+        double var_sum = sum(var);
+        double var_temp = 0.e0;
+        int i_temp = 0;
+        while ((var_temp+=var(i_temp))<((1-p)*var_sum)&&i_temp<dim){
+            ind.erase(0);
+            i_temp++;
+        }
+        shell_sort(ind);
     }
     int N_adof = ind.XSize();
+    cout << "Active Dims are:" << endl;
+    for (int i=0;i<N_adof;i++) cout << ind(i) << endl;
+    cout << endl;
 
     // Second order term
     Array1D<int> indi_2(N_adof*(N_adof-1)/2,0);

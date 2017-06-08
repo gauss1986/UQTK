@@ -25,14 +25,14 @@
 
 int main(int argc, char *argv[]){
 
-    int dof=30;
+    int dof=20;
     int ord_GS=1;
     int ord_AAPG=2;
     int ord_AAPG_GS=2;
     int refine = 1;
     bool act_D = false;
     Array1D<double> time(1+ord_GS,0.e0);
-    int nkl=20;
+    int nkl=30;
     int dim=nkl+6*dof;// set epsilon to be stochastic coeffs on each dof
     int nspl =100000;
     int factor_OD = 0.99;
