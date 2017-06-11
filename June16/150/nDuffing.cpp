@@ -25,7 +25,7 @@
 
 int main(int argc, char *argv[]){
 
-    int dof=25;
+    int dof=20;
     int nkl=30;
     int ord_GS=1;
     int ord_AAPG=2;

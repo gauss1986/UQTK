@@ -1,0 +1,6 @@
+1. Tested nonadaptive/adptive AAPG with dof=20, nkl=30. Both works. nonadptive
+second order AAPG cost 1019s, adaptive cost 324s with 93/150 active dims.
+Error for nonadpative is E1_mean=0.0005276, E1_std=0.03289
+E2_mean=0.0001933, E2_std=0.01831. Error for adaptive is E1_mean=0.0005276,
+E1_std=0.03289
+E2_mean=0.0001726, E2_std=0.01743.  
