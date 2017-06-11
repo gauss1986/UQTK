@@ -188,10 +188,11 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<
     }
     tt.tock("Took");
     t(1)=tt.silent_tock();
+    write_datafile_1d(var,"AAPG1var_ndof.dat");
 
+    // sort ind and find the active dims based on threshold p
     Array1D<int> ind(dim,0);
     for (int i=0;i<dim;i++) ind(i)=i;
-    write_datafile_1d(var,"AAPG1var_ndof.dat");
     if (active_D){
         // sort the variance in ascending order
         shell_sort_ind(var,ind);
@@ -206,7 +207,7 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<
         shell_sort(ind);
     }
     int N_adof = ind.XSize();
-    cout << "Active Dims are:" << endl;
+    cout << "There are " << N_adof << "/" << dim << " active Dims:" << endl;
     for (int i=0;i<N_adof;i++) cout << ind(i) << endl;
     cout << endl;
 
