@@ -210,6 +210,7 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<
     cout << "There are " << N_adof << "/" << dim << " active Dims:" << endl;
     for (int i=0;i<N_adof;i++) cout << ind(i) << endl;
     cout << endl;
+    write_datafile_1d(ind,"ind2.dat");
 
     // Second order term
     Array1D<int> indi_2(N_adof*(N_adof-1)/2,0);
@@ -225,8 +226,10 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<
     Array1D<Array1D<Array1D<Array1D<double> > > > mck_2(N2);
     // Generate the forcing, epsilon and initial conditions on each stochastic dim
     int k=0;
-    for (int idim=0;idim<N_adof-1;idim++){
-        for (int idim2=idim+1;idim2<N_adof;idim2++){
+    for (int i=0;i<N_adof-1;i++){
+        int idim = ind(i);
+        for (int i2=i+1;i2<N_adof;i2++){
+        int idim2 = ind(i2);
         // forcing
         Array1D<Array2D<double> > force_temp(dof);
         Array2D<double> f2_temp(2*nStep+1,PCTerms_2,0.e0);
@@ -283,8 +286,8 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<
             init_temp(i)= i2_temp;
         }
         init_2(k) = init_temp;
-	    indi_2(k) = ind(idim);
-        indj_2(k) = ind(idim2);
+	    indi_2(k) = idim;
+        indj_2(k) = idim2;
         // mck
         Array1D<Array1D<Array1D<double> > > mck_2_dof(3);
         Array1D<Array1D<double> > m_GS(dof);
@@ -326,6 +329,8 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<
         k++;
         }
     }
+    write_datafile_1d(indi_2,"indi2.dat");
+    write_datafile_1d(indj_2,"indj2.dat");
     cout << "Finished generating the forcing, epsilon and initial conditions on each stochastic dim." << endl;
 
     // allocate uv_2
