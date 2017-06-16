@@ -60,13 +60,13 @@ int main(int argc, char *argv[]){
     double e2 = efactor*e1;
     /* Read the user input */
     int c;
-    while ((c=getopt(argc,(char **)argv,"p:r:g:G:d:e:m:N:D:"))!=-1){
+    while ((c=getopt(argc,(char **)argv,"p:f:g:G:v:u:m:N:D:"))!=-1){
         switch (c) {
         case 'p':
             p = (strtod(optarg, (char **)NULL));
             break;
-        case 'r':
-            refine = (strtod(optarg, (char **)NULL));
+        case 'f':
+            efactor = (strtod(optarg, (char **)NULL));
             break;
         case 'g':
             ord_GS = (strtod(optarg, (char **)NULL));
@@ -74,14 +74,14 @@ int main(int argc, char *argv[]){
         case 'G':
             ord_AAPG_GS = (strtod(optarg, (char **)NULL));
             break;
-        case 'd':
-            dTym = 1/(strtod(optarg, (char **)NULL));
+        case 'v':
+            iniv = strtod(optarg, (char **)NULL);
             break;
-        case 'e':
-            e1 = strtod(optarg, (char **)NULL);
+        case 'u':
+            iniu = strtod(optarg, (char **)NULL);
             break;
         case 'm':
-            e2 = strtod(optarg, (char **)NULL);
+            mckfactor = strtod(optarg, (char **)NULL);
             break;
         case 'N':
             nspl = strtod(optarg, (char **)NULL);
@@ -111,6 +111,7 @@ int main(int argc, char *argv[]){
     cout << "sigma=" << sigma << endl;
     cout << "nspl=" << nspl << endl;
     cout << endl;
+    cout << "adaptive factor=" << p << endl;
     cout << "dTym=" << dTym << endl;
     cout << "ord_GS=" << ord_GS << endl;
     cout << "ord_AAPG=" << ord_AAPG << endl;
