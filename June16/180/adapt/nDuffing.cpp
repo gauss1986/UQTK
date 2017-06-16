@@ -54,8 +54,11 @@ int main(int argc, char *argv[]){
     double e2 = 0.1;
     /* Read the user input */
     int c;
-    while ((c=getopt(argc,(char **)argv,"r:g:G:d:e:m:N:D:"))!=-1){
+    while ((c=getopt(argc,(char **)argv,"p:r:g:G:d:e:m:N:D:"))!=-1){
         switch (c) {
+        case 'p':
+            p = (strtod(optarg, (char **)NULL));
+            break;
         case 'r':
             refine = (strtod(optarg, (char **)NULL));
             break;

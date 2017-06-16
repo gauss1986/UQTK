@@ -36,22 +36,18 @@ int main(int argc, char *argv[]){
     int dim=nkl+6*dof;// set epsilon to be stochastic coeffs on each dof
     int nspl =100000;
     int factor_OD = 0.99;
-    double clen = 0.1;//was 0.1
-    double sigma=0.2;//was 0.8
-    double iniv = 0.1;
-    double iniu = 0.5;
     string pcType="LU";  //PC type
     double dTym = 0.01;
     Array1D<double> initial(2*dof,0.e0); // initial condition
     Array1D<double> initial_sigma(2*dof,0.e0);
     for (int i=0;i<dof;i++){
-        initial_sigma(i)=iniv;
-        initial_sigma(dof+i)=iniu;
+        initial_sigma(i)=0.1;
+        initial_sigma(dof+i)=0.5;
     } 
     bool PDF = false;
-    bool active_D = true;
-    double p = 0.9; // adaptive coeff
-    double mckfactor = 0.4;
+    bool active_D = false;
+    double p = 0.99; // adaptive coeff
+    double mckfactor = 0.2;
     double efactor = 0.1;
 
     // epsilon
@@ -102,15 +98,9 @@ int main(int argc, char *argv[]){
     lout(3) = 8.8/dTym;
     int noutput = lout.XSize();
     e1=e1;
-    cout << "mckfactor=" << mckfactor << endl;
-    cout << "efactor=" << efactor << endl;
-    cout << "iniv=" << iniv << endl;
-    cout << "iniu=" << iniu << endl;
-    cout << endl;
-    cout << "clen=" << clen << endl;
-    cout << "sigma=" << sigma << endl;
+    cout << "epsilon_mean=" << e1 << endl;
+    cout << "e_sigma=" << e2 << endl;
     cout << "nspl=" << nspl << endl;
-    cout << endl;
     cout << "dTym=" << dTym << endl;
     cout << "ord_GS=" << ord_GS << endl;
     cout << "ord_AAPG=" << ord_AAPG << endl;
@@ -175,6 +165,8 @@ int main(int argc, char *argv[]){
     Array2D<double> scaledKLmodes_fine(2*nStep_fine+1,nkl,0.e0);
     if (nkl>0){
         cout << "Generating KL..." << endl;
+        double clen = 0.1;//was 0.1
+        double sigma=0.4;//was 0.8
         char* cov_type = (char *)"Exp";
         //genKL(scaledKLmodes, 2*nStep+1, nkl, clen, sigma, tf, cov_type);
         genKL(scaledKLmodes_fine, 2*nStep_fine+1, nkl, clen, sigma, tf, cov_type);

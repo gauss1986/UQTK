@@ -4,3 +4,13 @@ Error for nonadpative is E1_mean=0.0005276, E1_std=0.03289
 E2_mean=0.0001933, E2_std=0.01831. Error for adaptive is E1_mean=0.0005276,
 E1_std=0.03289
 E2_mean=0.0001726, E2_std=0.01743.  
+
+2. Tested dof = 25, nkl = 30. Both nonadaptive and adaptive AAPG ran out of
+memory. Try p=0.9 instead of 0.99, the computation of AAPG2 is ok but the
+assembling still result in out of memory error. 
+
+3. Tested dof=25, nkl = 10. Nonadaptive AAPG ran out of memory but adaptive
+AAPG is fine. The error of GS is E_mean=0.0002455, E_std=0.01662, error of
+AAPG is E1_mean=0.000421, E1_std=0.02583
+E2_mean=0.000188, E2_std=0.01445. Time for MCS is 60s, GS1 is 33s, AAPG1 is
+6s, AAPG1+AAPG2 is 43s.  

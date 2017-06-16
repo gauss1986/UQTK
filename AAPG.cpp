@@ -426,7 +426,7 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     tt.tock("Initialization Took");
  
     // assemble and save the mean values
-    printf("Assembling the mean...\n");
+    //printf("Assembling the mean...\n");
     //tt.tick();
     assemblemean(indi_2, indj_2, indi_3, indj_3, indk_3, sol_0, sol_1, sol_2, sol_3, dim, nStep, AAPG_ord, sol_1_mean, sol_2_mean, sol_3_mean);
     //tt.tock("Assemble mean took");   
@@ -441,7 +441,7 @@ void PostProcess(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi_
     }
 
     // assemble the rest PC terms
-    printf("Assembling the rest...\n");
+    //printf("Assembling the rest...\n");
     //tt.tick();
     assemblerest(indi_2, indj_2, indi_3, indj_3, indk_3, sol_1, sol_2, sol_3, sol_1_assembled, sol_2_assembled, sol_3_assembled, PCTerms_1, PCTerms_2, PCTerms_3, dim, order, nStep, AAPG_ord);
     //tt.tock("Assemble rest took");    
@@ -647,7 +647,7 @@ void assemblemean(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
     //Array1D<Array1D<double> > sol_1_mean_ind(dim);
     Array2D<double> sol_1_mean_ind(dim, nStep+1, 0.e0);
     if (AAPG_ord >= 1){
-        cout << "Ord 1" << endl;
+        //cout << "Ord 1" << endl;
         // First-order terms
         for (int i=0;i<dim;i++){
             // Retrieve mean
@@ -667,7 +667,7 @@ void assemblemean(Array1D<int>& indi_2, Array1D<int>& indj_2, Array1D<int>& indi
     sol_2_mean = sol_1_mean;
     Array2D<Array1D<double> > sol_2_mean_ind(dim, dim); 
     if (AAPG_ord >= 2){
-        cout << "Ord 1" << endl;
+        //cout << "Ord 2" << endl;
         for (unsigned int i=0;i<indi_2.XSize();i++){
                 Array1D<double> Temp(nStep+1,0.e0);
                 getCol(sol_2(indi_2(i),indj_2(i)),0,Temp);
