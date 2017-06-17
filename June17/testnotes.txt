@@ -1,0 +1,5 @@
+1. The efactor, which is the realtive level of randomness in epsilon has surprising low impact on the performance of all algorithms. 
+
+2. The mckfactor has some impact on the performance of algorithms.
+
+3. The p value, which is the threshold of AAPG adaptive algo, has impact on the cost and error of AAPG2. Worth mention in the thesis. 

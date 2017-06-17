@@ -59,7 +59,6 @@ int main(int argc, char *argv[]){
     // epsilon
     //Array1D<double>  epsilon_mean(dof,1e4);
     double e1 = 1.0;
-    double e2 = efactor*e1;
     /* Read the user input */
     int c;
     while ((c=getopt(argc,(char **)argv,"p:f:g:G:v:u:m:N:D:"))!=-1){
@@ -97,6 +96,7 @@ int main(int argc, char *argv[]){
             break;
         }
     }
+    double e2 = efactor*e1;
     Array1D<int> lout(4,0);
     lout(0) = 0;
     lout(1) = 7.5/dTym;

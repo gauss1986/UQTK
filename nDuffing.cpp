@@ -25,17 +25,16 @@
 
 int main(int argc, char *argv[]){
 
-    int dof=25;
-    int nkl=10;
-    int ord_GS=1;
+    int dof=3;
+    int nkl=2;
+    int ord_GS=2;
     int ord_AAPG=2;
     int ord_AAPG_GS=2;
     int refine = 1;
     bool act_D = false;
-    Array1D<double> time(1+ord_GS,0.e0);
     int dim=nkl+6*dof;// set epsilon to be stochastic coeffs on each dof
     int nspl =100000;
-    int factor_OD = 0.99;
+    double factor_OD = 0.99;
     double clen = 0.1;//was 0.1
     double sigma=0.2;//was 0.8
     double iniv = 0.1;
@@ -57,7 +56,6 @@ int main(int argc, char *argv[]){
     // epsilon
     //Array1D<double>  epsilon_mean(dof,1e4);
     double e1 = 1.0;
-    double e2 = efactor*e1;
     /* Read the user input */
     int c;
     while ((c=getopt(argc,(char **)argv,"p:f:g:G:v:u:m:N:D:"))!=-1){
@@ -95,7 +93,11 @@ int main(int argc, char *argv[]){
             break;
         }
     }
+    double e2 = efactor*e1;
+    Array1D<double> time(1+ord_GS,0.e0);
     Array1D<int> lout(4,0);
+    Array2D<double> performance(1+ord_GS+ord_AAPG,3,0.e0); // performance matrix to output the GS1,AAPG1,AAPG2
+
     lout(0) = 0;
     lout(1) = 7.5/dTym;
     lout(2) = 8.1/dTym;
@@ -272,6 +274,7 @@ int main(int argc, char *argv[]){
     }
     }
     time(0) = tt.silent_tock();
+    performance(0,2) = time(0);
     tt.tock("Took");
     //write_datafile(epsilon_MCS_samples,"epsilon_samples.dat");
     //write_datafile(initial_MCS_samples,"initial_samples.dat");
@@ -495,6 +498,10 @@ int main(int argc, char *argv[]){
             cout << "GS vel sample error for ord " << ord << " on dof " << j << " is em="<<e_GS_sample_vel(ord-1)(0) <<", es= "<< e_GS_sample_vel(ord-1)(1)<< endl;
             }
         }
+
+        performance(ord,0) = e3(0);
+        performance(ord,1) = e3(1);
+        performance(ord,2) = time(ord);
     }
 
     write_datafile_1d(time,"t_nMCSGS.dat");
@@ -516,7 +523,13 @@ int main(int argc, char *argv[]){
             normsq(ipc) *= norms1d(Pbtot(ipc,id));
    
     cout << "AAPG..." << endl;
-    nAAPG(refine,dof,nkl,dim,nStep,ord_AAPG_GS,lout,factor_OD,ord_AAPG,act_D,fbar,fbar_fine,dTym,epsilon_mean,pcType,scaledKLmodes,scaledKLmodes_fine,stat_e,stat_i,stat_m,stat_c,stat_k,normsq,mean_MCS,std_MCS,mck,PDF,samPts_norm,active_D,p);
+    nAAPG(refine,dof,nkl,dim,nStep,ord_AAPG_GS,lout,factor_OD,ord_AAPG,act_D,fbar,fbar_fine,dTym,epsilon_mean,pcType,scaledKLmodes,scaledKLmodes_fine,stat_e,stat_i,stat_m,stat_c,stat_k,normsq,mean_MCS,std_MCS,mck,PDF,samPts_norm,active_D,p,performance,ord_GS);
+
+
+    ostringstream s4;
+    s4 << "performance_" << p << "_"<< mckfactor << "_" << efactor << ".dat";
+    string perf(s4.str());
+    write_datafile(performance,perf.c_str());
 
     return 0;
 }

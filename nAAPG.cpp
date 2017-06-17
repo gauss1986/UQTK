@@ -15,7 +15,7 @@
 #include "nGhanemSpanos.h"
 #include "ticktock.h"
 
-void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<int>& lout, double factor_OD, int AAPG_ord, bool act_D, Array1D<double>& fbar, Array1D<double>& fbar_fine,double dTym, Array1D<double>& epsilon_mean, string pcType, Array2D<double>& scaledKLmodes,Array2D<double>& scaledKLmodes_fine, Array2D<double>& stat_e,  Array2D<double>& stat_i, Array2D<double>& stat_m, Array2D<double>& stat_c, Array2D<double>& stat_k, Array1D<double>& normsq, Array2D<double>& mean_MCS, Array2D<double>& std_MCS, Array1D<Array2D<double> >& mck, bool PDF, Array2D<double>& samPts_norm, bool active_D, double p){
+void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<int>& lout, double factor_OD, int AAPG_ord, bool act_D, Array1D<double>& fbar, Array1D<double>& fbar_fine,double dTym, Array1D<double>& epsilon_mean, string pcType, Array2D<double>& scaledKLmodes,Array2D<double>& scaledKLmodes_fine, Array2D<double>& stat_e,  Array2D<double>& stat_i, Array2D<double>& stat_m, Array2D<double>& stat_c, Array2D<double>& stat_k, Array1D<double>& normsq, Array2D<double>& mean_MCS, Array2D<double>& std_MCS, Array1D<Array2D<double> >& mck, bool PDF, Array2D<double>& samPts_norm, bool active_D, double p, Array2D<double>& performance, int ord_GS){
 
     // timing var
     Array1D<double> t(5,0.e0);
@@ -457,6 +457,12 @@ void nAAPG(int refine, int dof, int nkl, int dim, int nStep, int order, Array1D<
     cout << "E2_mean=" << e3_AAPG2(0) <<", E2_std=" << e3_AAPG2(1) << endl;
     write_datafile_1d(e3_AAPG1,"errornew_AAPG1.dat");
     write_datafile_1d(e3_AAPG2,"errornew_AAPG2.dat");
+    performance(1+ord_GS,0) = e3_AAPG1(0);
+    performance(1+ord_GS,1) = e3_AAPG1(1);
+    performance(1+ord_GS,2) = t(0)+t(1);
+    performance(2+ord_GS,0) = e3_AAPG2(0);
+    performance(2+ord_GS,1) = e3_AAPG2(1);
+    performance(2+ord_GS,2) = t(0)+t(1)+t(2);
 
     write_datafile(m1,"m_AAPG1.dat");
     write_datafile(std1,"s_AAPG1.dat");
