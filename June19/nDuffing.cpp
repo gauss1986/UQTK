@@ -31,6 +31,7 @@ int main(int argc, char *argv[]){
     int ord_AAPG=2;
     int ord_AAPG_GS=2;
     int refine = 1;
+    bool act_D = false;
     int dim=nkl+6*dof;// set epsilon to be stochastic coeffs on each dof
     int nspl =10000;
     double factor_OD = 0.99;
@@ -57,7 +58,7 @@ int main(int argc, char *argv[]){
     double e1 = 1.0;
     /* Read the user input */
     int c;
-    while ((c=getopt(argc,(char **)argv,"p:f:g:G:v:u:m:N:D:A:"))!=-1){
+    while ((c=getopt(argc,(char **)argv,"p:f:g:G:v:u:m:N:D:"))!=-1){
         switch (c) {
         case 'p':
             p = (strtod(optarg, (char **)NULL));
@@ -84,16 +85,11 @@ int main(int argc, char *argv[]){
             nspl = strtod(optarg, (char **)NULL);
             break;
         case 'D':
-            if (strtod(optarg, (char **)NULL) < 1e-5)
+            int temp_active = strtod(optarg, (char **)NULL);
+            if (temp_active == 0)
                 active_D = false;
             else
                 active_D = true;
-            break;
-        case 'A':
-            if (strtod(optarg, (char **)NULL) < 1e-5)
-                PDF = false;
-            else
-                PDF = true;
             break;
         }
     }
@@ -103,12 +99,9 @@ int main(int argc, char *argv[]){
     Array2D<double> performance(1+ord_GS+ord_AAPG,3,0.e0); // performance matrix to output the GS1,AAPG1,AAPG2
 
     lout(0) = 0;
-    //lout(1) = 7.5/dTym;
-    //lout(2) = 8.1/dTym;
-    //lout(3) = 8.8/dTym;
-    lout(1) = 5/dTym;
-    lout(2) = 8/dTym;
-    lout(3) = 9.5/dTym;
+    lout(1) = 7.5/dTym;
+    lout(2) = 8.1/dTym;
+    lout(3) = 8.8/dTym;
     int noutput = lout.XSize();
     e1=e1;
     cout << "mckfactor=" << mckfactor << endl;
@@ -130,11 +123,6 @@ int main(int argc, char *argv[]){
         cout << "AAPG adaptive is active" << endl;
     }else{
         cout << "AAPG adaptive is inactive" << endl;
-    }
-    if (PDF){
-        cout << "PDF is active" << endl;
-    }else{
-        cout << "PDF is inactive" << endl;
     }
     Array1D<double>  epsilon_mean(dof,e1);
     Array1D<double>  e_sigma(dof,e2);
@@ -535,7 +523,7 @@ int main(int argc, char *argv[]){
             normsq(ipc) *= norms1d(Pbtot(ipc,id));
    
     cout << "AAPG..." << endl;
-    nAAPG(refine,dof,nkl,dim,nStep,ord_AAPG_GS,lout,factor_OD,ord_AAPG,fbar,fbar_fine,dTym,epsilon_mean,pcType,scaledKLmodes,scaledKLmodes_fine,stat_e,stat_i,stat_m,stat_c,stat_k,normsq,mean_MCS,std_MCS,mck,PDF,samPts_norm,active_D,p,performance,ord_GS);
+    nAAPG(refine,dof,nkl,dim,nStep,ord_AAPG_GS,lout,factor_OD,ord_AAPG,act_D,fbar,fbar_fine,dTym,epsilon_mean,pcType,scaledKLmodes,scaledKLmodes_fine,stat_e,stat_i,stat_m,stat_c,stat_k,normsq,mean_MCS,std_MCS,mck,PDF,samPts_norm,active_D,p,performance,ord_GS);
 
 
     ostringstream s4;

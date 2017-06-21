@@ -1,0 +1,1 @@
+1. GS2 is unstable sometimes when mckfactor or efactor is too big. It takes 4000+ seconds.

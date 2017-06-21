@@ -103,12 +103,9 @@ int main(int argc, char *argv[]){
     Array2D<double> performance(1+ord_GS+ord_AAPG,3,0.e0); // performance matrix to output the GS1,AAPG1,AAPG2
 
     lout(0) = 0;
-    //lout(1) = 7.5/dTym;
-    //lout(2) = 8.1/dTym;
-    //lout(3) = 8.8/dTym;
-    lout(1) = 5/dTym;
-    lout(2) = 8/dTym;
-    lout(3) = 9.5/dTym;
+    lout(1) = 7.5/dTym;
+    lout(2) = 8.1/dTym;
+    lout(3) = 8.8/dTym;
     int noutput = lout.XSize();
     e1=e1;
     cout << "mckfactor=" << mckfactor << endl;

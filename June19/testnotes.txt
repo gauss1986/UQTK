@@ -1,0 +1,1 @@
+1. Std of epsilon = 0.8 (in subfolder extra3) has good results. The error of GS1 is 17% in std, thus giving enough reason to push for GS2. 
